@@ -729,7 +729,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         </Text>
         <View style={[styles.statRule, { backgroundColor: fg }]} />
         {top4.length === 0 ? (
-          <Text style={[styles.listTxt, { color: fg, marginTop: 18, textAlign: 'center' }]}>
+          <Text style={[styles.emptyTxt, { color: fg }]}>
             NO HIGH SCORES YET. PLAY A GAME!
           </Text>
         ) : (
@@ -798,7 +798,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
               ]}
             >
-              <Text style={[styles.listTxt, { color: sel ? bg : fg }]}>
+              <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
                 {sel ? '> ' : '  '}
                 {label}
               </Text>
@@ -1046,7 +1046,21 @@ const styles = StyleSheet.create({
   setupRow: {
     borderWidth: 1.5,
     paddingHorizontal: 8,
-    paddingVertical: 7,
-    marginBottom: 6,
+    paddingVertical: 6,
+    marginBottom: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  setupTxt: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  emptyTxt: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    marginTop: 18,
+    textAlign: 'center',
   },
 });
