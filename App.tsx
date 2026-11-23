@@ -4,6 +4,10 @@ import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-cont
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const PALETTE_STORAGE_KEY = '@retrodeck8_palette_v1';
+const SCANLINES_STORAGE_KEY = '@retrodeck8_scanlines_v1';
 
 import { ArcadeButton, RetroKeypad } from './src/components/RetroKeypad';
 import { ArcadeScreen } from './src/arcade/ArcadeScreen';
@@ -73,6 +77,24 @@ function RetroDeckConsole() {
   highScoresRef.current = highScores;
 
   const palette = RETRO_PALETTES[paletteId];
+
+  // Load persisted OS theme & CRT scanlines setting on boot
+  useEffect(() => {
+    AsyncStorage.getItem(PALETTE_STORAGE_KEY)
+      .then((saved) => {
+        if (saved && saved in RETRO_PALETTES) {
+          setPaletteId(saved as RetroPaletteId);
+        }
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(SCANLINES_STORAGE_KEY)
+      .then((saved) => {
+        if (saved === '0' || saved === '1') {
+          setScanlines(saved === '1');
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Initialize Retro Synthesizer & Subscribe to High Scores
   useEffect(() => {
@@ -179,7 +201,7 @@ function RetroDeckConsole() {
     inputRef.current[btn] = pressed;
   }, []);
 
-  // Cartridge Swap
+  // Cartridge Swap (preserve user's active OS theme)
   const handleSelectCartridge = useCallback((cart: ArcadeCartridgeDef) => {
     const savedHighScore = HighScoreService.getHighScore(cart.id);
     const nextGame = cart.createGame(savedHighScore);
@@ -187,13 +209,12 @@ function RetroDeckConsole() {
     if (nextGame.setHighScore) nextGame.setHighScore(savedHighScore);
     gameRef.current = nextGame;
     setActiveCart(cart);
-    setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());
     setIsPaused(false);
     setOsMode(false);
   }, []);
 
-  // Burn & Load Custom Sucrase Dev Cartridge
+  // Burn & Load Custom Sucrase Dev Cartridge (preserve user's active OS theme)
   const handleBurnCustomCartridge = useCallback((cart: ArcadeCartridgeDef) => {
     const savedHighScore = HighScoreService.getHighScore(cart.id);
     const nextGame = cart.createGame(savedHighScore);
@@ -201,7 +222,6 @@ function RetroDeckConsole() {
     if (nextGame.setHighScore) nextGame.setHighScore(savedHighScore);
     gameRef.current = nextGame;
     setActiveCart(cart);
-    setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());
     setIsPaused(false);
     setOsMode(false);
@@ -211,7 +231,17 @@ function RetroDeckConsole() {
   const handleCyclePalette = useCallback(() => {
     setPaletteId((prev) => {
       const idx = PALETTE_ORDER.indexOf(prev);
-      return PALETTE_ORDER[(idx + 1) % PALETTE_ORDER.length];
+      const next = PALETTE_ORDER[(idx + 1) % PALETTE_ORDER.length];
+      AsyncStorage.setItem(PALETTE_STORAGE_KEY, next).catch(() => {});
+      return next;
+    });
+  }, []);
+
+  const handleToggleScanlines = useCallback(() => {
+    setScanlines((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(SCANLINES_STORAGE_KEY, next ? '1' : '0').catch(() => {});
+      return next;
     });
   }, []);
 
@@ -222,7 +252,7 @@ function RetroDeckConsole() {
       onLaunchGame: (cart) => handleSelectCartridge(cart),
       onOpenCartVault: () => setBayVisible(true),
       onCyclePalette: () => handleCyclePalette(),
-      onToggleScanlines: () => setScanlines((s) => !s),
+      onToggleScanlines: () => handleToggleScanlines(),
       getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
     })
@@ -388,7 +418,7 @@ function RetroDeckConsole() {
           </Pressable>
 
           <Pressable
-            onPress={() => setScanlines((s) => !s)}
+            onPress={handleToggleScanlines}
             style={[styles.toolBtn, scanlines && { borderColor: `${palette.bezelAccent}77` }]}
           >
             <Ionicons
