@@ -2201,7 +2201,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
         </View>
 
         {/* Wide 72x20 (36x10 @ 2px) Authentic Nokia 3310 Picture Message Card */}
-        <View style={[styles.compStaff, { borderColor: fg, alignItems: 'center', justifyContent: 'space-between' }]}>
+        <View
+          style={[
+            styles.compStaff,
+            {
+              borderColor: fg,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 10,
+            },
+          ]}
+        >
           <View style={[styles.picBannerBox, { borderColor: fg }]}>
             {bannerSpans.map((s) => (
               <View
