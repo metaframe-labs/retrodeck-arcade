@@ -84,7 +84,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
               },
             ]}
           />
-          <Text style={styles.bezelLabel} numberOfLines={1}>
+          <Text style={styles.bezelLabel} numberOfLines={1} ellipsizeMode="tail">
             {cartridgeTitle}
           </Text>
         </View>
@@ -97,18 +97,11 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
           )}
 
           {isOsMode ? (
-            <>
-              <View style={styles.statBadgePill}>
-                <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
-                  RAM 64K
-                </Text>
-              </View>
-              <View style={styles.statBadgePill}>
-                <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
-                  {cartCount} ROMS
-                </Text>
-              </View>
-            </>
+            <View style={styles.statBadgePill}>
+              <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
+                {cartCount} ROMS
+              </Text>
+            </View>
           ) : (
             <>
               <View style={styles.statBadgePill}>
@@ -496,6 +489,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flex: 1,
+    marginRight: 8,
   },
   ledDot: {
     width: 6,
@@ -511,11 +505,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 1,
     fontFamily: 'monospace',
+    flexShrink: 1,
   },
   hudStats: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flexShrink: 0,
   },
   beepPill: {
     paddingHorizontal: 4,
