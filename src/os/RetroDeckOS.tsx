@@ -605,10 +605,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'term') {
-      if (dir === 'up') this.termIdx = (this.termIdx + TERM_CMDS.length - 2) % TERM_CMDS.length;
-      if (dir === 'down') this.termIdx = (this.termIdx + 2) % TERM_CMDS.length;
-      if (dir === 'left') this.termIdx = (this.termIdx + TERM_CMDS.length - 1) % TERM_CMDS.length;
-      if (dir === 'right') this.termIdx = (this.termIdx + 1) % TERM_CMDS.length;
+      if (dir === 'up' || dir === 'down') {
+        this.termIdx = (this.termIdx + 3) % TERM_CMDS.length;
+      }
+      if (dir === 'left') {
+        this.termIdx = (this.termIdx + TERM_CMDS.length - 1) % TERM_CMDS.length;
+      }
+      if (dir === 'right') {
+        this.termIdx = (this.termIdx + 1) % TERM_CMDS.length;
+      }
       if (dir) return 'hit';
       if (pressA) {
         return this.execTermCmd(TERM_CMDS[this.termIdx]);
@@ -1144,8 +1149,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
                 ]}
               >
-                <Text style={[styles.termCmdTxt, { color: sel ? bg : fg }]}>
-                  {sel ? '>' : ' '} $ {cmd}
+                <Text style={[styles.termCmdTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                  {sel ? '>' : ''}{cmd}
                 </Text>
               </View>
             );
@@ -1440,35 +1445,35 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   termScreen: {
+    flex: 1,
     borderWidth: 1.5,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    marginBottom: 5,
-    height: 92,
-    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    marginBottom: 4,
+    justifyContent: 'space-around',
+    overflow: 'hidden',
   },
   termLine: {
-    fontSize: 8.5,
-    lineHeight: 13,
+    fontSize: 8,
+    lineHeight: 11,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
   termCmds: {
-    flex: 1,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    alignContent: 'space-between',
   },
   termRow: {
-    width: '48.5%',
+    width: '32%',
     borderWidth: 1,
-    paddingHorizontal: 4,
-    paddingVertical: 2.5,
-    marginBottom: 3,
+    paddingHorizontal: 3,
+    paddingVertical: 2,
+    marginBottom: 2,
+    alignItems: 'center',
   },
   termCmdTxt: {
-    fontSize: 8.5,
+    fontSize: 8,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
