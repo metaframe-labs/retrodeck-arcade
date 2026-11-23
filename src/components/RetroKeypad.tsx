@@ -26,8 +26,8 @@ interface RetroKeypadProps {
 }
 
 /** Minimum press duration (ms) so rapid taps register cleanly */
-const MIN_LATCH_MS = 60;
-const BUTTON_HIT_SLOP = { top: 14, bottom: 14, left: 14, right: 14 };
+const MIN_LATCH_MS = 30;
+const BUTTON_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
 /** Helper to extract letter and sublabel from button label strings (e.g. "A (FIRE)" -> { letter: "A", sub: "FIRE" }) */
 function parseActionLabel(

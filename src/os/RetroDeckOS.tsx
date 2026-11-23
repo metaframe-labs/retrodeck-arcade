@@ -722,6 +722,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private moveCd = 0;
   private prevA = false;
   private prevB = false;
+  private prevUp = false;
+  private prevDown = false;
+  private prevLeft = false;
+  private prevRight = false;
 
   // Desktop 4x3 cursor
   private deskIdx = 0;
@@ -1312,14 +1316,27 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return 'hit';
     }
 
-    // Directional helper
+    // Directional helper with single-press edge trigger & initial repeat delay
+    const pressUp = input.up && !this.prevUp;
+    const pressDown = input.down && !this.prevDown;
+    const pressLeft = input.left && !this.prevLeft;
+    const pressRight = input.right && !this.prevRight;
+
+    this.prevUp = input.up;
+    this.prevDown = input.down;
+    this.prevLeft = input.left;
+    this.prevRight = input.right;
+
     let dir: 'up' | 'down' | 'left' | 'right' | null = null;
-    if (this.moveCd <= 0) {
-      if (input.up) dir = 'up';
-      else if (input.down) dir = 'down';
-      else if (input.left) dir = 'left';
-      else if (input.right) dir = 'right';
-      if (dir) this.moveCd = this.app === 'arcade' ? 0.11 : 0.15;
+    if (pressUp) { dir = 'up'; this.moveCd = 0.28; }
+    else if (pressDown) { dir = 'down'; this.moveCd = 0.28; }
+    else if (pressLeft) { dir = 'left'; this.moveCd = 0.28; }
+    else if (pressRight) { dir = 'right'; this.moveCd = 0.28; }
+    else if (this.moveCd <= 0) {
+      if (input.up) { dir = 'up'; this.moveCd = 0.16; }
+      else if (input.down) { dir = 'down'; this.moveCd = 0.16; }
+      else if (input.left) { dir = 'left'; this.moveCd = 0.16; }
+      else if (input.right) { dir = 'right'; this.moveCd = 0.16; }
     }
 
     if (this.app === 'desktop') {
