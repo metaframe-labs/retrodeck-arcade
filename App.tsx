@@ -741,13 +741,11 @@ function RetroDeckConsole() {
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
-                targetLabel={kbdBinding.targetLabel}
                 onPressKey={(k) => {
                   osRef.current.pressNumericKey?.(k);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
                 onSwitchMode={() => setDeckMode('kbd')}
-                onKeySound={() => handleSoundEvent('hit')}
               />
             ) : (
               <RetroKeypad

@@ -169,6 +169,16 @@ class SomaRadioService {
     this.notify();
   }
 
+  public setChannel(index: number) {
+    this.currentChannelIndex = ((index % SOMA_CHANNELS.length) + SOMA_CHANNELS.length) % SOMA_CHANNELS.length;
+    if (this.isPlaying) {
+      this.playCurrentChannel();
+    } else {
+      this.fetchNowPlaying();
+      this.notify();
+    }
+  }
+
   public nextChannel() {
     this.currentChannelIndex = (this.currentChannelIndex + 1) % SOMA_CHANNELS.length;
     if (this.isPlaying) {

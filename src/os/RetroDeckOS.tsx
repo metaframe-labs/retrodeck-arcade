@@ -1079,40 +1079,233 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.sendAiMessage();
   }
 
+  private executePhoneKey(k: string): ArcadeSound | null {
+    if (k === 'CLR') {
+      this.dialBuffer = this.dialBuffer.slice(0, -1);
+      return 'hit';
+    }
+    if (k === 'LOCK') {
+      this.keyLocked = true;
+      this.unlockStage = false;
+      return 'score';
+    }
+    if (k === 'RING') {
+      const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
+      this.callState = 'ringing';
+      this.callTitle = 'NOKIA 3310 CALLING';
+      this.callSub = `♪ ${activeRing.title.trim()}`;
+      RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
+      return null;
+    }
+    if (k === 'CALL') {
+      const num = this.dialBuffer || '0532-3310';
+      this.callState = 'connected';
+      this.callTitle = `CALLING ${num}`;
+      this.callSub = 'VOICE LINE ACTIVE';
+      this.callTimer = 0;
+      return 'powerup';
+    }
+    if (this.dialBuffer.length < 16) {
+      this.dialBuffer += k;
+    }
+    RetroAudioEngine.playDialKey(k);
+    if (this.dialBuffer === '*#0000#') {
+      this.callState = 'info';
+      this.callTitle = 'V 05.57  23-11-26';
+      this.callSub = 'NHM-5NX (c) NOKIA';
+      this.dialBuffer = '';
+    } else if (this.dialBuffer === '*#06#') {
+      this.callState = 'info';
+      this.callTitle = 'IMEI SERIAL NO:';
+      this.callSub = '350993-10-331000-8';
+      this.dialBuffer = '';
+    } else if (this.dialBuffer === '*#92702689#') {
+      this.callState = 'warranty';
+      this.warrantyPage = 0;
+      this.dialBuffer = '';
+      return 'powerup';
+    } else if (this.dialBuffer === '*#7780#') {
+      this.callState = 'info';
+      this.callTitle = 'FACTORY RESTORE';
+      this.callSub = '3310 ROM SETTINGS OK';
+      this.dialBuffer = '';
+    } else if (this.dialBuffer === '*#7370#') {
+      this.callState = 'info';
+      this.callTitle = 'DEEP FORMAT 3310';
+      this.callSub = '100 CARTS VERIFIED';
+      this.dialBuffer = '';
+    }
+    return null;
+  }
+
   public pressNumericKey(key: string) {
     this.idleTimer = 0;
+
+    // Keyguard unlock support
+    if (this.keyLocked) {
+      if (key === 'OK') {
+        this.unlockStage = true;
+        this.unlockHintTimer = 2.5;
+        this.cb.onPlaySound?.('hit');
+      } else if (key === '*' && this.unlockStage) {
+        this.keyLocked = false;
+        this.unlockStage = false;
+        this.cb.onPlaySound?.('powerup');
+      }
+      return;
+    }
+
+    // Global BACK action
+    if (key === 'BACK') {
+      if (this.app === 'phone' && this.callState !== 'idle') {
+        this.callState = 'idle';
+        RetroAudioEngine.stopNokiaMelody();
+        this.cb.onPlaySound?.('hit');
+        return;
+      }
+      if (this.app !== 'desktop') {
+        this.app = 'desktop';
+        this.cb.onPlaySound?.('hit');
+      }
+      return;
+    }
+
+    // Text input apps (AI, WAP, Terminal)
     if (this.app === 'wap' || this.app === 'term' || this.app === 'ai') {
       const cur = this.getKeyboardBinding().value;
       if (key === 'DEL') this.setKeyboardText(cur.slice(0, -1));
       else if (key === 'CLR') this.setKeyboardText('');
       else if (key === 'OK') this.submitKeyboard();
       else this.setKeyboardText(cur + key);
+      this.cb.onPlaySound?.('hit');
       return;
     }
 
+    // Calculator
     if (this.app === 'calc') {
       if (key === 'DEL' || key === 'CLR') this.pressCalcKey('C');
-      else if (key === 'OK') this.pressCalcKey('=');
+      else if (key === 'OK' || key === '#') this.pressCalcKey('=');
+      else if (key === '*') this.pressCalcKey('*');
       else if ('0123456789'.includes(key)) this.pressCalcKey(key);
+      this.cb.onPlaySound?.('hit');
       return;
     }
 
-    // Default / Desktop / Phone: behave like a real Nokia 3310 dialer
-    if (this.app !== 'phone') {
+    // SomaFM Radio: 1-9 & 0 tune stations, * / # adjust volume, OK toggles play
+    if (this.app === 'radio') {
+      if (key === 'OK') {
+        somaRadioService.togglePlay();
+        this.cb.onPlaySound?.(somaRadioService.getIsPlaying() ? 'hit' : 'powerup');
+      } else if (key === '*') {
+        somaRadioService.setVolume(Math.max(0, somaRadioService.getVolume() - 0.1));
+        this.cb.onPlaySound?.('hit');
+      } else if (key === '#') {
+        somaRadioService.setVolume(Math.min(1, somaRadioService.getVolume() + 0.1));
+        this.cb.onPlaySound?.('score');
+      } else if ('0123456789'.includes(key)) {
+        const chIdx = key === '0' ? 9 : parseInt(key, 10) - 1;
+        somaRadioService.setChannel(chIdx);
+        if (!somaRadioService.getIsPlaying()) {
+          somaRadioService.playCurrentChannel();
+        }
+        this.cb.onPlaySound?.('score');
+      }
+      return;
+    }
+
+    // Arcade Browser: 2/8 browse, OK launches
+    if (this.app === 'arcade') {
+      const carts = this.cb.getCartridges();
+      if (key === '2') {
+        this.gameIdx = (this.gameIdx + carts.length - 1) % carts.length;
+        this.cb.onPlaySound?.('hit');
+      } else if (key === '8') {
+        this.gameIdx = (this.gameIdx + 1) % carts.length;
+        this.cb.onPlaySound?.('hit');
+      } else if (key === 'OK' && carts[this.gameIdx]) {
+        this.cb.onLaunchGame(carts[this.gameIdx]);
+        this.cb.onPlaySound?.('powerup');
+      }
+      return;
+    }
+
+    // Desktop: OK opens highlighted app; digits jump straight to Phone dialer like Nokia 3310!
+    if (this.app === 'desktop') {
+      if (key === 'OK') {
+        this.app = DESKTOP_ICONS[this.deskIdx].id;
+        if (this.app === 'radio') somaRadioService.fetchNowPlaying();
+        this.cb.onPlaySound?.('score');
+        return;
+      }
+      if (key === 'DEL' || key === 'CLR') return;
       this.app = 'phone';
       this.callState = 'idle';
-    }
-    if (key === 'DEL') {
-      this.dialBuffer = this.dialBuffer.slice(0, -1);
-    } else if (key === 'CLR') {
       this.dialBuffer = '';
-    } else if (key === 'OK') {
-      this.dialR = 4;
-      this.dialC = 0; // CALL button on dialer
-      this.prevA = false;
-      this.update({ up: false, down: false, left: false, right: false, a: true, b: false }, 1 / 60);
-    } else if (this.dialBuffer.length < 14) {
-      this.dialBuffer += key;
+    }
+
+    // Phone Dialer: full interactive 3310 keypad + DTMF tones + USSD codes
+    if (this.app === 'phone') {
+      if (this.callState === 'warranty') {
+        if (key === 'OK' || key === '8' || key === '6') {
+          this.warrantyPage = (this.warrantyPage + 1) % 5;
+          this.cb.onPlaySound?.('score');
+        } else if (key === '2' || key === '4') {
+          this.warrantyPage = (this.warrantyPage + 4) % 5;
+          this.cb.onPlaySound?.('hit');
+        }
+        return;
+      }
+      if (this.callState !== 'idle') {
+        if (key === 'OK' && this.callState === 'ringing') {
+          RetroAudioEngine.stopNokiaMelody();
+          this.callState = 'connected';
+          this.callTimer = 0;
+          this.cb.onPlaySound?.('score');
+        } else {
+          this.callState = 'idle';
+          RetroAudioEngine.stopNokiaMelody();
+          this.cb.onPlaySound?.('hit');
+        }
+        return;
+      }
+
+      if (key === 'DEL') {
+        if (this.dialBuffer.length > 0) {
+          this.dialBuffer = this.dialBuffer.slice(0, -1);
+          this.dialR = 2;
+          this.dialC = 3;
+        } else {
+          this.app = 'desktop';
+        }
+        this.cb.onPlaySound?.('hit');
+        return;
+      }
+      if (key === 'CLR') {
+        this.dialBuffer = '';
+        this.dialR = 2;
+        this.dialC = 3;
+        this.cb.onPlaySound?.('hit');
+        return;
+      }
+      if (key === 'OK') {
+        this.dialR = 0;
+        this.dialC = 3; // CALL
+        const s = this.executePhoneKey('CALL');
+        if (s) this.cb.onPlaySound?.(s);
+        return;
+      }
+
+      // Highlight matching key on LCD DIAL_KEYS & dial with DTMF tone
+      for (let r = 0; r < DIAL_KEYS.length; r++) {
+        const c = DIAL_KEYS[r].indexOf(key);
+        if (c !== -1) {
+          this.dialR = r;
+          this.dialC = c;
+          break;
+        }
+      }
+      const s = this.executePhoneKey(key);
+      if (s) this.cb.onPlaySound?.(s);
     }
   }
 
@@ -1508,63 +1701,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (dir) return 'hit';
 
       if (pressA) {
-        const k = DIAL_KEYS[this.dialR][this.dialC];
-        if (k === 'CLR') {
-          this.dialBuffer = this.dialBuffer.slice(0, -1);
-          return 'hit';
-        }
-        if (k === 'LOCK') {
-          this.keyLocked = true;
-          this.unlockStage = false;
-          return 'score';
-        }
-        if (k === 'RING') {
-          const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
-          this.callState = 'ringing';
-          this.callTitle = 'NOKIA 3310 CALLING';
-          this.callSub = `♪ ${activeRing.title.trim()}`;
-          RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
-          return null;
-        }
-        if (k === 'CALL') {
-          const num = this.dialBuffer || '0532-3310';
-          this.callState = 'connected';
-          this.callTitle = `CALLING ${num}`;
-          this.callSub = 'VOICE LINE ACTIVE';
-          this.callTimer = 0;
-          return 'powerup';
-        }
-        if (this.dialBuffer.length < 16) {
-          this.dialBuffer += k;
-        }
-        RetroAudioEngine.playDialKey(k);
-        if (this.dialBuffer === '*#0000#') {
-          this.callState = 'info';
-          this.callTitle = 'V 05.57  23-11-26';
-          this.callSub = 'NHM-5NX (c) NOKIA';
-          this.dialBuffer = '';
-        } else if (this.dialBuffer === '*#06#') {
-          this.callState = 'info';
-          this.callTitle = 'IMEI SERIAL NO:';
-          this.callSub = '350993-10-331000-8';
-          this.dialBuffer = '';
-        } else if (this.dialBuffer === '*#92702689#') {
-          this.callState = 'warranty';
-          this.warrantyPage = 0;
-          this.dialBuffer = '';
-          return 'powerup';
-        } else if (this.dialBuffer === '*#7780#') {
-          this.callState = 'info';
-          this.callTitle = 'FACTORY RESTORE';
-          this.callSub = '3310 ROM SETTINGS OK';
-          this.dialBuffer = '';
-        } else if (this.dialBuffer === '*#7370#') {
-          this.callState = 'info';
-          this.callTitle = 'DEEP FORMAT 3310';
-          this.callSub = '100 CARTS VERIFIED';
-          this.dialBuffer = '';
-        }
-        return null;
+        return this.executePhoneKey(DIAL_KEYS[this.dialR][this.dialC]);
       }
       return null;
     }

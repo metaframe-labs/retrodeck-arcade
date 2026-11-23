@@ -67,9 +67,9 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
     onPressKey('DEL');
   };
 
-  const handleClear = () => {
+  const handleBack = () => {
     tapHaptic();
-    onPressKey('CLR');
+    onPressKey('BACK');
   };
 
   const handleOk = () => {
@@ -108,14 +108,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
         ))}
       </View>
 
-      {/* Right: Action & Mode Column */}
+      {/* Right: 4-Row Aligned Action & Mode Column */}
       <View style={styles.sideCol}>
-        <View style={[styles.targetBadge, { borderColor: `${accentColor}55` }]}>
-          <Text style={[styles.targetTxt, { color: accentColor }]} numberOfLines={1}>
-            {targetLabel}
-          </Text>
-        </View>
-
         <Pressable
           onPress={handleBackspace}
           style={({ pressed }) => [
@@ -124,19 +118,20 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             pressed && { borderColor: accentColor },
           ]}
         >
-          <Ionicons name="backspace-outline" size={16} color="#E2E8F0" />
+          <Ionicons name="backspace-outline" size={15} color="#E2E8F0" />
           <Text style={styles.sideTxt}>DEL</Text>
         </Pressable>
 
         <Pressable
-          onPress={handleClear}
+          onPress={handleBack}
           style={({ pressed }) => [
             styles.sideBtn,
             { backgroundColor: buttonBg, borderColor: buttonBorder },
             pressed && { borderColor: accentColor },
           ]}
         >
-          <Text style={styles.sideTxt}>CLR</Text>
+          <Ionicons name="return-down-back-outline" size={15} color="#E2E8F0" />
+          <Text style={styles.sideTxt}>BACK</Text>
         </Pressable>
 
         <Pressable
