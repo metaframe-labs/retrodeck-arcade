@@ -1906,6 +1906,38 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'calc') {
+      if (this.isNumericDeckActive) {
+        const ops = ['+', '-', '*', '/'];
+        if (dir === 'left' || dir === 'right') {
+          const curIdx = this.calcOp ? ops.indexOf(this.calcOp) : -1;
+          const nextIdx =
+            dir === 'right'
+              ? (curIdx + 1) % ops.length
+              : (curIdx - 1 + ops.length) % ops.length;
+          const nextOp = ops[nextIdx];
+          if (this.calcAcc === null) {
+            this.pressCalcKey(nextOp);
+          } else {
+            this.calcOp = nextOp;
+            this.calcFresh = true;
+          }
+          return 'hit';
+        }
+        if (dir === 'up') {
+          this.pressCalcKey('FX');
+          return 'score';
+        }
+        if (dir === 'down') {
+          this.pressCalcKey('.');
+          return 'hit';
+        }
+        if (pressA) {
+          this.pressCalcKey('=');
+          return 'score';
+        }
+        return null;
+      }
+
       if (dir === 'up') this.calcR = (this.calcR + 3) % 4;
       if (dir === 'down') this.calcR = (this.calcR + 1) % 4;
       if (dir === 'left') this.calcC = (this.calcC + 4) % 5;
