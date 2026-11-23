@@ -9,6 +9,7 @@ interface RetroNumericDeckProps {
   buttonBorder?: string;
   targetLabel?: string;
   onPressKey: (key: string) => void;
+  onNav: (dir: 'up' | 'down' | 'left' | 'right') => void;
   onSwitchMode: () => void;
   onKeySound?: () => void;
 }
@@ -45,8 +46,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   accentColor,
   buttonBg = '#121A26',
   buttonBorder = '#26374D',
-  targetLabel = 'NUM',
   onPressKey,
+  onNav,
   onSwitchMode,
   onKeySound,
 }) => {
@@ -55,6 +56,13 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
     onKeySound?.();
+  };
+
+  const handleNav = (dir: 'up' | 'down' | 'left' | 'right') => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+    onNav(dir);
   };
 
   const handleDigit = (d: string) => {
@@ -82,8 +90,30 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
 
   return (
     <View style={styles.wrap}>
-      {/* Left: Classic Nokia 3310 3x4 Numeric Matrix */}
+      {/* Left: Top Nokia Navi-Row + 3x4 Numeric Matrix */}
       <View style={styles.grid}>
+        <View style={styles.navRow}>
+          {(['left', 'up', 'down', 'right'] as const).map((dir) => {
+            const label = dir === 'left' ? '◀' : dir === 'up' ? '▲' : dir === 'down' ? '▼' : '▶';
+            return (
+              <Pressable
+                key={dir}
+                onPress={() => handleNav(dir)}
+                style={({ pressed }) => [
+                  styles.navBtn,
+                  { backgroundColor: buttonBg, borderColor: buttonBorder },
+                  pressed && {
+                    borderColor: accentColor,
+                    backgroundColor: `${accentColor}28`,
+                    transform: [{ scale: 0.95 }],
+                  },
+                ]}
+              >
+                <Text style={styles.navTxt}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
         {NUM_ROWS.map((row, rIdx) => (
           <View key={rIdx} style={styles.row}>
             {row.map((k) => (
@@ -175,12 +205,30 @@ const styles = StyleSheet.create({
   grid: {
     flex: 1,
     justifyContent: 'space-between',
-    gap: 6,
+    gap: 5,
+  },
+  navRow: {
+    height: 30,
+    flexDirection: 'row',
+    gap: 5,
+  },
+  navBtn: {
+    flex: 1,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navTxt: {
+    color: '#E2E8F0',
+    fontSize: 13,
+    fontWeight: '900',
+    fontFamily: 'monospace',
   },
   row: {
     flex: 1,
     flexDirection: 'row',
-    gap: 6,
+    gap: 5,
   },
   numKey: {
     flex: 1,

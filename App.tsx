@@ -749,6 +749,10 @@ function RetroDeckConsole() {
                   osRef.current.pressNumericKey?.(k);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
+                onNav={(dir) => {
+                  osRef.current.pressNavDir?.(dir);
+                  setKbdTick((t) => (t + 1) % 100000);
+                }}
                 onSwitchMode={() => setDeckMode('kbd')}
               />
             ) : (

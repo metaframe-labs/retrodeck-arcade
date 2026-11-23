@@ -1143,6 +1143,27 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.isNumericDeckActive = active;
   }
 
+  public pressNavDir(dir: 'up' | 'down' | 'left' | 'right') {
+    this.idleTimer = 0;
+    this.prevUp = false;
+    this.prevDown = false;
+    this.prevLeft = false;
+    this.prevRight = false;
+    this.moveCd = 0;
+    const s = this.update(
+      {
+        up: dir === 'up',
+        down: dir === 'down',
+        left: dir === 'left',
+        right: dir === 'right',
+        a: false,
+        b: false,
+      },
+      1 / 60
+    );
+    if (s) this.cb.onPlaySound?.(s);
+  }
+
   public pressNumericKey(key: string) {
     this.idleTimer = 0;
 
