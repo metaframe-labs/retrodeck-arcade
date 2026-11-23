@@ -27,6 +27,7 @@ import {
   PALETTE_ORDER,
   RETRO_PALETTES,
   RetroPaletteId,
+  getAccentInk,
 } from './src/theme/palettes';
 import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
@@ -483,8 +484,10 @@ function RetroDeckConsole() {
               onPress={() => setBayVisible(true)}
               style={[styles.cartBtn, { backgroundColor: palette.bezelAccent }]}
             >
-              <Ionicons name="albums" size={14} color="#04100C" />
-              <Text style={styles.cartBtnText}>CARTS</Text>
+              <Ionicons name="albums" size={14} color={getAccentInk(palette.bezelAccent)} />
+              <Text style={[styles.cartBtnText, { color: getAccentInk(palette.bezelAccent) }]}>
+                CARTS
+              </Text>
             </Pressable>
           </View>
         </View>

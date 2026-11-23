@@ -15,6 +15,7 @@ import {
   RetroPalette,
   RetroPaletteId,
   RetroThemeCategory,
+  getAccentInk,
 } from '../theme/palettes';
 
 interface ThemePickerModalProps {
@@ -92,8 +93,19 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
               onPress={onClose}
               style={[styles.closeBtn, { backgroundColor: activePalette.bezelAccent }]}
             >
-              <Ionicons name="checkmark" size={16} color="#06080A" />
-              <Text style={styles.closeTxt}>DONE</Text>
+              <Ionicons
+                name="checkmark"
+                size={16}
+                color={getAccentInk(activePalette.bezelAccent)}
+              />
+              <Text
+                style={[
+                  styles.closeTxt,
+                  { color: getAccentInk(activePalette.bezelAccent) },
+                ]}
+              >
+                DONE
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -126,7 +138,11 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                 <Text
                   style={[
                     styles.catTxt,
-                    { color: active ? '#06080A' : '#CBD5E1' },
+                    {
+                      color: active
+                        ? getAccentInk(activePalette.bezelAccent)
+                        : '#CBD5E1',
+                    },
                   ]}
                 >
                   {cat}
@@ -171,7 +187,14 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                         { backgroundColor: theme.bezelAccent },
                       ]}
                     >
-                      <Text style={styles.activeTagTxt}>ACTIVE</Text>
+                      <Text
+                        style={[
+                          styles.activeTagTxt,
+                          { color: getAccentInk(theme.bezelAccent) },
+                        ]}
+                      >
+                        ACTIVE
+                      </Text>
                     </View>
                   )}
                 </View>
