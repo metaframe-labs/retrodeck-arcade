@@ -123,11 +123,183 @@ export function synthesizeRetroSoundUri(sound: ArcadeSound): string {
   return `data:audio/wav;base64,${base64}`;
 }
 
+const SEMITONE_MAP: Record<string, number> = {
+  c: 0,
+  'c#': 1,
+  d: 2,
+  'd#': 3,
+  e: 4,
+  f: 5,
+  'f#': 6,
+  g: 7,
+  'g#': 8,
+  a: 9,
+  'a#': 10,
+  b: 11,
+};
+
+export interface NokiaNoteEvent {
+  token: string;
+  freq: number;
+  durationSec: number;
+  startSec: number;
+}
+
+/** Parses Nokia 3310 Composer notation (e.g. "8e2 8d2 4f#1 4g#1") into timed note events */
+export function parseNokiaMelody(notation: string, bpm: number = 160): NokiaNoteEvent[] {
+  const tokens = notation
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const beatSec = 60 / Math.max(40, Math.min(300, bpm));
+  const events: NokiaNoteEvent[] = [];
+  let cursor = 0;
+
+  for (const tok of tokens) {
+    const m = tok.toLowerCase().match(/^(1|2|4|8|16|32)(\.)?(-|[a-g]#?)([1-3])?$/);
+    if (!m) continue;
+    const div = parseInt(m[1], 10);
+    const dotted = Boolean(m[2]);
+    const noteStr = m[3];
+    const oct = m[4] ? parseInt(m[4], 10) : 1;
+
+    let dur = (4 / div) * beatSec;
+    if (dotted) dur *= 1.5;
+
+    let freq = 0;
+    if (noteStr !== '-' && noteStr in SEMITONE_MAP) {
+      const semi = SEMITONE_MAP[noteStr];
+      // Octave 1 in Nokia Composer = C5 (523.25 Hz)
+      const midi = 72 + (oct - 1) * 12 + semi;
+      freq = 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    events.push({
+      token: tok,
+      freq,
+      durationSec: dur,
+      startSec: cursor,
+    });
+    cursor += dur;
+  }
+
+  return events;
+}
+
+/** Synthesizes a Nokia 3310 piezo square-wave melody into a single Base64 WAV URI */
+export function synthesizeNokiaMelodyUri(notation: string, bpm: number = 160): {
+  uri: string;
+  events: NokiaNoteEvent[];
+  totalSec: number;
+} {
+  const events = parseNokiaMelody(notation, bpm);
+  const totalSec = events.reduce((acc, e) => acc + e.durationSec, 0);
+  const numSamples = Math.max(200, Math.min(SAMPLE_RATE * 25, Math.floor(totalSec * SAMPLE_RATE)));
+  const buffer = createWavBuffer(numSamples);
+  const dataOffset = 44;
+
+  buffer.fill(128, dataOffset);
+
+  for (const ev of events) {
+    if (ev.freq <= 0) continue;
+    const startSample = Math.floor(ev.startSec * SAMPLE_RATE);
+    // Leave tiny 14ms articulation gap between notes like a real 3310 buzzer
+    const gapSec = Math.min(0.014, ev.durationSec * 0.15);
+    const toneSamples = Math.floor((ev.durationSec - gapSec) * SAMPLE_RATE);
+    const endSample = Math.min(numSamples, startSample + toneSamples);
+
+    for (let i = startSample; i < endSample; i++) {
+      const localT = (i - startSample) / SAMPLE_RATE;
+      const wave = Math.sin(2 * Math.PI * ev.freq * localT) >= 0 ? 1 : -1;
+      buffer[dataOffset + i] = 128 + wave * 98;
+    }
+  }
+
+  return {
+    uri: `data:audio/wav;base64,${bytesToBase64(buffer)}`,
+    events,
+    totalSec,
+  };
+}
+
 export class RetroAudioEngine {
   private static pools: Partial<Record<ArcadeSound, any[]>> = {};
   private static poolIndex: Partial<Record<ArcadeSound, number>> = {};
   private static soundUris: Partial<Record<ArcadeSound, string>> = {};
   private static isInitialized = false;
+  private static melodyPlayer: any = null;
+  private static notePlayer: any = null;
+
+  public static stopNokiaMelody(): void {
+    try {
+      if (this.melodyPlayer) {
+        if (typeof this.melodyPlayer.pause === 'function') this.melodyPlayer.pause();
+        if (typeof this.melodyPlayer.remove === 'function') this.melodyPlayer.remove();
+        this.melodyPlayer = null;
+      }
+    } catch {
+      this.melodyPlayer = null;
+    }
+  }
+
+  public static playNokiaMelody(notation: string, bpm: number = 160): {
+    events: NokiaNoteEvent[];
+    totalSec: number;
+  } {
+    this.stopNokiaMelody();
+    const { uri, events, totalSec } = synthesizeNokiaMelodyUri(notation, bpm);
+
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
+        if (p) {
+          p.volume = 1.0;
+          this.melodyPlayer = p;
+          p.play();
+        }
+      } catch (e) {
+        console.warn('[RetroAudioEngine] playNokiaMelody error:', e);
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a = new Audio(uri);
+        a.volume = 0.9;
+        this.melodyPlayer = a;
+        a.play().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+
+    return { events, totalSec };
+  }
+
+  public static playNokiaNote(token: string, bpm: number = 160): void {
+    const { uri } = synthesizeNokiaMelodyUri(token, bpm);
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        if (this.notePlayer && typeof this.notePlayer.remove === 'function') {
+          this.notePlayer.remove();
+        }
+        const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
+        if (p) {
+          p.volume = 1.0;
+          this.notePlayer = p;
+          p.play();
+        }
+      } catch {
+        // ignore
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a = new Audio(uri);
+        a.volume = 0.9;
+        a.play().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   public static async init(): Promise<void> {
     if (this.isInitialized) return;

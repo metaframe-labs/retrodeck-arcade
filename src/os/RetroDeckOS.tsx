@@ -8,6 +8,7 @@ import {
   ArcadeStats,
 } from '../arcade/types';
 import { RetroPalette } from '../theme/palettes';
+import { NokiaNoteEvent, RetroAudioEngine } from '../audio/RetroAudioEngine';
 import {
   BYOK_PROVIDERS,
   BYOKChatMessage,
@@ -55,13 +56,72 @@ interface DesktopIcon {
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', code: '[+]', label: 'GAMES' },
   { id: 'ai', code: 'AI', label: 'CHAT' },
+  { id: 'synth', code: '3310', label: 'MUSIC' },
   { id: 'calc', code: '1+2', label: 'CALC' },
   { id: 'clock', code: '12:0', label: 'CLOCK' },
-  { id: 'synth', code: 'SFX', label: 'SYNTH' },
   { id: 'paint', code: 'PIX', label: 'PAINT' },
   { id: 'stats', code: 'TOP', label: 'STATS' },
   { id: 'term', code: '$>_', label: 'SHELL' },
   { id: 'setup', code: 'SYS', label: 'SETUP' },
+];
+
+interface NokiaSong {
+  title: string;
+  bpm: number;
+  notes: string;
+}
+
+const NOKIA_SONGS: NokiaSong[] = [
+  {
+    title: 'NOKIA TUNE',
+    bpm: 180,
+    notes: '8e2 8d2 4f#1 4g#1 8c#2 8b1 4d1 4e1 8b1 8a1 4c#1 4e1 2a1',
+  },
+  {
+    title: 'TETRIS 3310',
+    bpm: 160,
+    notes: '4e2 8b1 8c2 4d2 8c2 8b1 4a1 8a1 8c2 4e2 8d2 8c2 4b1 8c2 4d2 4e2 4c2 4a1 2a1',
+  },
+  {
+    title: 'MARIO BROS',
+    bpm: 200,
+    notes: '8e2 8e2 8- 8e2 8- 8c2 8e2 8- 4g2 4- 4g1',
+  },
+  {
+    title: 'STAR WARS',
+    bpm: 120,
+    notes: '4g1 4g1 4g1 8d#1. 16a#1 4g1 8d#1. 16a#1 2g1 4d2 4d2 4d2 8d#2. 16a#1 4f#1 8d#1. 16a#1 2g1',
+  },
+  {
+    title: 'AXEL F 3310',
+    bpm: 145,
+    notes: '4f1 8g#1. 16f1 16f1 8a#1 8f1 8d#1 4f1 8c2. 16f1 16f1 8c#2 8c2 8g#1 8f1 8c2 8f2 16f1 8d#1 16d#1 8c1 8g1 2f1',
+  },
+  {
+    title: 'PAC-MAN',
+    bpm: 160,
+    notes: '16b1 16b2 16f#2 16d#2 32b2 16f#2 8d#2 16c2 16c3 16g2 16e2 32c3 16g2 8e2',
+  },
+  {
+    title: 'CUSTOM 3310',
+    bpm: 160,
+    notes: '8c1 8d1 8e1 8f1 8g1 8a1 8b1 4c2',
+  },
+];
+
+const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'DEL' }[] = [
+  { label: '▶ PLAY', token: 'PLAY' },
+  { label: '♫ SONG', token: 'SONG' },
+  { label: '1: C1', token: '8c1' },
+  { label: '2: D1', token: '8d1' },
+  { label: '3: E1', token: '8e1' },
+  { label: '4: F1', token: '8f1' },
+  { label: '5: G1', token: '8g1' },
+  { label: '6: A1', token: '8a1' },
+  { label: '7: B1', token: '8b1' },
+  { label: '8: C2', token: '8c2' },
+  { label: '9: E2', token: '8e2' },
+  { label: '⌫ DEL', token: 'DEL' },
 ];
 
 const CALC_KEYS = [
@@ -177,8 +237,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private swTime = 0;
   private swLap = 0;
 
-  // Synth state
-  private synthIdx = 0;
+  // Nokia 3310 Composer / Music state
+  private synthIdx = 0; // 0..11 in COMPOSER_KEYS
+  private songIdx = 0;
+  private songs: NokiaSong[] = NOKIA_SONGS.map((s) => ({ ...s }));
+  private melodyPlaying = false;
+  private melodyTimer = 0;
+  private melodyDuration = 0;
+  private melodyEvents: NokiaNoteEvent[] = [];
 
   // Pixel Paint 16x10
   private paintW = 16;
@@ -240,12 +306,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.app = 'desktop';
     this.prevA = true;
     this.prevB = true;
+    this.melodyPlaying = false;
+    RetroAudioEngine.stopNokiaMelody();
     this.cb.onRequestKeyboard?.(false);
   }
 
   public getCurrentTitle(): string {
     if (this.app === 'boot') return 'BIOS BOOT';
     if (this.app === 'desktop') return 'RETRODECK OS';
+    if (this.app === 'synth') return '3310 COMPOSER';
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -270,7 +339,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       case 'clock':
         return '[A]: Start/Stop Stopwatch • [▲]: Reset • [B]: Desktop';
       case 'synth':
-        return 'D-PAD: Select Sound • [A]: Play SFX • [B]: Desktop';
+        return 'D-PAD: Select Note/Play • [A]: Play/Add Note • [B]: Exit';
       case 'paint':
         return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
       case 'stats':
@@ -427,8 +496,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return null;
     }
 
+    if (this.melodyPlaying) {
+      this.melodyTimer += dt;
+      if (this.melodyTimer >= this.melodyDuration) {
+        this.melodyPlaying = false;
+        this.melodyTimer = 0;
+      }
+    }
+
     // Global B = return to desktop from any sub-app
     if (this.app !== 'desktop' && pressB) {
+      if (this.melodyPlaying) {
+        this.melodyPlaying = false;
+        RetroAudioEngine.stopNokiaMelody();
+      }
       this.app = 'desktop';
       this.cb.onRequestKeyboard?.(false);
       return 'hit';
@@ -582,13 +663,52 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'synth') {
-      if (dir === 'left') this.synthIdx = (this.synthIdx + 8) % 9;
-      if (dir === 'right') this.synthIdx = (this.synthIdx + 1) % 9;
-      if (dir === 'up') this.synthIdx = (this.synthIdx + 6) % 9;
-      if (dir === 'down') this.synthIdx = (this.synthIdx + 3) % 9;
+      const totalKeys = COMPOSER_KEYS.length; // 12 (4 cols x 3 rows)
+      if (dir === 'left') this.synthIdx = (this.synthIdx + totalKeys - 1) % totalKeys;
+      if (dir === 'right') this.synthIdx = (this.synthIdx + 1) % totalKeys;
+      if (dir === 'up') this.synthIdx = (this.synthIdx + totalKeys - 4) % totalKeys;
+      if (dir === 'down') this.synthIdx = (this.synthIdx + 4) % totalKeys;
       if (dir) return 'hit';
+
       if (pressA) {
-        return SYNTH_SOUNDS[this.synthIdx].sfx;
+        const key = COMPOSER_KEYS[this.synthIdx];
+        const curSong = this.songs[this.songIdx];
+        if (key.token === 'PLAY') {
+          if (this.melodyPlaying) {
+            this.melodyPlaying = false;
+            RetroAudioEngine.stopNokiaMelody();
+          } else {
+            const res = RetroAudioEngine.playNokiaMelody(curSong.notes, curSong.bpm);
+            this.melodyEvents = res.events;
+            this.melodyDuration = res.totalSec;
+            this.melodyTimer = 0;
+            this.melodyPlaying = res.totalSec > 0;
+          }
+          return null;
+        }
+        if (key.token === 'SONG') {
+          this.melodyPlaying = false;
+          RetroAudioEngine.stopNokiaMelody();
+          this.songIdx = (this.songIdx + 1) % this.songs.length;
+          return 'score';
+        }
+        if (key.token === 'DEL') {
+          this.melodyPlaying = false;
+          RetroAudioEngine.stopNokiaMelody();
+          const parts = curSong.notes.trim().split(/\s+/).filter(Boolean);
+          parts.pop();
+          curSong.notes = parts.join(' ');
+          return 'hit';
+        }
+        // Musical note pressed! Play piezo note and append to current song
+        this.melodyPlaying = false;
+        RetroAudioEngine.stopNokiaMelody();
+        RetroAudioEngine.playNokiaNote(key.token, curSong.bpm);
+        const parts = curSong.notes.trim().split(/\s+/).filter(Boolean);
+        if (parts.length >= 24) parts.shift();
+        parts.push(key.token);
+        curSong.notes = parts.join(' ');
+        return null;
       }
       return null;
     }
@@ -1045,23 +1165,89 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderSynth(fg: string, bg: string) {
+    const curSong = this.songs[this.songIdx];
+    const tokens = curSong.notes.trim().split(/\s+/).filter(Boolean);
+
+    // Find active playing note index
+    let activeNoteIdx = -1;
+    if (this.melodyPlaying) {
+      for (let i = 0; i < this.melodyEvents.length; i++) {
+        const ev = this.melodyEvents[i];
+        if (
+          this.melodyTimer >= ev.startSec &&
+          this.melodyTimer < ev.startSec + ev.durationSec
+        ) {
+          activeNoteIdx = i;
+          break;
+        }
+      }
+    }
+
     return (
-      <View style={styles.deskGrid}>
-        {SYNTH_SOUNDS.map((item, idx) => {
-          const sel = idx === this.synthIdx;
-          return (
-            <View
-              key={item.sfx}
-              style={[
-                styles.deskTile,
-                { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-              ]}
-            >
-              <Text style={[styles.deskCode, { color: sel ? bg : fg }]}>#{idx + 1}</Text>
-              <Text style={[styles.deskLbl, { color: sel ? bg : fg }]}>{item.label}</Text>
-            </View>
-          );
-        })}
+      <View style={styles.listWrap}>
+        {/* Top Nokia 3310 Composer Header */}
+        <View style={styles.compHeader}>
+          <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
+            ♪ {this.songIdx + 1}/{this.songs.length} {curSong.title}
+          </Text>
+          <Text style={[styles.compBpm, { color: fg }]}>
+            {this.melodyPlaying ? 'PLAYING' : `${curSong.bpm}BPM`}
+          </Text>
+        </View>
+
+        {/* Nokia 3310 Note Staff Screen */}
+        <View style={[styles.compStaff, { borderColor: fg }]}>
+          <View style={styles.compTokensWrap}>
+            {tokens.slice(0, 18).map((tok, idx) => {
+              const isPlaying = idx === activeNoteIdx;
+              return (
+                <View
+                  key={idx}
+                  style={[
+                    styles.compTokPill,
+                    isPlaying && { backgroundColor: fg },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.compTokTxt,
+                      { color: isPlaying ? bg : fg },
+                    ]}
+                  >
+                    {tok}
+                  </Text>
+                </View>
+              );
+            })}
+            {tokens.length === 0 && (
+              <Text style={[styles.compTokTxt, { color: fg }]}>
+                (EMPTY - TAP NOTES BELOW TO COMPOSE)
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* 12-Key 3310 Composer Keypad (4 cols x 3 rows) */}
+        <View style={styles.compKeypad}>
+          {COMPOSER_KEYS.map((item, idx) => {
+            const sel = idx === this.synthIdx;
+            const label =
+              item.token === 'PLAY' && this.melodyPlaying ? '■ STOP' : item.label;
+            return (
+              <View
+                key={idx}
+                style={[
+                  styles.compKey,
+                  { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                ]}
+              >
+                <Text style={[styles.compKeyTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                  {label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
     );
   }
@@ -1464,6 +1650,62 @@ const styles = StyleSheet.create({
   swLap: {
     fontSize: 9,
     fontWeight: '800',
+    fontFamily: 'monospace',
+  },
+  compHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 3,
+  },
+  compTitle: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  compBpm: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  compStaff: {
+    flex: 1,
+    borderWidth: 1.5,
+    paddingHorizontal: 5,
+    paddingVertical: 4,
+    marginBottom: 4,
+    overflow: 'hidden',
+  },
+  compTokensWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 3,
+  },
+  compTokPill: {
+    paddingHorizontal: 3,
+    paddingVertical: 1,
+  },
+  compTokTxt: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  compKeypad: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  compKey: {
+    width: '24%',
+    borderWidth: 1,
+    paddingVertical: 3,
+    marginBottom: 2.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compKeyTxt: {
+    fontSize: 8,
+    fontWeight: '900',
     fontFamily: 'monospace',
   },
   miniHint: {
