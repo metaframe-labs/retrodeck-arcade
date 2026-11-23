@@ -87,8 +87,8 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             style={[
               styles.ledDot,
               {
-                backgroundColor: isPaused ? '#FF9F0A' : (palette.actionAccent || palette.bezelAccent),
-                shadowColor: isPaused ? '#FF9F0A' : (palette.actionAccent || palette.bezelAccent),
+                backgroundColor: isPaused ? '#FF9F0A' : (palette.ledColor || palette.bezelAccent),
+                shadowColor: isPaused ? '#FF9F0A' : (palette.ledColor || palette.bezelAccent),
               },
             ]}
           />

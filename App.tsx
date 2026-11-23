@@ -681,7 +681,7 @@ function RetroDeckConsole() {
               <View
                 style={[
                   styles.statusLed,
-                  { backgroundColor: palette.actionAccent || palette.bezelAccent },
+                  { backgroundColor: palette.ledColor || palette.bezelAccent },
                 ]}
               />
               <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
@@ -718,7 +718,7 @@ function RetroDeckConsole() {
             ) : (
               <RetroKeypad
                 labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
-                accentColor={palette.actionAccent || palette.bezelAccent}
+                accentColor={palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 centerBg={palette.bezelBg}

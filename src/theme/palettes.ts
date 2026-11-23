@@ -45,7 +45,7 @@ export interface RetroPalette {
   pixelGlow: string;
   scanlineColor: string;
   bezelAccent: string;
-  actionAccent?: string;
+  ledColor?: string;
   textMuted: string;
   isLightLcd?: boolean;
   // Hardware chassis & tactile controls shell colors
@@ -266,7 +266,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelGlow: 'rgba(230, 236, 239, 0.35)',
     scanlineColor: 'rgba(0, 0, 0, 0.24)',
     bezelAccent: '#D1D5DB',
-    actionAccent: '#EE1D23',
+    ledColor: '#EE1D23',
     textMuted: '#737D84',
     chassisBg: '#050506',
     deckBg: '#0B0B0D',
@@ -286,7 +286,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelGlow: 'rgba(255, 241, 232, 0.4)',
     scanlineColor: 'rgba(0, 0, 0, 0.25)',
     bezelAccent: '#29ADFF',
-    actionAccent: '#FF004D',
+    ledColor: '#FF004D',
     textMuted: '#83769C',
     chassisBg: '#0B1021',
     deckBg: '#121A33',
@@ -325,7 +325,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelGlow: 'rgba(122, 162, 247, 0.5)',
     scanlineColor: 'rgba(0, 0, 0, 0.24)',
     bezelAccent: '#7AA2F7',
-    actionAccent: '#7DCFFF',
+    ledColor: '#7DCFFF',
     textMuted: '#565F89',
     chassisBg: '#070910',
     deckBg: '#0E121E',
@@ -557,7 +557,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelGlow: 'rgba(255, 42, 133, 0.58)',
     scanlineColor: 'rgba(0, 0, 0, 0.25)',
     bezelAccent: '#FF2A85',
-    actionAccent: '#00E5FF',
+    ledColor: '#00E5FF',
     textMuted: '#844D9E',
     chassisBg: '#080311',
     deckBg: '#100620',
@@ -596,7 +596,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelGlow: 'rgba(255, 182, 39, 0.55)',
     scanlineColor: 'rgba(0, 0, 0, 0.28)',
     bezelAccent: '#FF7B29',
-    actionAccent: '#FF2E7E',
+    ledColor: '#FF2E7E',
     textMuted: '#9B456E',
     chassisBg: '#10050B',
     deckBg: '#1A0913',
