@@ -39,9 +39,12 @@ type OsAppId =
   | 'desktop'
   | 'arcade'
   | 'ai'
+  | 'synth'
+  | 'phone'
+  | 'sms'
+  | 'profiles'
   | 'calc'
   | 'clock'
-  | 'synth'
   | 'paint'
   | 'stats'
   | 'term'
@@ -57,6 +60,9 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', code: '[+]', label: 'GAMES' },
   { id: 'ai', code: 'AI', label: 'CHAT' },
   { id: 'synth', code: '3310', label: 'MUSIC' },
+  { id: 'phone', code: 'CALL', label: 'PHONE' },
+  { id: 'sms', code: 'SMS', label: 'INBOX' },
+  { id: 'profiles', code: 'PROF', label: 'NOKIA' },
   { id: 'calc', code: '1+2', label: 'CALC' },
   { id: 'clock', code: '12:0', label: 'CLOCK' },
   { id: 'paint', code: 'PIX', label: 'PAINT' },
@@ -64,6 +70,74 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'term', code: '$>_', label: 'SHELL' },
   { id: 'setup', code: 'SYS', label: 'SETUP' },
 ];
+
+const DIAL_KEYS = [
+  ['1', '2', '3', 'CALL'],
+  ['4', '5', '6', 'RING'],
+  ['7', '8', '9', 'CLR'],
+  ['*', '0', '#', '*#00'],
+];
+
+interface NokiaPicSms {
+  sender: string;
+  title: string;
+  text: string;
+  art: string[]; // 5 rows of 11 chars ('#' = pixel on)
+}
+
+const NOKIA_PIC_MESSAGES: NokiaPicSms[] = [
+  {
+    sender: '0532-KONTOR',
+    title: 'CALDIR KAPAT',
+    text: 'KONTORUM BITTI BENI CALDIR KAPAT :)',
+    art: [
+      '..#######..',
+      '.#.......#.',
+      '.#.#####.#.',
+      '..#.....#..',
+      '...#####...',
+    ],
+  },
+  {
+    sender: 'SNAKE-KING',
+    title: 'YILAN REKORU',
+    text: 'YILANDA 9999 PUAN YAPTIM GECEBILEN VAR MI?',
+    art: [
+      '#######....',
+      '......#....',
+      '..#####....',
+      '..#.....*..',
+      '..#######..',
+    ],
+  },
+  {
+    sender: 'NOKIA-3310',
+    title: 'CONNECTING',
+    text: 'NOKIA 3310: SARJIM 2 HAFTA GIDIYOR XD',
+    art: [
+      '.###...###.',
+      '#####.#####',
+      '..#######..',
+      '...#####...',
+      '....###....',
+    ],
+  },
+  {
+    sender: 'DOGUM-GUNU',
+    title: 'RESIMLI SMS',
+    text: 'IYI KI DOGDUN! (BU RESIMLI MESAJ 2 KONTOR)',
+    art: [
+      '...*.*.*...',
+      '...#.#.#...',
+      '.#########.',
+      '.#.......#.',
+      '.#########.',
+    ],
+  },
+];
+
+const NOKIA_PROFILES = ['GENERAL', 'SILENT', 'DISCREET', 'LOUD', 'OUTDOOR'];
+const NOKIA_OPERATORS = ['TRKCELL', 'TELSIM', 'ARIA', 'NOKIA', 'RD-OS 1.1'];
 
 interface NokiaSong {
   title: string;
@@ -268,6 +342,24 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Setup state
   private setupIdx = 0;
 
+  // Nokia 3310 Phone / SMS / Profiles state
+  private dialR = 0;
+  private dialC = 0;
+  private dialBuffer = '';
+  private callState: 'idle' | 'ringing' | 'connected' | 'info' = 'idle';
+  private callTitle = '';
+  private callSub = '';
+  private callTimer = 0;
+
+  private smsIdx = 0;
+  private smsBanner = '';
+  private smsBannerTimer = 0;
+
+  private profRow = 0;
+  private profileIdx = 0;
+  private operatorIdx = 0;
+  private torchInvert = false;
+
   constructor(cb: RetroDeckOSCallbacks) {
     this.cb = cb;
     this.clearCanvas();
@@ -340,6 +432,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return '[A]: Start/Stop Stopwatch • [▲]: Reset • [B]: Desktop';
       case 'synth':
         return 'D-PAD: Select Note/Play • [A]: Play/Add Note • [B]: Exit';
+      case 'phone':
+        return 'D-PAD: Keypad • [A]: Press/Call (*#0000# Firmware) • [B]: Exit';
+      case 'sms':
+        return '[◀]/[▶]: Browse Picture SMS • [A]: Send w/ Nokia Tone • [B]: Exit';
+      case 'profiles':
+        return '[▲]/[▼]: Option • [A]: Change Profile/Operator/Torch • [B]: Exit';
       case 'paint':
         return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
       case 'stats':
@@ -496,6 +594,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return null;
     }
 
+    if (this.callState === 'connected') {
+      this.callTimer += dt;
+    }
+    if (this.smsBannerTimer > 0) {
+      this.smsBannerTimer -= dt;
+    }
+
     if (this.melodyPlaying) {
       this.melodyTimer += dt;
       if (this.melodyTimer >= this.melodyDuration) {
@@ -510,6 +615,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.melodyPlaying = false;
         RetroAudioEngine.stopNokiaMelody();
       }
+      this.callState = 'idle';
       this.app = 'desktop';
       this.cb.onRequestKeyboard?.(false);
       return 'hit';
@@ -526,10 +632,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'desktop') {
-      if (dir === 'left') this.deskIdx = (this.deskIdx + 8) % 9;
-      if (dir === 'right') this.deskIdx = (this.deskIdx + 1) % 9;
-      if (dir === 'up') this.deskIdx = (this.deskIdx + 6) % 9;
-      if (dir === 'down') this.deskIdx = (this.deskIdx + 3) % 9;
+      const total = DESKTOP_ICONS.length; // 12 (4 cols x 3 rows)
+      if (dir === 'left') this.deskIdx = (this.deskIdx + total - 1) % total;
+      if (dir === 'right') this.deskIdx = (this.deskIdx + 1) % total;
+      if (dir === 'up') this.deskIdx = (this.deskIdx + total - 4) % total;
+      if (dir === 'down') this.deskIdx = (this.deskIdx + 4) % total;
       if (dir) return 'hit';
 
       if (pressA) {
@@ -538,6 +645,123 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.kbdTarget = 'chat';
         }
         return 'score';
+      }
+      return null;
+    }
+
+    if (this.app === 'phone') {
+      if (this.callState !== 'idle') {
+        if (pressA) {
+          if (this.callState === 'ringing') {
+            RetroAudioEngine.stopNokiaMelody();
+            this.callState = 'connected';
+            this.callTimer = 0;
+            return 'score';
+          } else {
+            this.callState = 'idle';
+            RetroAudioEngine.stopNokiaMelody();
+            return 'hit';
+          }
+        }
+        return null;
+      }
+
+      if (dir === 'up') this.dialR = (this.dialR + 3) % 4;
+      if (dir === 'down') this.dialR = (this.dialR + 1) % 4;
+      if (dir === 'left') this.dialC = (this.dialC + 3) % 4;
+      if (dir === 'right') this.dialC = (this.dialC + 1) % 4;
+      if (dir) return 'hit';
+
+      if (pressA) {
+        const k = DIAL_KEYS[this.dialR][this.dialC];
+        if (k === 'CLR') {
+          this.dialBuffer = this.dialBuffer.slice(0, -1);
+          return 'hit';
+        }
+        if (k === '*#00') {
+          this.callState = 'info';
+          this.callTitle = 'V 05.57  23-11-26';
+          this.callSub = 'NHM-5NX (c) NOKIA';
+          return 'powerup';
+        }
+        if (k === 'RING') {
+          this.callState = 'ringing';
+          this.callTitle = 'NOKIA 3310 CALLING';
+          this.callSub = '+358-50-3310-00';
+          RetroAudioEngine.playNokiaMelody(NOKIA_SONGS[0].notes, NOKIA_SONGS[0].bpm);
+          return null;
+        }
+        if (k === 'CALL') {
+          const num = this.dialBuffer || '0532-3310';
+          this.callState = 'connected';
+          this.callTitle = `CALLING ${num}`;
+          this.callSub = 'VOICE LINE ACTIVE';
+          this.callTimer = 0;
+          return 'powerup';
+        }
+        // Digit pressed
+        if (this.dialBuffer.length < 14) {
+          this.dialBuffer += k;
+        }
+        RetroAudioEngine.playDialKey(k);
+        if (this.dialBuffer === '*#0000#') {
+          this.callState = 'info';
+          this.callTitle = 'V 05.57  23-11-26';
+          this.callSub = 'NHM-5NX (c) NOKIA';
+          this.dialBuffer = '';
+        } else if (this.dialBuffer === '*#06#') {
+          this.callState = 'info';
+          this.callTitle = 'IMEI SERIAL NO:';
+          this.callSub = '350993-10-331000-8';
+          this.dialBuffer = '';
+        }
+        return null;
+      }
+      return null;
+    }
+
+    if (this.app === 'sms') {
+      if (dir === 'left' || dir === 'up') {
+        this.smsIdx = (this.smsIdx + NOKIA_PIC_MESSAGES.length - 1) % NOKIA_PIC_MESSAGES.length;
+        return 'hit';
+      }
+      if (dir === 'right' || dir === 'down') {
+        this.smsIdx = (this.smsIdx + 1) % NOKIA_PIC_MESSAGES.length;
+        return 'hit';
+      }
+      if (pressA) {
+        RetroAudioEngine.playNokiaSmsTone();
+        this.smsBanner = 'SENDING SMS... DELIVERED!';
+        this.smsBannerTimer = 2.2;
+        return null;
+      }
+      return null;
+    }
+
+    if (this.app === 'profiles') {
+      if (dir === 'up') {
+        this.profRow = (this.profRow + 3) % 4;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        this.profRow = (this.profRow + 1) % 4;
+        return 'hit';
+      }
+      if (pressA || dir === 'left' || dir === 'right') {
+        const step = dir === 'left' ? -1 : 1;
+        if (this.profRow === 0) {
+          this.profileIdx = (this.profileIdx + step + NOKIA_PROFILES.length) % NOKIA_PROFILES.length;
+          return 'score';
+        } else if (this.profRow === 1) {
+          this.operatorIdx = (this.operatorIdx + step + NOKIA_OPERATORS.length) % NOKIA_OPERATORS.length;
+          return 'score';
+        } else if (this.profRow === 2 && pressA) {
+          RetroAudioEngine.playNokiaSmsTone();
+          return null;
+        } else if (this.profRow === 3 && pressA) {
+          this.torchInvert = !this.torchInvert;
+          return 'powerup';
+        }
       }
       return null;
     }
@@ -872,8 +1096,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public renderEntities(palette: RetroPalette): React.ReactNode {
-    const fg = palette.pixelOn;
-    const bg = palette.screenBg;
+    const fg = this.torchInvert ? palette.screenBg : palette.pixelOn;
+    const bg = this.torchInvert ? palette.pixelOn : palette.screenBg;
 
     if (this.app === 'boot') {
       const pct = Math.min(100, Math.floor((this.bootTimer / 1.4) * 100));
@@ -897,13 +1121,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     return (
       <View style={[styles.container, { backgroundColor: bg }]}>
-        {/* OS Top Status Bar */}
+        {/* OS Top Status Bar (Authentic Nokia 3310 Signal + Operator + Clock + Battery) */}
         <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
           <Text style={[styles.osBarTxt, { color: bg }]}>
-            {this.app === 'desktop' ? 'RD-OS 1.1' : `< ${this.app.toUpperCase()}`}
+            {this.app === 'desktop'
+              ? `Ψ|||| ${NOKIA_OPERATORS[this.operatorIdx]}`
+              : `< ${this.app.toUpperCase()}`}
           </Text>
           <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
-          <Text style={[styles.osBarTxt, { color: bg }]}>BAT[###]</Text>
+          <Text style={[styles.osBarTxt, { color: bg }]}>
+            {NOKIA_PROFILES[this.profileIdx].slice(0, 3)} [||||]
+          </Text>
         </View>
 
         {/* Body */}
@@ -911,9 +1139,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'desktop' && this.renderDesktop(fg, bg)}
           {this.app === 'arcade' && this.renderArcadeBrowser(fg, bg)}
           {this.app === 'ai' && this.renderAiApp(fg, bg)}
+          {this.app === 'synth' && this.renderSynth(fg, bg)}
+          {this.app === 'phone' && this.renderPhone(fg, bg)}
+          {this.app === 'sms' && this.renderSms(fg, bg)}
+          {this.app === 'profiles' && this.renderProfiles(fg, bg)}
           {this.app === 'calc' && this.renderCalc(fg, bg)}
           {this.app === 'clock' && this.renderClock(fg, bg)}
-          {this.app === 'synth' && this.renderSynth(fg, bg)}
           {this.app === 'paint' && this.renderPaint(fg, bg)}
           {this.app === 'stats' && this.renderStats(fg, bg)}
           {this.app === 'term' && this.renderTerm(fg, bg)}
@@ -1252,6 +1483,157 @@ export class RetroDeckOS implements ArcadeGameInstance {
     );
   }
 
+  private renderPhone(fg: string, bg: string) {
+    if (this.callState !== 'idle') {
+      return (
+        <View style={styles.centerBox}>
+          <View style={[styles.swBox, { borderColor: fg, width: '90%' }]}>
+            <Text style={[styles.swLbl, { color: fg, marginBottom: 4 }]}>
+              {this.callState === 'ringing'
+                ? '((( INCOMING CALL )))'
+                : this.callState === 'connected'
+                ? `CONNECTED 00:${String(Math.floor(this.callTimer)).padStart(2, '0')}`
+                : 'NOKIA 3310 SERVICE'}
+            </Text>
+            <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
+              {this.callTitle}
+            </Text>
+            <Text style={[styles.clockDate, { color: fg, marginTop: 4, marginBottom: 4 }]}>
+              {this.callSub}
+            </Text>
+          </View>
+          <Text style={[styles.miniHint, { color: fg }]}>
+            {this.callState === 'ringing'
+              ? '[A] ANSWER CALL   [B] REJECT'
+              : '[A] / [B] END / BACK'}
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.calcWrap}>
+        <View style={[styles.calcScreen, { borderColor: fg }]}>
+          <Text style={[styles.calcOp, { color: fg }]}>TEL:</Text>
+          <Text style={[styles.calcNum, { color: fg }]} numberOfLines={1}>
+            {this.dialBuffer || '*#0000# / *#06#'}
+          </Text>
+        </View>
+        <View style={styles.calcGrid}>
+          {DIAL_KEYS.map((row, r) => (
+            <View key={r} style={styles.calcRow}>
+              {row.map((k, c) => {
+                const sel = r === this.dialR && c === this.dialC;
+                return (
+                  <View
+                    key={k}
+                    style={[
+                      styles.calcKey,
+                      { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                    ]}
+                  >
+                    <Text style={[styles.compKeyTxt, { color: sel ? bg : fg }]}>{k}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  private renderSms(fg: string, _bg: string) {
+    const msg = NOKIA_PIC_MESSAGES[this.smsIdx];
+    return (
+      <View style={styles.listWrap}>
+        <View style={styles.compHeader}>
+          <Text style={[styles.compTitle, { color: fg }]}>
+            ✉ {this.smsIdx + 1}/{NOKIA_PIC_MESSAGES.length} {msg.sender}
+          </Text>
+          <Text style={[styles.compBpm, { color: fg }]}>◀/▶ NEXT</Text>
+        </View>
+
+        {/* Picture Postcard + Text */}
+        <View
+          style={[
+            styles.compStaff,
+            {
+              borderColor: fg,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            },
+          ]}
+        >
+          {/* 11x5 Pixel Postcard */}
+          <View style={{ borderWidth: 1.5, borderColor: fg, padding: 3 }}>
+            {msg.art.map((row, rIdx) => (
+              <View key={rIdx} style={{ flexDirection: 'row' }}>
+                {row.split('').map((ch, cIdx) => (
+                  <View
+                    key={cIdx}
+                    style={{
+                      width: 6,
+                      height: 6,
+                      backgroundColor: ch !== '.' ? fg : 'transparent',
+                    }}
+                  />
+                ))}
+              </View>
+            ))}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.compTitle, { color: fg, marginBottom: 3 }]}>
+              [{msg.title}]
+            </Text>
+            <Text style={[styles.compTokTxt, { color: fg, lineHeight: 12 }]}>
+              {msg.text}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]}>
+          {this.smsBannerTimer > 0
+            ? this.smsBanner
+            : 'PRESS [A] TO SEND SMS (PLAYS NOKIA MORSE TONE)'}
+        </Text>
+      </View>
+    );
+  }
+
+  private renderProfiles(fg: string, bg: string) {
+    const rows = [
+      `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
+      `OPERATOR LOGO: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
+      'PLAY NOKIA 3310 SMS TONE (... -- ...)',
+      `TORCH / INVERT LCD: ${this.torchInvert ? 'ON' : 'OFF'}`,
+    ];
+    return (
+      <View style={styles.listWrap}>
+        <Text style={[styles.subHeader, { color: fg }]}>NOKIA 3310 PROFILES & EXTRAS</Text>
+        {rows.map((label, i) => {
+          const sel = i === this.profRow;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.setupRow,
+                { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+              ]}
+            >
+              <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                {sel ? '> ' : '  '}
+                {label}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
+    );
+  }
+
   private renderPaint(fg: string, bg: string) {
     return (
       <View style={styles.centerBox}>
@@ -1480,26 +1862,26 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignContent: 'space-between',
-    padding: 4,
+    padding: 2,
   },
   deskTile: {
-    width: '31%',
-    height: '30%',
+    width: '23.5%',
+    height: '30.5%',
     borderWidth: 2,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
   deskCode: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
   deskLbl: {
-    fontSize: 8,
+    fontSize: 7.5,
     fontWeight: '900',
     fontFamily: 'monospace',
-    marginTop: 2,
+    marginTop: 1,
   },
   listWrap: {
     flex: 1,

@@ -301,6 +301,33 @@ export class RetroAudioEngine {
     }
   }
 
+  /** Plays the iconic Nokia 3310 Morse "S-M-S" (... -- ...) message tone */
+  public static playNokiaSmsTone(): void {
+    this.playNokiaMelody(
+      '16e2 32- 16e2 32- 16e2 8- 8e2 32- 8e2 8- 16e2 32- 16e2 32- 16e2',
+      170
+    );
+  }
+
+  /** Plays a distinct keypad dialer tone for 0-9, *, # */
+  public static playDialKey(key: string): void {
+    const map: Record<string, string> = {
+      '1': '16c1',
+      '2': '16d1',
+      '3': '16e1',
+      '4': '16f1',
+      '5': '16g1',
+      '6': '16a1',
+      '7': '16b1',
+      '8': '16c2',
+      '9': '16d2',
+      '*': '16e2',
+      '0': '16f2',
+      '#': '16g2',
+    };
+    this.playNokiaNote(map[key] || '16c2', 180);
+  }
+
   public static async init(): Promise<void> {
     if (this.isInitialized) return;
     this.isInitialized = true;
