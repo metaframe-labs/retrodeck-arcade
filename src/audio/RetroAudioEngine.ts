@@ -42,10 +42,31 @@ function createWavBuffer(numSamples: number): Uint8Array {
   return buffer;
 }
 
+export type KeypadSoundStyle =
+  | 'nokia_blip'   // Iconic high-pitch 3310 piezo tap
+  | 'gameboy_click' // Chunky mechanical Game Boy tactile click
+  | 'cyber_beep'   // Futuristic sci-fi synth pulse
+  | 'dtmf_tone'    // Phone keypad multi-frequency dial tone
+  | 'silent';      // No key tone
+
+export const KEYPAD_SOUND_STYLES: { id: KeypadSoundStyle; name: string }[] = [
+  { id: 'nokia_blip', name: 'NOKIA 3310' },
+  { id: 'gameboy_click', name: 'ORIGINAL GB' },
+  { id: 'cyber_beep', name: 'CYBER SYNTH' },
+  { id: 'dtmf_tone', name: 'PHONE DTMF' },
+  { id: 'silent', name: 'MUTE KEYS' },
+];
+
 /** Synthesizes authentic 8-bit sound waveforms directly into Base64 WAV data URI */
-export function synthesizeRetroSoundUri(sound: ArcadeSound): string {
+export function synthesizeRetroSoundUri(sound: ArcadeSound, keyStyle: KeypadSoundStyle = 'nokia_blip'): string {
   let duration = 0.10;
-  if (sound === 'shoot') duration = 0.12;
+  if (sound === 'hit') {
+    if (keyStyle === 'gameboy_click') duration = 0.04;
+    else if (keyStyle === 'cyber_beep') duration = 0.08;
+    else if (keyStyle === 'dtmf_tone') duration = 0.07;
+    else duration = 0.05; // nokia_blip
+  }
+  else if (sound === 'shoot') duration = 0.12;
   else if (sound === 'score') duration = 0.16;
   else if (sound === 'powerup') duration = 0.24;
   else if (sound === 'explode') duration = 0.25;
@@ -63,10 +84,36 @@ export function synthesizeRetroSoundUri(sound: ArcadeSound): string {
 
     switch (sound) {
       case 'hit': {
-        const freq = 520 - progress * 280;
-        const env = Math.max(0, 1 - progress * 1.4);
-        const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
-        sample = Math.floor(128 + wave * 105 * env);
+        if (keyStyle === 'silent') {
+          sample = 128;
+          break;
+        }
+        if (keyStyle === 'gameboy_click') {
+          // Tactile low-frequency square thump + transient click
+          const env = Math.max(0, 1 - progress * 2.2);
+          const click = Math.sin(2 * Math.PI * 180 * t) > 0 ? 1 : -1;
+          const pop = (Math.random() * 2 - 1) * Math.exp(-progress * 25);
+          sample = Math.floor(128 + (click * 70 + pop * 50) * env);
+        } else if (keyStyle === 'cyber_beep') {
+          // Sci-Fi chirp sine pulse
+          const freq = 1200 + Math.sin(progress * Math.PI) * 400;
+          const env = Math.sin(progress * Math.PI);
+          const wave = Math.sin(2 * Math.PI * freq * t);
+          sample = Math.floor(128 + wave * 95 * env);
+        } else if (keyStyle === 'dtmf_tone') {
+          // Dual-tone multi-frequency phone dialer beep (697 Hz + 1209 Hz)
+          const env = Math.max(0, 1 - progress * 1.2);
+          const f1 = Math.sin(2 * Math.PI * 697 * t);
+          const f2 = Math.sin(2 * Math.PI * 1209 * t);
+          const mix = (f1 + f2) * 0.5 > 0 ? 1 : -1;
+          sample = Math.floor(128 + mix * 90 * env);
+        } else {
+          // Default: Classic authentic Nokia 3310 piezo chirp (crisp 1850Hz pulse)
+          const freq = 1850;
+          const env = Math.max(0, 1 - progress * 1.8);
+          const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
+          sample = Math.floor(128 + wave * 105 * env);
+        }
         break;
       }
       case 'shoot': {
@@ -228,8 +275,49 @@ export class RetroAudioEngine {
   private static soundUris: Partial<Record<ArcadeSound, string>> = {};
   private static isInitialized = false;
   private static isMuted = false;
+  private static keySoundStyle: KeypadSoundStyle = 'nokia_blip';
   private static melodyPlayer: any = null;
   private static notePlayer: any = null;
+
+  public static getKeySoundStyle(): KeypadSoundStyle {
+    return this.keySoundStyle;
+  }
+
+  public static setKeySoundStyle(style: KeypadSoundStyle): void {
+    this.keySoundStyle = style;
+    // Re-synthesize 'hit' sound for the new key style
+    const newUri = synthesizeRetroSoundUri('hit', style);
+    this.soundUris.hit = newUri;
+
+    // Refresh voice pool for 'hit'
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        const voiceList: any[] = [];
+        for (let v = 0; v < 3; v++) {
+          const player = SafeExpoAudio.createAudioPlayer(newUri, { keepAudioSessionActive: true });
+          if (player) {
+            player.volume = 1.0;
+            voiceList.push(player);
+          }
+        }
+        this.pools.hit = voiceList;
+        this.poolIndex.hit = 0;
+      } catch (err) {
+        console.warn('[RetroAudioEngine] Failed to refresh hit voices:', err);
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a1 = new Audio(newUri);
+        const a2 = new Audio(newUri);
+        a1.volume = 0.9;
+        a2.volume = 0.9;
+        this.pools.hit = [a1, a2];
+        this.poolIndex.hit = 0;
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   public static setMuted(muted: boolean): void {
     this.isMuted = muted;
@@ -361,7 +449,7 @@ export class RetroAudioEngine {
 
     // Pre-synthesize all sound URIs
     for (const s of sounds) {
-      this.soundUris[s] = synthesizeRetroSoundUri(s);
+      this.soundUris[s] = synthesizeRetroSoundUri(s, this.keySoundStyle);
     }
 
     // 1. Native Mobile Audio (expo-audio on Android / iOS local build)
