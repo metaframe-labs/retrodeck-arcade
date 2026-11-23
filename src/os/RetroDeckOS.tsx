@@ -190,9 +190,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Terminal state
   private termIdx = 0;
   private termOut: string[] = [
-    'RETRODECK OS v1.1 (ARM64)',
-    'BYOK AI ENGINE MOUNTED',
-    'READY. 100 ROMS + AI ACTIVE.',
+    ' .---------.  root@retrodeck',
+    ' | .-----. |  --------------',
+    ' | |RD-OS| |  OS: RetroDeck v1.1',
+    " | '-----' |  CPU: ARM64 @ 60Hz",
+    ' |  +  B A |  ROMS: 100 + BYOK AI',
+    " '---------'  SELECT CMD BELOW:",
   ];
 
   // Setup state
@@ -602,8 +605,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'term') {
-      if (dir === 'up') this.termIdx = (this.termIdx + TERM_CMDS.length - 1) % TERM_CMDS.length;
-      if (dir === 'down') this.termIdx = (this.termIdx + 1) % TERM_CMDS.length;
+      if (dir === 'up') this.termIdx = (this.termIdx + TERM_CMDS.length - 2) % TERM_CMDS.length;
+      if (dir === 'down') this.termIdx = (this.termIdx + 2) % TERM_CMDS.length;
+      if (dir === 'left') this.termIdx = (this.termIdx + TERM_CMDS.length - 1) % TERM_CMDS.length;
+      if (dir === 'right') this.termIdx = (this.termIdx + 1) % TERM_CMDS.length;
       if (dir) return 'hit';
       if (pressA) {
         return this.execTermCmd(TERM_CMDS[this.termIdx]);
@@ -670,22 +675,43 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private execTermCmd(cmd: string): ArcadeSound {
     const carts = this.cb.getCartridges();
+    const meta = getProviderMeta(this.byokConfig.activeProvider);
     if (cmd === 'neofetch') {
       this.termOut = [
-        'OS: RetroDeck OS v1.1',
-        `ROMS: ${carts.length} + BYOK AI`,
-        `UP: ${Math.floor(this.uptime)}s  PAL: ${this.cb.getPaletteName()}`,
+        ' .---------.  root@retrodeck',
+        ' | .-----. |  --------------',
+        ' | |RD-OS| |  OS: RetroDeck v1.1',
+        ` | '-----' |  PAL: ${this.cb.getPaletteName().slice(0, 12)}`,
+        ` |  +  B A |  ROMS: ${carts.length} | AI: ${meta.shortName}`,
+        ` '---------'  UP: ${Math.floor(this.uptime)}s | RAM: 18/64K`,
       ];
     } else if (cmd === 'uname -a') {
-      this.termOut = ['RetroDeckOS 1.1.0 arm64', 'LCD 320x240 60Hz MONO', 'BYOK-LLM + SYNTH-8BIT'];
+      this.termOut = [
+        '  _  _  ___   RetroDeckOS 1.1.0',
+        ' | || |/ _ \\  ARCH: arm64-v8a',
+        ' | __ | (_) | DISP: 320x240 60Hz',
+        ' |_||_|\\___/  AUDIO: 8-BIT WAV',
+        ` AI ENGINE:   ${meta.name.toUpperCase()}`,
+        ' STATUS:      ALL SYSTEMS NOMINAL',
+      ];
     } else if (cmd === 'ls /carts') {
       this.termOut = [
-        `TOTAL ${carts.length} CARTS MOUNTED`,
-        `01: ${carts[0]?.title}`,
-        `02: ${carts[1]?.title}`,
+        `/carts (${carts.length} ROMS MOUNTED):`,
+        `001:${carts[0]?.title.slice(0, 11)} 002:${carts[1]?.title.slice(0, 11)}`,
+        `003:${carts[2]?.title.slice(0, 11)} 004:${carts[3]?.title.slice(0, 11)}`,
+        `005:${carts[4]?.title.slice(0, 11)} 006:${carts[5]?.title.slice(0, 11)}`,
+        `007:${carts[6]?.title.slice(0, 11)} 008:${carts[7]?.title.slice(0, 11)}`,
+        '... +92 MORE IN [GAMES] VAULT',
       ];
     } else if (cmd === 'free -k') {
-      this.termOut = ['MEM TOTAL: 64 KB', 'MEM USED:  18 KB', 'MEM FREE:  46 KB (OK)'];
+      this.termOut = [
+        '       TOTAL   USED   FREE   SHARED',
+        'MEM:    64KB   18KB   46KB     2KB',
+        'VRAM:   16KB    9KB    7KB     0KB',
+        'ROM:  4096KB 3840KB  256KB     0KB',
+        'RAM  [#####-------------] 28% USED',
+        'VRAM [##########--------] 56% USED',
+      ];
     } else if (cmd === 'randgame') {
       const pick = carts[Math.floor(Math.random() * carts.length)];
       if (pick) this.cb.onLaunchGame(pick);
@@ -1113,7 +1139,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
             return (
               <View
                 key={cmd}
-                style={[styles.termRow, { backgroundColor: sel ? fg : 'transparent' }]}
+                style={[
+                  styles.termRow,
+                  { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                ]}
               >
                 <Text style={[styles.termCmdTxt, { color: sel ? bg : fg }]}>
                   {sel ? '>' : ' '} $ {cmd}
@@ -1412,23 +1441,34 @@ const styles = StyleSheet.create({
   },
   termScreen: {
     borderWidth: 1.5,
-    padding: 5,
-    marginBottom: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    marginBottom: 5,
+    height: 92,
+    justifyContent: 'space-between',
   },
   termLine: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 8.5,
+    lineHeight: 13,
+    fontWeight: '900',
     fontFamily: 'monospace',
   },
   termCmds: {
     flex: 1,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignContent: 'space-between',
   },
   termRow: {
-    paddingHorizontal: 5,
-    paddingVertical: 2,
+    width: '48.5%',
+    borderWidth: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 2.5,
+    marginBottom: 3,
   },
   termCmdTxt: {
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
