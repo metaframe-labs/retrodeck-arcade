@@ -648,18 +648,10 @@ const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'RING' |
 ];
 
 const CALC_KEYS = [
-  ['7', '8', '9', '/', 'FX'],
+  ['7', '8', '9', '/', 'DEL'],
   ['4', '5', '6', '*', 'C'],
   ['1', '2', '3', '-', '='],
   ['0', '.', '00', '+', '='],
-];
-
-const CURRENCY_MODES = [
-  { label: 'CALC MODE', rate: 1, unit: '' },
-  { label: 'USD -> EUR', rate: 0.92, unit: 'EUR' },
-  { label: 'EUR -> USD', rate: 1.09, unit: 'USD' },
-  { label: 'USD -> TRY', rate: 34.5, unit: 'TRY' },
-  { label: 'TRY -> USD', rate: 1 / 34.5, unit: 'USD' },
 ];
 
 const TERM_PRESETS = [
@@ -762,14 +754,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
   ];
   private chatScroll = 0;
 
-  // Calculator + Currency Converter state
+  // Calculator state
   private calcR = 0;
   private calcC = 0;
   private calcDisplay = '0';
   private calcAcc: number | null = null;
   private calcOp: string | null = null;
   private calcFresh = true;
-  private fxModeIdx = 0;
 
   // Clock / Stopwatch / Countdown Timer state
   private clockTab: 'clk' | 'sw' | 'cd' = 'clk';
@@ -962,7 +953,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       case 'wap':
         return '[▲]/[▼]: Scroll Page • [◀]/[▶]: Bookmarks • [A]: Type URL / Go';
       case 'calc':
-        return 'D-PAD: Key • [A]: Press (FX = Currency Converter) • [B]: Exit';
+        return 'D-PAD: Key • [A]: Press • [B]: Exit';
       case 'clock':
         return '[◀]/[▶]: Stopwatch/Timer • [A]: Start/Stop • [▲]/[▼]: Set/Reset';
       case 'synth':
@@ -1237,7 +1228,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.calcOp = nextOp;
           this.calcFresh = true;
         }
-      } else if (key === '#') this.pressCalcKey('FX');
+      } else if (key === '#') this.pressCalcKey('=');
       else if ('0123456789'.includes(key)) this.pressCalcKey(key);
       this.cb.onPlaySound?.('hit');
       return;
@@ -1940,8 +1931,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           return 'hit';
         }
         if (dir === 'up') {
-          this.pressCalcKey('FX');
-          return 'score';
+          this.pressCalcKey('C');
+          return 'hit';
         }
         if (dir === 'down') {
           this.pressCalcKey('.');
@@ -2167,8 +2158,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private pressCalcKey(k: string) {
-    if (k === 'FX') {
-      this.fxModeIdx = (this.fxModeIdx + 1) % CURRENCY_MODES.length;
+    if (k === 'DEL') {
+      if (this.calcFresh) return;
+      this.calcDisplay =
+        this.calcDisplay.length > 1 ? this.calcDisplay.slice(0, -1) : '0';
       return;
     }
     if (k === 'C') {
@@ -3165,11 +3158,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderCalc(fg: string, bg: string) {
-    const fx = CURRENCY_MODES[this.fxModeIdx];
-    const numVal = parseFloat(this.calcDisplay) || 0;
-    const converted =
-      this.fxModeIdx > 0 ? `${(numVal * fx.rate).toFixed(2)} ${fx.unit}` : '';
-
     if (this.isNumericDeckActive) {
       const opBtns: { label: string; key: string }[] = [
         { label: '+', key: '+' },
@@ -3177,14 +3165,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
         { label: '×', key: '*' },
         { label: '÷', key: '/' },
         { label: '.', key: '.' },
-        { label: 'FX', key: 'FX' },
+        { label: '=', key: '=' },
       ];
       return (
         <View style={styles.calcWrap}>
           <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]}>
-              NOKIA CALC // {fx.label}
-            </Text>
+            <Text style={[styles.compTitle, { color: fg }]}>NOKIA CALC</Text>
             <Text style={[styles.compBpm, { color: fg }]}>
               {this.calcOp ? `[OP: ${this.calcOp}]` : '[NUM PAD]'}
             </Text>
@@ -3221,13 +3207,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
             >
               {this.calcDisplay}
             </Text>
-            {converted ? (
-              <Text style={[styles.swLap, { color: fg, marginTop: 4 }]} numberOfLines={1}>
-                = {converted}
-              </Text>
-            ) : null}
           </View>
-          {/* Single-row touchable operators (+, -, ×, ÷, ., FX) */}
+          {/* Single-row touchable operators (+, -, ×, ÷, ., =) */}
           <View style={{ flexDirection: 'row', gap: 4, height: 26, marginBottom: 2 }}>
             {opBtns.map((op) => {
               const active = this.calcOp === op.key;
@@ -3267,10 +3248,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
       <View style={styles.calcWrap}>
         <View style={[styles.calcScreen, { borderColor: fg }]}>
           <Text style={[styles.calcModeTag, { color: fg }]}>
-            {fx.label} {this.calcOp || ''}
+            {this.calcOp ? `OP: ${this.calcOp}` : 'CALC'}
           </Text>
           <Text style={[styles.calcNum, { color: fg }]} numberOfLines={1}>
-            {converted ? `${this.calcDisplay} = ${converted}` : this.calcDisplay}
+            {this.calcDisplay}
           </Text>
         </View>
         <View style={styles.calcGrid}>
