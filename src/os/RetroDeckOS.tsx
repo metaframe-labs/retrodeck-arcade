@@ -9,12 +9,7 @@ import {
   ArcadeStats,
 } from '../arcade/types';
 import { RetroPalette } from '../theme/palettes';
-import {
-  NokiaNoteEvent,
-  RetroAudioEngine,
-  KeypadSoundStyle,
-  KEYPAD_SOUND_STYLES,
-} from '../audio/RetroAudioEngine';
+import { NokiaNoteEvent, RetroAudioEngine } from '../audio/RetroAudioEngine';
 import {
   BYOK_PROVIDERS,
   BYOKChatMessage,
@@ -1510,11 +1505,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'profiles') {
       if (dir === 'up') {
-        this.profRow = (this.profRow + 5) % 6;
+        this.profRow = (this.profRow + 4) % 5;
         return 'hit';
       }
       if (dir === 'down') {
-        this.profRow = (this.profRow + 1) % 6;
+        this.profRow = (this.profRow + 1) % 5;
         return 'hit';
       }
       if (pressA || dir === 'left' || dir === 'right') {
@@ -1537,17 +1532,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
           RetroAudioEngine.playNokiaMelody(st.notes, st.bpm);
           return null;
         } else if (this.profRow === 3) {
-          // KEYPAD SOUND STYLE SWITCHER
-          const curStyle = RetroAudioEngine.getKeySoundStyle();
-          const curIdx = KEYPAD_SOUND_STYLES.findIndex((s) => s.id === curStyle);
-          const nextIdx = (curIdx + step + KEYPAD_SOUND_STYLES.length) % KEYPAD_SOUND_STYLES.length;
-          RetroAudioEngine.setKeySoundStyle(KEYPAD_SOUND_STYLES[nextIdx].id);
-          return 'hit'; // plays the newly selected click sound immediately!
-        } else if (this.profRow === 4) {
           this.operatorIdx =
             (this.operatorIdx + step + NOKIA_OPERATORS.length) % NOKIA_OPERATORS.length;
           return 'score';
-        } else if (this.profRow === 5) {
+        } else if (this.profRow === 4) {
           if (pressA) {
             this.keyLocked = true;
             this.unlockStage = false;
@@ -2873,15 +2861,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderProfiles(fg: string, bg: string) {
     const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
     const activeSms = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
-    const activeKeyStyle = KEYPAD_SOUND_STYLES.find(
-      (s) => s.id === RetroAudioEngine.getKeySoundStyle()
-    ) || KEYPAD_SOUND_STYLES[0];
-
     const rows = [
       `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
       `RINGTONE: < ${activeRing.title.trim()} >`,
       `SMS TONE: < ${activeSms.title} >`,
-      `KEYPAD SOUND: < ${activeKeyStyle.name} >`,
       `OPERATOR: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
       `[A] LOCK KEYS • [◀/▶] TORCH: ${this.torchInvert ? 'ON' : 'OFF'}`,
     ];
