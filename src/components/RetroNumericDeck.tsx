@@ -7,10 +7,8 @@ interface RetroNumericDeckProps {
   accentColor: string;
   buttonBg?: string;
   buttonBorder?: string;
-  value: string;
   targetLabel?: string;
-  onChangeText: (next: string) => void;
-  onSubmit: () => void;
+  onPressKey: (key: string) => void;
   onSwitchMode: () => void;
   onKeySound?: () => void;
 }
@@ -47,10 +45,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   accentColor,
   buttonBg = '#121A26',
   buttonBorder = '#26374D',
-  value,
   targetLabel = 'NUM',
-  onChangeText,
-  onSubmit,
+  onPressKey,
   onSwitchMode,
   onKeySound,
 }) => {
@@ -63,19 +59,17 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
 
   const handleDigit = (d: string) => {
     tapHaptic();
-    onChangeText(value + d);
+    onPressKey(d);
   };
 
   const handleBackspace = () => {
     tapHaptic();
-    if (value.length > 0) {
-      onChangeText(value.slice(0, -1));
-    }
+    onPressKey('DEL');
   };
 
   const handleClear = () => {
     tapHaptic();
-    onChangeText('');
+    onPressKey('CLR');
   };
 
   const handleOk = () => {
@@ -83,7 +77,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
     onKeySound?.();
-    onSubmit();
+    onPressKey('OK');
   };
 
   return (

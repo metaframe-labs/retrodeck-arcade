@@ -741,14 +741,9 @@ function RetroDeckConsole() {
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
-                value={kbdBinding.value}
                 targetLabel={kbdBinding.targetLabel}
-                onChangeText={(next) => {
-                  osRef.current.setKeyboardText(next);
-                  setKbdTick((t) => (t + 1) % 100000);
-                }}
-                onSubmit={() => {
-                  osRef.current.submitKeyboard();
+                onPressKey={(k) => {
+                  osRef.current.pressNumericKey(k);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
                 onSwitchMode={() => setDeckMode('kbd')}

@@ -1079,6 +1079,43 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.sendAiMessage();
   }
 
+  public pressNumericKey(key: string) {
+    this.idleTimer = 0;
+    if (this.app === 'wap' || this.app === 'term' || this.app === 'ai') {
+      const cur = this.getKeyboardBinding().value;
+      if (key === 'DEL') this.setKeyboardText(cur.slice(0, -1));
+      else if (key === 'CLR') this.setKeyboardText('');
+      else if (key === 'OK') this.submitKeyboard();
+      else this.setKeyboardText(cur + key);
+      return;
+    }
+
+    if (this.app === 'calc') {
+      if (key === 'DEL' || key === 'CLR') this.pressCalcKey('C');
+      else if (key === 'OK') this.pressCalcKey('=');
+      else if ('0123456789'.includes(key)) this.pressCalcKey(key);
+      return;
+    }
+
+    // Default / Desktop / Phone: behave like a real Nokia 3310 dialer
+    if (this.app !== 'phone') {
+      this.app = 'phone';
+      this.callState = 'idle';
+    }
+    if (key === 'DEL') {
+      this.dialBuffer = this.dialBuffer.slice(0, -1);
+    } else if (key === 'CLR') {
+      this.dialBuffer = '';
+    } else if (key === 'OK') {
+      this.dialR = 4;
+      this.dialC = 0; // CALL button on dialer
+      this.prevA = false;
+      this.update({ up: false, down: false, left: false, right: false, a: true, b: false }, 1 / 60);
+    } else if (this.dialBuffer.length < 14) {
+      this.dialBuffer += key;
+    }
+  }
+
   private appendChatLines(prefix: string, text: string) {
     const wrapped = wrapTextLines(`${prefix} ${text}`, 33);
     this.chatLines.push(...wrapped);
