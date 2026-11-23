@@ -11,8 +11,83 @@ import { SokobanGame } from './games/SokobanGame';
 import { TowerClimberGame } from './games/TowerClimberGame';
 import { PacBoyGame } from './games/PacBoyGame';
 import { FroggerGame } from './games/FroggerGame';
+import { AsteroidsGame } from './games/AsteroidsGame';
+import { RiverRaidGame } from './games/RiverRaidGame';
+import { MinesweeperGame } from './games/MinesweeperGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'asteroids-dx',
+    title: 'ASTEROIDS DX',
+    subtitle: 'Vector Space Physics, 360 Thrust & Rock Splitting',
+    genre: 'SPACE VECTOR',
+    year: '1979',
+    defaultPalette: 'nokia',
+    controlsHint: '◀ / ▶: Rotate Ship, [▲]: Rocket Thrust, [A]: Fire Blaster',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: 'THRUST',
+      down: '▼',
+      a: 'FIRE',
+      b: 'FIRE',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲ (GAS)',
+      downLabel: '▼',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new AsteroidsGame(hs),
+  },
+  {
+    id: 'river-raid',
+    title: 'RIVER RAID DX',
+    subtitle: 'Vertical River Jet, Patrol Boats & Fuel Depots',
+    genre: 'RIVER SHOOTER',
+    year: '1982',
+    defaultPalette: 'nokia',
+    controlsHint: '◀ / ▶: Steer, [▲/▼]: Throttle, Fly over FUEL to Refuel, Blow Bridges!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: 'FAST ▲',
+      down: 'SLOW ▼',
+      a: 'FIRE',
+      b: 'FIRE',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new RiverRaidGame(hs),
+  },
+  {
+    id: 'minesweeper-dx',
+    title: 'MINESWEEPER DX',
+    subtitle: 'Classic Logic Minefield, Digging & Flagging',
+    genre: 'LOGIC PUZZLE',
+    year: '1989',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move Reticle, [A]: Dig Open, [B]: Place Flag ⚑',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'DIG',
+      b: 'FLAG',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (DIG)',
+      bLabel: 'B (FLAG)',
+    },
+    createGame: (hs = 0) => new MinesweeperGame(hs),
+  },
   {
     id: 'frogger-retro',
     title: 'FROGGER DX',
