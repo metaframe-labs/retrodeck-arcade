@@ -509,6 +509,46 @@ const NOKIA_SONGS: NokiaSong[] = [
     notes: '8e2 8d2 4f#1 4g#1 8c#2 8b1 4d1 4e1 8b1 8a1 4c#1 4e1 2a1',
   },
   {
+    title: 'KICK RING 3310',
+    bpm: 185,
+    notes: '16a1 16c2 8e2 16a1 16c2 8e2 16g1 16b1 8d2 16e2 16d2 16c2 16b1 4a1',
+  },
+  {
+    title: 'HURDY GURDY',
+    bpm: 175,
+    notes: '8c2 8g1 8e1 8g1 8c2 8g1 8e2 8c2 8d2 8b1 8g1 8b1 4c2',
+  },
+  {
+    title: 'ESPAGNOLE',
+    bpm: 165,
+    notes: '8e1 8a1 8c2 8e2 4d2 8c2 8b1 4a1 8g#1 8b1 4e2 4a1',
+  },
+  {
+    title: 'BADINERIE BACH',
+    bpm: 150,
+    notes: '8b2 16d3 16b2 8f#2 16b2 16f#2 8d2 16f#2 16d2 4b1 8d2 8f#2 8b2 8f#2 4b2',
+  },
+  {
+    title: 'VALKYRIES 3310',
+    bpm: 145,
+    notes: '8b1 16f#1 8b1 4d2 4b1 8d2 16b1 8d2 4f#2 4d2 8f#2 16d2 8f#2 2a2',
+  },
+  {
+    title: 'WILLIAM TELL',
+    bpm: 190,
+    notes: '16e1 16e1 8e1 16e1 16e1 8e1 16e1 16g1 8c1 16d1 4e1 16f1 16f1 8f1 16e1 16d1 8e1 8c1',
+  },
+  {
+    title: 'CITY BIRD 3310',
+    bpm: 220,
+    notes: '32e3 32g3 32e3 32g3 16c3 8- 32d3 32f3 32d3 32f3 16b2 8- 16c3 16e3 8g3',
+  },
+  {
+    title: ' GROOVY BLUE',
+    bpm: 160,
+    notes: '8a1 8- 16c2 8d2 8d#2 8e2 8c2 8a1 8g1 8a1 4c2 4a1',
+  },
+  {
     title: 'TETRIS 3310',
     bpm: 160,
     notes: '4e2 8b1 8c2 4d2 8c2 8b1 4a1 8a1 8c2 4e2 8d2 8c2 4b1 8c2 4d2 4e2 4c2 4a1 2a1',
@@ -529,6 +569,11 @@ const NOKIA_SONGS: NokiaSong[] = [
     notes: '4f1 8g#1. 16f1 16f1 8a#1 8f1 8d#1 4f1 8c2. 16f1 16f1 8c#2 8c2 8g#1 8f1 8c2 8f2 16f1 8d#1 16d#1 8c1 8g1 2f1',
   },
   {
+    title: 'MISSION 3310',
+    bpm: 170,
+    notes: '8g1 8- 8g1 8- 8a#1 8c2 8g1 8- 8g1 8- 8f1 8f#1 4g1',
+  },
+  {
     title: 'PAC-MAN',
     bpm: 160,
     notes: '16b1 16b2 16f#2 16d#2 32b2 16f#2 8d#2 16c2 16c3 16g2 16e2 32c3 16g2 8e2',
@@ -540,9 +585,44 @@ const NOKIA_SONGS: NokiaSong[] = [
   },
 ];
 
-const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'DEL' }[] = [
+interface NokiaSmsTone {
+  title: string;
+  bpm: number;
+  notes: string;
+}
+
+const NOKIA_SMS_TONES: NokiaSmsTone[] = [
+  {
+    title: 'SPECIAL (MORSE SMS)',
+    bpm: 170,
+    notes: '16e2 32- 16e2 32- 16e2 8- 8e2 32- 8e2 8- 16e2 32- 16e2 32- 16e2',
+  },
+  {
+    title: 'STANDARD BEEP 2X',
+    bpm: 180,
+    notes: '16c3 16- 16c3',
+  },
+  {
+    title: 'ASCENDING ALERT',
+    bpm: 200,
+    notes: '16c2 16e2 16g2 8c3',
+  },
+  {
+    title: 'COIN DROP',
+    bpm: 220,
+    notes: '16b2 4e3',
+  },
+  {
+    title: 'DOUBLE CHIME',
+    bpm: 190,
+    notes: '16e2 16b2 8- 16e2 8b2',
+  },
+];
+
+const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'RING' | 'DEL' }[] = [
   { label: '▶ PLAY', token: 'PLAY' },
-  { label: '♫ SONG', token: 'SONG' },
+  { label: '♫ TONE', token: 'SONG' },
+  { label: '★ RING', token: 'RING' },
   { label: '1: C1', token: '8c1' },
   { label: '2: D1', token: '8d1' },
   { label: '3: E1', token: '8e1' },
@@ -551,7 +631,6 @@ const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'DEL' }[
   { label: '6: A1', token: '8a1' },
   { label: '7: B1', token: '8b1' },
   { label: '8: C2', token: '8c2' },
-  { label: '9: E2', token: '8e2' },
   { label: '⌫ DEL', token: 'DEL' },
 ];
 
@@ -757,6 +836,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private profRow = 0;
   private profileIdx = 0;
+  private ringtoneIdx = 0;
+  private smsToneIdx = 0;
   private operatorIdx = 0;
   private torchInvert = false;
 
@@ -1080,7 +1161,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.smsIdx = 0;
       this.smsBanner = `NEW PIC-SMS FROM ${meta.shortName}!`;
       this.smsBannerTimer = 3.0;
-      RetroAudioEngine.playNokiaSmsTone();
+      const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
+      RetroAudioEngine.playNokiaMelody(smsTone.notes, smsTone.bpm);
     } catch (err: any) {
       this.smsBanner = `SMS ERR: ${(err?.message || 'FAILED').slice(0, 24).toUpperCase()}`;
       this.smsBannerTimer = 3.0;
@@ -1147,7 +1229,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.cdRemaining = 0;
         this.cdRunning = false;
         this.cdAlarmActive = true;
-        RetroAudioEngine.playNokiaMelody(NOKIA_SONGS[0].notes, NOKIA_SONGS[0].bpm);
+        const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
+        RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
       }
     }
 
@@ -1337,10 +1420,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
           return 'score';
         }
         if (k === 'RING') {
+          const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
           this.callState = 'ringing';
           this.callTitle = 'NOKIA 3310 CALLING';
-          this.callSub = '+358-50-3310-00';
-          RetroAudioEngine.playNokiaMelody(NOKIA_SONGS[0].notes, NOKIA_SONGS[0].bpm);
+          this.callSub = `♪ ${activeRing.title.trim()}`;
+          RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
           return null;
         }
         if (k === 'CALL') {
@@ -1404,11 +1488,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'profiles') {
       if (dir === 'up') {
-        this.profRow = (this.profRow + 3) % 4;
+        this.profRow = (this.profRow + 4) % 5;
         return 'hit';
       }
       if (dir === 'down') {
-        this.profRow = (this.profRow + 1) % 4;
+        this.profRow = (this.profRow + 1) % 5;
         return 'hit';
       }
       if (pressA || dir === 'left' || dir === 'right') {
@@ -1419,16 +1503,30 @@ export class RetroDeckOS implements ArcadeGameInstance {
           RetroAudioEngine.setMuted(NOKIA_PROFILES[this.profileIdx] === 'SILENT');
           return 'score';
         } else if (this.profRow === 1) {
+          this.ringtoneIdx =
+            (this.ringtoneIdx + step + this.songs.length) % this.songs.length;
+          const ring = this.songs[this.ringtoneIdx];
+          RetroAudioEngine.playNokiaMelody(ring.notes, ring.bpm);
+          return null;
+        } else if (this.profRow === 2) {
+          this.smsToneIdx =
+            (this.smsToneIdx + step + NOKIA_SMS_TONES.length) % NOKIA_SMS_TONES.length;
+          const st = NOKIA_SMS_TONES[this.smsToneIdx];
+          RetroAudioEngine.playNokiaMelody(st.notes, st.bpm);
+          return null;
+        } else if (this.profRow === 3) {
           this.operatorIdx =
             (this.operatorIdx + step + NOKIA_OPERATORS.length) % NOKIA_OPERATORS.length;
           return 'score';
-        } else if (this.profRow === 2 && pressA) {
-          this.keyLocked = true;
-          this.unlockStage = false;
-          return 'score';
-        } else if (this.profRow === 3 && pressA) {
-          this.torchInvert = !this.torchInvert;
-          return 'powerup';
+        } else if (this.profRow === 4) {
+          if (pressA) {
+            this.keyLocked = true;
+            this.unlockStage = false;
+            return 'score';
+          } else {
+            this.torchInvert = !this.torchInvert;
+            return 'powerup';
+          }
         }
       }
       return null;
@@ -1613,6 +1711,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
           RetroAudioEngine.stopNokiaMelody();
           this.songIdx = (this.songIdx + 1) % this.songs.length;
           return 'score';
+        }
+        if (key.token === 'RING') {
+          this.ringtoneIdx = this.songIdx;
+          const res = RetroAudioEngine.playNokiaMelody(curSong.notes, curSong.bpm);
+          this.melodyEvents = res.events;
+          this.melodyDuration = res.totalSec;
+          this.melodyTimer = 0;
+          this.melodyPlaying = res.totalSec > 0;
+          return null;
         }
         if (key.token === 'DEL') {
           this.melodyPlaying = false;
@@ -1957,6 +2064,28 @@ export class RetroDeckOS implements ArcadeGameInstance {
       const pick = carts[Math.floor(Math.random() * carts.length)];
       if (pick) this.cb.onLaunchGame(pick);
       return 'powerup';
+    }
+
+    if (bin === 'ringtones' || bin === 'ringtone' || bin === 'tones') {
+      if (arg) {
+        const q = arg.toLowerCase();
+        const idx = this.songs.findIndex((s) => s.title.toLowerCase().includes(q));
+        if (idx >= 0) {
+          this.ringtoneIdx = idx;
+          const s = this.songs[idx];
+          RetroAudioEngine.playNokiaMelody(s.notes, s.bpm);
+          this.pushTermLines([`ACTIVE RINGTONE SET TO: ${s.title.trim()}`]);
+          return 'score';
+        }
+      }
+      this.pushTermLines([
+        `ACTIVE RING: ${this.songs[this.ringtoneIdx]?.title.trim()}`,
+        '3310 RINGTONES: nokia, kick, hurdy,',
+        'espagnole, badinerie, valkyries, tell,',
+        'city, groovy, tetris, mario, star, axel,',
+        'mission, pacman, custom (use "play <name>")',
+      ]);
+      return 'score';
     }
 
     if (bin === 'play') {
@@ -2510,7 +2639,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
       <View style={styles.listWrap}>
         <View style={styles.compHeader}>
           <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-            ♪ {this.songIdx + 1}/{this.songs.length} {curSong.title}
+            ♪ {this.songIdx + 1}/{this.songs.length} {curSong.title.trim()}
+            {this.songIdx === this.ringtoneIdx ? ' [★RING]' : ''}
           </Text>
           <Text style={[styles.compBpm, { color: fg }]}>
             {this.melodyPlaying ? 'PLAYING' : `${curSong.bpm}BPM`}
@@ -2712,15 +2842,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderProfiles(fg: string, bg: string) {
+    const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
+    const activeSms = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
     const rows = [
       `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
+      `RINGTONE: < ${activeRing.title.trim()} >`,
+      `SMS TONE: < ${activeSms.title} >`,
       `OPERATOR: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
-      'KEYGUARD & CLOCK SCREENSAVER (* TO UNLOCK)',
-      `TORCH / INVERT LCD: ${this.torchInvert ? 'ON' : 'OFF'}`,
+      `[A] LOCK KEYS • [◀/▶] TORCH: ${this.torchInvert ? 'ON' : 'OFF'}`,
     ];
     return (
       <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>NOKIA 3310 PROFILES & KEYGUARD</Text>
+        <Text style={[styles.subHeader, { color: fg }]}>3310 PROFILES & RINGTONES</Text>
         {rows.map((label, i) => {
           const sel = i === this.profRow;
           return (
@@ -2728,7 +2861,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
               key={i}
               style={[
                 styles.setupRow,
-                { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                {
+                  borderColor: fg,
+                  backgroundColor: sel ? fg : 'transparent',
+                  paddingVertical: 4.5,
+                  marginBottom: 3.5,
+                },
               ]}
             >
               <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
