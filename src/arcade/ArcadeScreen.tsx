@@ -188,7 +188,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
               styles.titleOverlay,
               {
                 backgroundColor: palette.isLightLcd
-                  ? 'rgba(148, 176, 124, 0.94)'
+                  ? `${palette.screenBg}F0`
                   : 'rgba(2, 6, 12, 0.84)',
               },
             ]}
@@ -198,7 +198,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 styles.titleBadge,
                 {
                   borderColor: palette.isLightLcd ? palette.pixelOn : `${palette.bezelAccent}66`,
-                  backgroundColor: palette.isLightLcd ? '#94B07C' : 'rgba(5, 10, 18, 0.92)',
+                  backgroundColor: palette.isLightLcd ? palette.screenBg : 'rgba(5, 10, 18, 0.92)',
                 },
               ]}
             >
@@ -236,7 +236,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                   style={[
                     styles.startPillText,
                     {
-                      color: palette.isLightLcd ? '#94B07C' : '#000000',
+                      color: palette.isLightLcd ? palette.screenBg : '#000000',
                     },
                   ]}
                 >
@@ -277,11 +277,25 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
 
         {/* Pause Overlay */}
         {isPaused && (
-          <View style={styles.overlay}>
+          <View
+            style={[
+              styles.overlay,
+              palette.isLightLcd && {
+                backgroundColor: `${palette.screenBg}F0`,
+              },
+            ]}
+          >
             <Text style={[styles.overlayTitle, { color: palette.pixelOn }]}>
               PAUSED
             </Text>
-            <Text style={styles.overlaySub}>TOUCH PLAY TO RESUME</Text>
+            <Text
+              style={[
+                styles.overlaySub,
+                palette.isLightLcd && { color: palette.textMuted },
+              ]}
+            >
+              TOUCH PLAY TO RESUME
+            </Text>
           </View>
         )}
 
@@ -291,7 +305,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             style={[
               styles.overlay,
               palette.isLightLcd && {
-                backgroundColor: 'rgba(148, 176, 124, 0.94)', // Authentic Nokia LCD overlay
+                backgroundColor: `${palette.screenBg}F0`,
               },
             ]}
           >
@@ -332,7 +346,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 style={[
                   styles.gameOverScorePill,
                   palette.isLightLcd && {
-                    backgroundColor: 'rgba(23, 38, 22, 0.12)',
+                    backgroundColor: `${palette.pixelOn}18`,
                     borderColor: palette.pixelOn,
                   },
                 ]}
@@ -340,7 +354,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 <Text
                   style={[
                     styles.overlayFinalScoreLabel,
-                    palette.isLightLcd && { color: palette.pixelOn },
+                    palette.isLightLcd && { color: palette.textMuted },
                   ]}
                 >
                   FINAL SCORE
