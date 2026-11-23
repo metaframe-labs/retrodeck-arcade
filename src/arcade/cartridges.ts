@@ -6,8 +6,83 @@ import { SpaceImpactGame } from './games/SpaceImpactGame';
 import { BreakoutGame } from './games/BreakoutGame';
 import { TetrisGame } from './games/TetrisGame';
 import { SpaceInvadersGame } from './games/SpaceInvadersGame';
+import { HeliRescueGame } from './games/HeliRescueGame';
+import { SokobanGame } from './games/SokobanGame';
+import { TowerClimberGame } from './games/TowerClimberGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'heli-rescue',
+    title: 'NOKIA HELI RESCUE',
+    subtitle: 'Classic Cavern Flyer, Obstacles & Survivors',
+    genre: 'NOKIA RETRO',
+    year: '2001',
+    defaultPalette: 'nokia',
+    controlsHint: 'HOLD [A] / [▲]: Fly Up, RELEASE: Dive, Rescue Survivors!',
+    gamepadLabels: {
+      up: '▲',
+      down: '▼',
+      left: '◀',
+      right: '▶',
+      a: 'FLY',
+      b: 'FLY',
+      upLabel: '▲',
+      downLabel: '▼',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      aLabel: 'A (FLY)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new HeliRescueGame(hs),
+  },
+  {
+    id: 'sokoban-dx',
+    title: 'SOKOBAN WAREHOUSE',
+    subtitle: 'Classic Box-Pushing Mind Puzzler',
+    genre: 'LOGIC PUZZLE',
+    year: '1982',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move worker & push boxes to dots. [B]: Restart room',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'NEXT',
+      b: 'RESET',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (NEXT)',
+      bLabel: 'B (REDO)',
+    },
+    createGame: (hs = 0) => new SokobanGame(hs),
+  },
+  {
+    id: 'tower-climber',
+    title: 'ICY TOWER CLIMBER',
+    subtitle: 'Infinite Jumping, Spring Boards & Moving Platforms',
+    genre: 'RETRO PLATFORMER',
+    year: '2001',
+    defaultPalette: 'nokia',
+    controlsHint: '◀ / ▶: Steer Climber. Screen wraps around! Jump on Springs!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'START',
+      b: 'PAUSE',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (RETRY)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new TowerClimberGame(hs),
+  },
   {
     id: 'space-invaders',
     title: 'ALIEN ASSAULT',
