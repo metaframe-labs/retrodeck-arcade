@@ -66,7 +66,8 @@ function createWavBuffer(numSamples: number): Uint8Array {
 /** Synthesizes authentic 8-bit sound waveforms directly into Base64 WAV data URI */
 export function synthesizeRetroSoundUri(
   sound: ArcadeSound,
-  keyStyle: KeypadSoundStyle = 'classic'
+  keyStyle: KeypadSoundStyle = 'classic',
+  gain: number = 1.0
 ): string {
   let duration = 0.10;
   if (sound === 'hit') {
@@ -182,7 +183,8 @@ export function synthesizeRetroSoundUri(
       }
     }
 
-    buffer[dataOffset + i] = Math.max(0, Math.min(255, sample));
+    const scaled = Math.round(128 + (sample - 128) * gain);
+    buffer[dataOffset + i] = Math.max(0, Math.min(255, scaled));
   }
 
   const base64 = bytesToBase64(buffer);
@@ -253,7 +255,11 @@ export function parseNokiaMelody(notation: string, bpm: number = 160): NokiaNote
 }
 
 /** Synthesizes a Nokia 3310 piezo square-wave melody into a single Base64 WAV URI */
-export function synthesizeNokiaMelodyUri(notation: string, bpm: number = 160): {
+export function synthesizeNokiaMelodyUri(
+  notation: string,
+  bpm: number = 160,
+  gain: number = 1.0
+): {
   uri: string;
   events: NokiaNoteEvent[];
   totalSec: number;
@@ -277,7 +283,7 @@ export function synthesizeNokiaMelodyUri(notation: string, bpm: number = 160): {
     for (let i = startSample; i < endSample; i++) {
       const localT = (i - startSample) / SAMPLE_RATE;
       const wave = Math.sin(2 * Math.PI * ev.freq * localT) >= 0 ? 1 : -1;
-      buffer[dataOffset + i] = 128 + wave * 98;
+      buffer[dataOffset + i] = Math.round(128 + wave * 98 * gain);
     }
   }
 
@@ -299,8 +305,55 @@ export class RetroAudioEngine {
   private static melodyPlayer: any = null;
   private static notePlayer: any = null;
 
+  public static getEffectiveGain(): number {
+    if (this.masterVolume <= 0) return 0;
+    return Math.pow(this.masterVolume, 1.8);
+  }
+
   public static getVolume(): number {
     return this.masterVolume;
+  }
+
+  private static rebuildPoolForSound(s: ArcadeSound, count: number): void {
+    const gain = this.getEffectiveGain();
+    const newUri = synthesizeRetroSoundUri(s, this.keySoundStyle, gain);
+    this.soundUris[s] = newUri;
+
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        const oldPool = this.pools[s];
+        if (oldPool) {
+          oldPool.forEach((p) => {
+            try {
+              if (typeof p?.remove === 'function') p.remove();
+            } catch {}
+          });
+        }
+        const voiceList: any[] = [];
+        for (let v = 0; v < count; v++) {
+          const player = SafeExpoAudio.createAudioPlayer(newUri, { keepAudioSessionActive: true });
+          if (player) {
+            player.volume = gain;
+            voiceList.push(player);
+          }
+        }
+        this.pools[s] = voiceList;
+        this.poolIndex[s] = 0;
+      } catch (err) {
+        console.warn(`[RetroAudioEngine] Failed to refresh voices for ${s}:`, err);
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a1 = new Audio(newUri);
+        const a2 = new Audio(newUri);
+        a1.volume = gain * 0.9;
+        a2.volume = gain * 0.9;
+        this.pools[s] = [a1, a2];
+        this.poolIndex[s] = 0;
+      } catch {
+        // ignore
+      }
+    }
   }
 
   public static setVolume(vol: number, persist = true): void {
@@ -312,21 +365,27 @@ export class RetroAudioEngine {
     if (clamped === 0) {
       this.stopNokiaMelody();
     }
-    // Update active pools immediately
-    Object.values(this.pools).forEach((list) => {
-      if (list) {
-        list.forEach((p) => {
-          try {
-            if (p) p.volume = Platform.OS === 'web' ? clamped * 0.9 : clamped;
-          } catch {}
-        });
-      }
-    });
     if (this.melodyPlayer) {
       try {
-        this.melodyPlayer.volume = Platform.OS === 'web' ? clamped * 0.9 : clamped;
+        const gain = this.getEffectiveGain();
+        this.melodyPlayer.volume = Platform.OS === 'web' ? gain * 0.9 : gain;
       } catch {}
     }
+    // Re-synthesize all sound effects (including menu score/powerup/hit) with physical PCM gain scaling
+    const poolSizes: Partial<Record<ArcadeSound, number>> = {
+      shoot: 2,
+      hit: 3,
+      explode: 2,
+      score: 2,
+      powerup: 1,
+      bomb: 1,
+      die: 1,
+      gameover: 1,
+      levelclear: 1,
+    };
+    (Object.keys(poolSizes) as ArcadeSound[]).forEach((s) => {
+      this.rebuildPoolForSound(s, poolSizes[s] || 1);
+    });
   }
 
   public static getKeySoundStyle(): KeypadSoundStyle {
@@ -338,45 +397,7 @@ export class RetroAudioEngine {
     if (persist) {
       AsyncStorage.setItem(KEY_SOUND_STORAGE_KEY, style).catch(() => {});
     }
-
-    const newUri = synthesizeRetroSoundUri('hit', style);
-    this.soundUris.hit = newUri;
-
-    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
-      try {
-        const oldPool = this.pools.hit;
-        if (oldPool) {
-          oldPool.forEach((p) => {
-            try {
-              if (typeof p?.remove === 'function') p.remove();
-            } catch {}
-          });
-        }
-        const voiceList: any[] = [];
-        for (let v = 0; v < 3; v++) {
-          const player = SafeExpoAudio.createAudioPlayer(newUri, { keepAudioSessionActive: true });
-          if (player) {
-            player.volume = this.masterVolume;
-            voiceList.push(player);
-          }
-        }
-        this.pools.hit = voiceList;
-        this.poolIndex.hit = 0;
-      } catch (err) {
-        console.warn('[RetroAudioEngine] Failed to refresh hit voices:', err);
-      }
-    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
-      try {
-        const a1 = new Audio(newUri);
-        const a2 = new Audio(newUri);
-        a1.volume = this.masterVolume * 0.9;
-        a2.volume = this.masterVolume * 0.9;
-        this.pools.hit = [a1, a2];
-        this.poolIndex.hit = 0;
-      } catch {
-        // ignore
-      }
-    }
+    this.rebuildPoolForSound('hit', 3);
   }
 
   public static setMuted(muted: boolean): void {
@@ -407,8 +428,9 @@ export class RetroAudioEngine {
     totalSec: number;
   } {
     this.stopNokiaMelody();
-    const { uri, events, totalSec } = synthesizeNokiaMelodyUri(notation, bpm);
-    if (this.isMuted || this.masterVolume <= 0) {
+    const gain = this.getEffectiveGain();
+    const { uri, events, totalSec } = synthesizeNokiaMelodyUri(notation, bpm, gain);
+    if (this.isMuted || gain <= 0) {
       return { events, totalSec };
     }
 
@@ -416,7 +438,7 @@ export class RetroAudioEngine {
       try {
         const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
         if (p) {
-          p.volume = this.masterVolume;
+          p.volume = gain;
           this.melodyPlayer = p;
           p.play();
         }
@@ -426,7 +448,7 @@ export class RetroAudioEngine {
     } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
       try {
         const a = new Audio(uri);
-        a.volume = this.masterVolume * 0.9;
+        a.volume = gain * 0.9;
         this.melodyPlayer = a;
         a.play().catch(() => {});
       } catch {
@@ -438,8 +460,9 @@ export class RetroAudioEngine {
   }
 
   public static playNokiaNote(token: string, bpm: number = 160): void {
-    if (this.isMuted || this.masterVolume <= 0) return;
-    const { uri } = synthesizeNokiaMelodyUri(token, bpm);
+    const gain = this.getEffectiveGain();
+    if (this.isMuted || gain <= 0) return;
+    const { uri } = synthesizeNokiaMelodyUri(token, bpm, gain);
     if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
       try {
         if (this.notePlayer && typeof this.notePlayer.remove === 'function') {
@@ -447,7 +470,7 @@ export class RetroAudioEngine {
         }
         const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
         if (p) {
-          p.volume = this.masterVolume;
+          p.volume = gain;
           this.notePlayer = p;
           p.play();
         }
@@ -457,7 +480,7 @@ export class RetroAudioEngine {
     } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
       try {
         const a = new Audio(uri);
-        a.volume = this.masterVolume * 0.9;
+        a.volume = gain * 0.9;
         a.play().catch(() => {});
       } catch {
         // ignore
@@ -521,11 +544,14 @@ export class RetroAudioEngine {
       'bomb',
       'die',
       'gameover',
+      'levelclear',
     ];
+
+    const gain = this.getEffectiveGain();
 
     // Pre-synthesize all sound URIs
     for (const s of sounds) {
-      this.soundUris[s] = synthesizeRetroSoundUri(s, this.keySoundStyle);
+      this.soundUris[s] = synthesizeRetroSoundUri(s, this.keySoundStyle, gain);
     }
 
     // 1. Native Mobile Audio (expo-audio on Android / iOS local build)
@@ -539,16 +565,17 @@ export class RetroAudioEngine {
           });
         }
 
-        // Voice pool sizes: 2 voices for high-frequency sounds, 1 for others
+        // Voice pool sizes: 2-3 voices for high-frequency sounds, 1-2 for others
         const poolSizes: Partial<Record<ArcadeSound, number>> = {
           shoot: 2,
-          hit: 2,
+          hit: 3,
           explode: 2,
-          score: 1,
+          score: 2,
           powerup: 1,
           bomb: 1,
           die: 1,
           gameover: 1,
+          levelclear: 1,
         };
 
         for (const s of sounds) {
@@ -561,7 +588,7 @@ export class RetroAudioEngine {
                 keepAudioSessionActive: true,
               });
               if (player) {
-                player.volume = this.masterVolume;
+                player.volume = gain;
                 voiceList.push(player);
               }
             } catch (err) {
@@ -583,8 +610,8 @@ export class RetroAudioEngine {
           const uri = this.soundUris[s]!;
           const a1 = new Audio(uri);
           const a2 = new Audio(uri);
-          a1.volume = this.masterVolume * 0.9;
-          a2.volume = this.masterVolume * 0.9;
+          a1.volume = gain * 0.9;
+          a2.volume = gain * 0.9;
           this.pools[s] = [a1, a2];
           this.poolIndex[s] = 0;
         } catch {
@@ -595,7 +622,8 @@ export class RetroAudioEngine {
   }
 
   public static play(sound: ArcadeSound): void {
-    if (this.isMuted || this.masterVolume <= 0) return;
+    const gain = this.getEffectiveGain();
+    if (this.isMuted || gain <= 0) return;
     // 1. Native Mobile (expo-audio)
     if (Platform.OS !== 'web') {
       try {
@@ -606,7 +634,7 @@ export class RetroAudioEngine {
           const player = pool[idx];
 
           if (player) {
-            player.volume = this.masterVolume;
+            player.volume = gain;
             if (typeof player.seekTo === 'function') {
               player.seekTo(0)
                 .then(() => {
@@ -624,10 +652,11 @@ export class RetroAudioEngine {
 
         // Lazy fallback if not pre-initialized
         if (SafeExpoAudio?.createAudioPlayer) {
-          const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle);
+          const uri =
+            this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle, gain);
           const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
           if (p) {
-            p.volume = this.masterVolume;
+            p.volume = gain;
             p.play();
           }
         }
@@ -644,14 +673,15 @@ export class RetroAudioEngine {
         const idx = (this.poolIndex[sound] || 0) % pool.length;
         this.poolIndex[sound] = (idx + 1) % pool.length;
         const audio = pool[idx];
-        audio.volume = this.masterVolume * 0.9;
+        audio.volume = gain * 0.9;
         audio.currentTime = 0;
         audio.play().catch(() => {});
         return;
       }
-      const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle);
+      const uri =
+        this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle, gain);
       const audio = new Audio(uri);
-      audio.volume = this.masterVolume * 0.9;
+      audio.volume = gain * 0.9;
       audio.play().catch(() => {});
     } catch {
       // Ignore
