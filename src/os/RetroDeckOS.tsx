@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import {
   ArcadeCartridgeDef,
   ArcadeGameInstance,
@@ -117,203 +118,22 @@ function buildPixelSpans(
 interface DesktopIcon {
   id: OsAppId;
   label: string;
-  spans: PixelSpan[];
+  icon: keyof typeof Ionicons.glyphMap;
 }
 
-// 12 Crisp 11x7 Pixel-Art Menu Icons (2px per pixel = 22x14 icon)
 const DESKTOP_ICONS: DesktopIcon[] = [
-  {
-    id: 'arcade',
-    label: 'GAMES',
-    spans: buildPixelSpans(
-      [
-        '..#######..',
-        '.#########.',
-        '###.###.#.#',
-        '##...##.#.#',
-        '###.###.###',
-        '.###...###.',
-        '..##...##..',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'ai',
-    label: 'CHAT',
-    spans: buildPixelSpans(
-      [
-        '.....#.....',
-        '..#######..',
-        '.#.##.##.#.',
-        '.#########.',
-        '.#.#####.#.',
-        '..#######..',
-        '...#...#...',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'synth',
-    label: 'MUSIC',
-    spans: buildPixelSpans(
-      [
-        '...#######.',
-        '...#.....#.',
-        '...#.....#.',
-        '...#...###.',
-        '.###...###.',
-        '.###.......',
-        '...........',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'phone',
-    label: 'PHONE',
-    spans: buildPixelSpans(
-      [
-        '...#####...',
-        '..#.....#..',
-        '..#.###.#..',
-        '..#######..',
-        '..#.#.#.#..',
-        '..#.#.#.#..',
-        '...#####...',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'sms',
-    label: 'SMS',
-    spans: buildPixelSpans(
-      [
-        '###########',
-        '##.......##',
-        '#.#.....#.#',
-        '#..#...#..#',
-        '#...###...#',
-        '#.........#',
-        '###########',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'profiles',
-    label: 'PROFIL',
-    spans: buildPixelSpans(
-      [
-        '.....#.....',
-        '...#####...',
-        '..#######..',
-        '..#######..',
-        '.#########.',
-        '...........',
-        '....###....',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'calc',
-    label: 'CALC',
-    spans: buildPixelSpans(
-      [
-        '.########.',
-        '.#......#.',
-        '.########.',
-        '.#.#..#.#.',
-        '.#.#..#.#.',
-        '.#.#..#.#.',
-        '.########.',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'clock',
-    label: 'CLOCK',
-    spans: buildPixelSpans(
-      [
-        '...#####...',
-        '.##..#..##.',
-        '.#...#...#.',
-        '.#...###.#.',
-        '.#.......#.',
-        '.##.....##.',
-        '...#####...',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'paint',
-    label: 'PAINT',
-    spans: buildPixelSpans(
-      [
-        '........##.',
-        '.......###.',
-        '......###..',
-        '.....###...',
-        '....###....',
-        '..####.....',
-        '.##........',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'stats',
-    label: 'STATS',
-    spans: buildPixelSpans(
-      [
-        '.#########.',
-        '##.#####.##',
-        '##.#####.##',
-        '..#######..',
-        '....###....',
-        '....###....',
-        '..#######..',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'term',
-    label: 'SHELL',
-    spans: buildPixelSpans(
-      [
-        '###########',
-        '#.........#',
-        '#.#.......#',
-        '#..#......#',
-        '#.#..###..#',
-        '#.........#',
-        '###########',
-      ],
-      2
-    ),
-  },
-  {
-    id: 'setup',
-    label: 'SETUP',
-    spans: buildPixelSpans(
-      [
-        '..#.....#..',
-        '.###...#...',
-        '..#...###..',
-        '..#....#...',
-        '..#....#.#.',
-        '..#....###.',
-        '........#..',
-      ],
-      2
-    ),
-  },
+  { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
+  { id: 'ai', label: 'CHAT', icon: 'sparkles' },
+  { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
+  { id: 'phone', label: 'PHONE', icon: 'call' },
+  { id: 'sms', label: 'SMS', icon: 'mail' },
+  { id: 'profiles', label: 'PROFILE', icon: 'notifications' },
+  { id: 'calc', label: 'CALC', icon: 'calculator' },
+  { id: 'clock', label: 'CLOCK', icon: 'time' },
+  { id: 'paint', label: 'PAINT', icon: 'brush' },
+  { id: 'stats', label: 'STATS', icon: 'trophy' },
+  { id: 'term', label: 'SHELL', icon: 'terminal' },
+  { id: 'setup', label: 'SETUP', icon: 'settings' },
 ];
 
 // Wide 36x10 (72x14 aspect ratio) Iconic Nokia 3310 Picture Message Banners!
@@ -444,8 +264,8 @@ const DIAL_KEYS = [
   ['*', '0', '#', 'LOCK'],
 ];
 
-const NOKIA_PROFILES = ['GENEL', 'SESSIZ', 'TOPLANTI', 'DISARIDA'];
-const NOKIA_OPERATORS = ['TRKCELL', 'TELSIM', 'ARIA', 'NOKIA', 'RD-OS 1.1'];
+const NOKIA_PROFILES = ['GENERAL', 'SILENT', 'MEETING', 'OUTDOOR'];
+const NOKIA_OPERATORS = ['NOKIA', 'TRKCELL', 'TELSIM', 'CYBER', 'RD-OS 1.2'];
 
 interface NokiaSong {
   title: string;
@@ -514,11 +334,11 @@ const CALC_KEYS = [
 ];
 
 const CURRENCY_MODES = [
-  { label: 'HESAP MAK.', rate: 1, unit: '' },
-  { label: 'USD -> TL', rate: 34.5, unit: 'TL' },
-  { label: 'TL -> USD', rate: 1 / 34.5, unit: '$' },
-  { label: 'EUR -> TL', rate: 37.2, unit: 'TL' },
-  { label: 'TL -> EUR', rate: 1 / 37.2, unit: 'E' },
+  { label: 'CALC MODE', rate: 1, unit: '' },
+  { label: 'USD -> EUR', rate: 0.92, unit: 'EUR' },
+  { label: 'EUR -> USD', rate: 1.09, unit: 'USD' },
+  { label: 'USD -> TRY', rate: 34.5, unit: 'TRY' },
+  { label: 'TRY -> USD', rate: 1 / 34.5, unit: 'USD' },
 ];
 
 const TERM_CMDS = [
@@ -1184,7 +1004,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         if (this.profRow === 0) {
           this.profileIdx =
             (this.profileIdx + step + NOKIA_PROFILES.length) % NOKIA_PROFILES.length;
-          RetroAudioEngine.setMuted(NOKIA_PROFILES[this.profileIdx] === 'SESSIZ');
+          RetroAudioEngine.setMuted(NOKIA_PROFILES[this.profileIdx] === 'SILENT');
           return 'score';
         } else if (this.profRow === 1) {
           this.operatorIdx =
@@ -1622,7 +1442,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 {hh}:{mm}:{ss}
               </Text>
               <Text style={[styles.swLap, { color: fg }]}>
-                TUS KILIDI AKTIF ({NOKIA_PROFILES[this.profileIdx]})
+                KEYGUARD LOCKED ({NOKIA_PROFILES[this.profileIdx]})
               </Text>
             </View>
           </View>
@@ -1630,8 +1450,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <View style={[styles.osFooter, { borderTopColor: fg, backgroundColor: this.unlockStage ? fg : 'transparent' }]}>
             <Text style={[styles.footerTxt, { color: this.unlockStage ? bg : fg }]}>
               {this.unlockStage
-                ? 'ACMAK ICIN SIMDI [▲] (*) TUSUNA BASIN!'
-                : 'KILIDI AC: ONCE [A] SONRA [▲] (*) BASIN'}
+                ? 'NOW PRESS [▲] (*) TO UNLOCK!'
+                : 'UNLOCK: PRESS [A] THEN [▲] (*)'}
             </Text>
           </View>
         </View>
@@ -1703,22 +1523,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 },
               ]}
             >
-              {/* 11x7 Pixel-Art Icon (22x14px) */}
-              <View style={styles.pixelIconBox}>
-                {item.spans.map((s) => (
-                  <View
-                    key={s.key}
-                    style={{
-                      position: 'absolute',
-                      left: s.x,
-                      top: s.y,
-                      width: s.w,
-                      height: s.h,
-                      backgroundColor: iconColor,
-                    }}
-                  />
-                ))}
-              </View>
+              <Ionicons name={item.icon} size={18} color={iconColor} />
               <Text style={[styles.deskLbl, { color: iconColor }]}>{item.label}</Text>
             </View>
           );
@@ -1910,7 +1715,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ]}
           >
             <Text style={[styles.aiTabTxt, { color: this.clockTab === 'sw' ? bg : fg }]}>
-              1.KRONOMETRE
+              1.STOPWATCH
             </Text>
           </View>
           <View
@@ -1920,23 +1725,23 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ]}
           >
             <Text style={[styles.aiTabTxt, { color: this.clockTab === 'cd' ? bg : fg }]}>
-              2.GERI SAYIM
+              2.COUNTDOWN
             </Text>
           </View>
         </View>
 
         <View style={styles.centerBox}>
           <Text style={[styles.clockDate, { color: fg }]}>
-            SAAT {hh}:{mm}:{ss}
+            TIME {hh}:{mm}:{ss}
           </Text>
           {this.clockTab === 'sw' ? (
             <View style={[styles.swBox, { borderColor: fg }]}>
               <Text style={[styles.swLbl, { color: fg }]}>
-                KRONOMETRE {this.swRunning ? '[RUN]' : '[STOP]'}
+                STOPWATCH {this.swRunning ? '[RUN]' : '[STOP]'}
               </Text>
               <Text style={[styles.swTime, { color: fg }]}>{this.swTime.toFixed(2)}s</Text>
               {this.swLap > 0 && (
-                <Text style={[styles.swLap, { color: fg }]}>TUR: {this.swLap.toFixed(2)}s</Text>
+                <Text style={[styles.swLap, { color: fg }]}>LAP: {this.swLap.toFixed(2)}s</Text>
               )}
             </View>
           ) : (
@@ -1951,8 +1756,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
             >
               <Text style={[styles.swLbl, { color: this.cdAlarmActive ? bg : fg }]}>
                 {this.cdAlarmActive
-                  ? '((( SURE DOLDU! ALARM )))'
-                  : `GERI SAYIM (${this.cdPresetSec}s)`}
+                  ? '((( TIME UP! ALARM )))'
+                  : `COUNTDOWN (${this.cdPresetSec}s)`}
               </Text>
               <Text style={[styles.swTime, { color: this.cdAlarmActive ? bg : fg }]}>
                 {this.cdRemaining.toFixed(1)}s
@@ -1961,8 +1766,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           )}
           <Text style={[styles.miniHint, { color: fg }]}>
             {this.clockTab === 'sw'
-              ? '[A] BASLAT/DUR • [▲] SIFIRLA • [▼] TUR'
-              : '[A] BASLAT/DUR • [▲] +15SN • [▼] -5SN'}
+              ? '[A] START/STOP • [▲] RESET • [▼] LAP'
+              : '[A] START/STOP • [▲] +15S • [▼] -5S'}
           </Text>
         </View>
       </View>
@@ -2153,14 +1958,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private renderProfiles(fg: string, bg: string) {
     const rows = [
-      `PROFIL: < ${NOKIA_PROFILES[this.profileIdx]} >`,
+      `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
       `OPERATOR: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
-      'TUS KILIDI & SAAT EKRAN KORUYUCU (* ILE AC)',
-      `EL FENERI / TERS LCD: ${this.torchInvert ? 'ACIK' : 'KAPALI'}`,
+      'KEYGUARD & CLOCK SCREENSAVER (* TO UNLOCK)',
+      `TORCH / INVERT LCD: ${this.torchInvert ? 'ON' : 'OFF'}`,
     ];
     return (
       <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>NOKIA 3310 PROFILLER & KILIT</Text>
+        <Text style={[styles.subHeader, { color: fg }]}>NOKIA 3310 PROFILES & KEYGUARD</Text>
         {rows.map((label, i) => {
           const sel = i === this.profRow;
           return (
