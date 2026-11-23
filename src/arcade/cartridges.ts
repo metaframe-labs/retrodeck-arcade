@@ -4,8 +4,33 @@ import { RapidRollGame } from './games/RapidRollGame';
 import { BounceGame } from './games/BounceGame';
 import { SpaceImpactGame } from './games/SpaceImpactGame';
 import { BreakoutGame } from './games/BreakoutGame';
+import { TetrisGame } from './games/TetrisGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'tetris-brick',
+    title: 'RETRO BRICK 99',
+    subtitle: 'Classic Handheld Brick Game & Tetrominoes',
+    genre: 'BRICK RETRO',
+    year: '1989',
+    defaultPalette: 'nokia',
+    controlsHint: '◀ / ▶: Move, ▲ / [A]: Rotate, ▼: Soft Drop, [B]: Hard Drop',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: 'ROTATE',
+      down: 'DOWN',
+      a: 'ROTATE',
+      b: 'DROP',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (ROT)',
+      bLabel: 'B (DROP)',
+    },
+    createGame: (hs = 0) => new TetrisGame(hs),
+  },
   {
     id: 'snake-3310',
     title: 'NOKIA 3310 SNAKE DX',
