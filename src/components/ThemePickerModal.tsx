@@ -111,46 +111,48 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
         </View>
 
         {/* Category Filter Strip */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.catRow}
-          style={styles.catScroll}
-        >
-          {CATEGORIES.map((cat) => {
-            const active = category === cat;
-            return (
-              <Pressable
-                key={cat}
-                onPress={() => setCategory(cat)}
-                style={[
-                  styles.catPill,
-                  {
-                    backgroundColor: active
-                      ? activePalette.bezelAccent
-                      : activePalette.surfaceBg,
-                    borderColor: active
-                      ? activePalette.bezelAccent
-                      : activePalette.surfaceBorder,
-                  },
-                ]}
-              >
-                <Text
+        <View style={styles.catWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.catRow}
+            style={styles.catScroll}
+          >
+            {CATEGORIES.map((cat) => {
+              const active = category === cat;
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => setCategory(cat)}
                   style={[
-                    styles.catTxt,
+                    styles.catPill,
                     {
-                      color: active
-                        ? getAccentInk(activePalette.bezelAccent)
-                        : '#CBD5E1',
+                      backgroundColor: active
+                        ? activePalette.bezelAccent
+                        : activePalette.surfaceBg,
+                      borderColor: active
+                        ? activePalette.bezelAccent
+                        : activePalette.surfaceBorder,
                     },
                   ]}
                 >
-                  {cat}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+                  <Text
+                    style={[
+                      styles.catTxt,
+                      {
+                        color: active
+                          ? getAccentInk(activePalette.bezelAccent)
+                          : '#CBD5E1',
+                      },
+                    ]}
+                  >
+                    {cat}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        </View>
 
         {/* Theme Grid */}
         <ScrollView contentContainerStyle={styles.grid}>
@@ -316,23 +318,30 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontFamily: 'monospace',
   },
+  catWrap: {
+    height: 48,
+    justifyContent: 'center',
+  },
   catScroll: {
-    maxHeight: 46,
+    flexGrow: 0,
   },
   catRow: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
     gap: 8,
     alignItems: 'center',
   },
   catPill: {
-    paddingHorizontal: 11,
-    paddingVertical: 5,
-    borderRadius: 12,
+    height: 30,
+    paddingHorizontal: 13,
+    borderRadius: 15,
     borderWidth: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   catTxt: {
-    fontSize: 10,
+    fontSize: 10.5,
+    lineHeight: 13,
+    includeFontPadding: false,
     fontWeight: '900',
     fontFamily: 'monospace',
     letterSpacing: 0.6,
