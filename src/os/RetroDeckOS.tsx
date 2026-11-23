@@ -123,7 +123,7 @@ interface DesktopIcon {
 
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
-  { id: 'ai', label: 'CHAT', icon: 'sparkles' },
+  { id: 'ai', label: 'CHAT', icon: 'chatbubble-ellipses' },
   { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
   { id: 'phone', label: 'PHONE', icon: 'call' },
   { id: 'sms', label: 'SMS', icon: 'mail' },
