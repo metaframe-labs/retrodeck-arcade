@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { ArcadeGameInstance, ArcadeStats } from './types';
 import { RetroPalette } from '../theme/palettes';
 
@@ -87,9 +88,28 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             </Text>
           </View>
 
-          <View style={styles.statBadgePill}>
-            <Text style={styles.statHeartIcon}>♥</Text>
-            <Text style={styles.statLivesText}>{stats.lives}</Text>
+          <View
+            style={[
+              styles.statBadgePill,
+              palette.isLightLcd && {
+                backgroundColor: 'rgba(23, 38, 22, 0.12)',
+                borderColor: `${palette.bezelAccent}55`,
+              },
+            ]}
+          >
+            <Ionicons
+              name="heart"
+              size={12}
+              color={palette.isLightLcd ? palette.bezelAccent : '#FF2A6D'}
+            />
+            <Text
+              style={[
+                styles.statLivesText,
+                palette.isLightLcd && { color: palette.bezelAccent },
+              ]}
+            >
+              {stats.lives}
+            </Text>
           </View>
 
           <View
@@ -240,35 +260,85 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
 
         {/* Game Over / Victory Overlay */}
         {(stats.gameOver || stats.message?.includes('VICTORY')) && stats.message && !isPaused && (
-          <View style={styles.overlay}>
-            <Text
+          <View
+            style={[
+              styles.overlay,
+              palette.isLightLcd && {
+                backgroundColor: 'rgba(148, 176, 124, 0.94)', // Authentic Nokia LCD overlay
+              },
+            ]}
+          >
+            <View
               style={[
-                styles.overlayTitle,
-                { color: stats.message.includes('OVER') ? '#FF0055' : '#FFD700' },
+                styles.nokiaGameOverFrame,
+                palette.isLightLcd && {
+                  borderColor: palette.pixelOn,
+                  backgroundColor: palette.screenBg,
+                },
               ]}
             >
-              {stats.message}
-            </Text>
-            {stats.subMessage && (
-              <Text style={styles.overlaySub}>{stats.subMessage}</Text>
-            )}
-            <View style={styles.gameOverScorePill}>
-              <Text style={styles.overlayFinalScoreLabel}>FINAL SCORE</Text>
               <Text
                 style={[
-                  styles.overlayFinalScoreValue,
+                  styles.overlayTitle,
                   {
-                    color: palette.isLightLcd ? '#FFFFFF' : palette.pixelOn,
+                    color: palette.isLightLcd
+                      ? palette.pixelOn
+                      : stats.message.includes('OVER')
+                      ? '#FF0055'
+                      : '#FFD700',
                   },
                 ]}
               >
-                {stats.score.toString().padStart(6, '0')}
+                {stats.message}
               </Text>
-              {stats.highScore > 0 && (
-                <Text style={styles.overlayHighScoreLabel}>
-                  BEST RECORD: {stats.highScore.toString().padStart(6, '0')}
+              {stats.subMessage && (
+                <Text
+                  style={[
+                    styles.overlaySub,
+                    palette.isLightLcd && { color: palette.pixelOn },
+                  ]}
+                >
+                  {stats.subMessage}
                 </Text>
               )}
+              <View
+                style={[
+                  styles.gameOverScorePill,
+                  palette.isLightLcd && {
+                    backgroundColor: 'rgba(23, 38, 22, 0.12)',
+                    borderColor: palette.pixelOn,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.overlayFinalScoreLabel,
+                    palette.isLightLcd && { color: palette.pixelOn },
+                  ]}
+                >
+                  FINAL SCORE
+                </Text>
+                <Text
+                  style={[
+                    styles.overlayFinalScoreValue,
+                    {
+                      color: palette.pixelOn,
+                    },
+                  ]}
+                >
+                  {stats.score.toString().padStart(6, '0')}
+                </Text>
+                {stats.highScore > 0 && (
+                  <Text
+                    style={[
+                      styles.overlayHighScoreLabel,
+                      palette.isLightLcd && { color: palette.pixelOn },
+                    ]}
+                  >
+                    ★ BEST: {stats.highScore.toString().padStart(6, '0')} ★
+                  </Text>
+                )}
+              </View>
             </View>
           </View>
         )}
@@ -361,12 +431,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   statHeartIcon: {
-    color: '#FF2A6D',
+    color: '#94B07C',
     fontSize: 11,
     fontWeight: '900',
   },
   statLivesText: {
-    color: '#CBD5E1',
+    color: '#94B07C',
     fontSize: 10,
     fontWeight: '800',
     fontFamily: 'monospace',
@@ -506,6 +576,15 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     letterSpacing: 1,
     textAlign: 'center',
+  },
+  nokiaGameOverFrame: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    maxWidth: '90%',
   },
   gameOverScorePill: {
     marginTop: 10,

@@ -693,14 +693,44 @@ export class BounceGame implements ArcadeGameInstance {
     return (
       <View style={StyleSheet.absoluteFill}>
         {/* In-Game HUD Badge: Golden Hoops Counter */}
-        <View style={styles.hudBadge}>
-          <View style={styles.hudRingIcon} />
-          <Text style={styles.hudText}>
+        <View
+          style={[
+            styles.hudBadge,
+            isLight && {
+              backgroundColor: 'rgba(23, 38, 22, 0.15)',
+              borderColor: palette.pixelOn,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.hudRingIcon,
+              isLight && { borderColor: palette.pixelOn },
+            ]}
+          />
+          <Text
+            style={[
+              styles.hudText,
+              isLight && { color: palette.pixelOn },
+            ]}
+          >
             {collectedCount}/{this.hoops.length}
           </Text>
           {this.exitDoor.open && (
-            <View style={styles.exitOpenBadge}>
-              <Text style={styles.exitOpenText}>EXIT OPEN</Text>
+            <View
+              style={[
+                styles.exitOpenBadge,
+                isLight && { backgroundColor: palette.pixelOn },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.exitOpenText,
+                  isLight && { color: palette.screenBg },
+                ]}
+              >
+                EXIT OPEN
+              </Text>
             </View>
           )}
         </View>
