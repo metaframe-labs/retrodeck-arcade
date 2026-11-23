@@ -19,4 +19,9 @@ android/app/build/
 android/local.properties
 *.apk
 *.aab
+scc.exe
+screen24.png
+android/app/src/main/assets/
+android/app/src/main/res/raw/
+scripts/verifySokoban.ts
 

@@ -62,8 +62,8 @@ function RetroDeckConsole() {
   });
 
   const [stats, setStats] = useState<ArcadeStats>(() => gameRef.current.getStats());
-  const [paletteId, setPaletteId] = useState<RetroPaletteId>('nokia');
-  const [scanlines, setScanlines] = useState(true);
+  const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
+  const [scanlines, setScanlines] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isBeeping, setIsBeeping] = useState(false);
   const [keyboardMode, setKeyboardMode] = useState(false);
