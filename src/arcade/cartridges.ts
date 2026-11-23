@@ -79,8 +79,298 @@ import { MorseCodeGame } from './games/MorseCodeGame';
 import { RouletteGame } from './games/RouletteGame';
 import { PyramidHopGame } from './games/PyramidHopGame';
 import { BumperCarsGame } from './games/BumperCarsGame';
+import { BattleshipGame } from './games/BattleshipGame';
+import { BalloonPopGame } from './games/BalloonPopGame';
+import { MeteorShieldGame } from './games/MeteorShieldGame';
+import { HurdlesSprintGame } from './games/HurdlesSprintGame';
+import { CardWarGame } from './games/CardWarGame';
+import { NumberRushGame } from './games/NumberRushGame';
+import { PlinkoDropGame } from './games/PlinkoDropGame';
+import { ParachuteRescueGame } from './games/ParachuteRescueGame';
+import { LockpickVaultGame } from './games/LockpickVaultGame';
+import { LaserMirrorGame } from './games/LaserMirrorGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'battleship-dx',
+    title: 'BATTLESHIP DX',
+    subtitle: '8x8 Naval Grid — Hunt & Sink 4 Hidden Ships',
+    genre: 'STRATEGY',
+    year: '1979',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Aim Grid Cell • [A]: Fire Torpedo',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'FIRE',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new BattleshipGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'balloon-pop-dx',
+    title: 'BALLOON POP DX',
+    subtitle: 'Aim Crosshair, Pop Star Balloons & Avoid Skulls',
+    genre: 'SHOOTER',
+    year: '1984',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move Crosshair • [A]: Pop Balloon (Avoid X Skulls!)',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'POP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (POP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new BalloonPopGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'meteor-shield-dx',
+    title: 'METEOR SHIELD DX',
+    subtitle: 'Rotate 360° Orbital Shield & Unleash EMP Pulse',
+    genre: 'DEFENSE',
+    year: '1982',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Rotate Shield • [A]: Fire EMP when 100%',
+    gamepadLabels: {
+      left: 'CCW',
+      right: 'CW',
+      up: 'TOP',
+      down: 'BOT',
+      a: 'EMP',
+      b: 'B',
+      leftLabel: '◀ (CCW)',
+      rightLabel: '▶ (CW)',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (EMP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new MeteorShieldGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'hurdles-sprint-dx',
+    title: 'HURDLES SPRINT',
+    subtitle: 'Retro Track & Field Sprint and Hurdle Timing',
+    genre: 'SPORTS',
+    year: '1983',
+    defaultPalette: 'nokia',
+    controlsHint: 'TAP [▶]: Sprint Faster • [A]/[▲]: Jump Hurdles',
+    gamepadLabels: {
+      left: '◀',
+      right: 'RUN',
+      up: 'JUMP',
+      down: '▼',
+      a: 'JUMP',
+      b: 'RUN',
+      leftLabel: '◀',
+      rightLabel: '▶ (RUN)',
+      upLabel: '▲ (JUMP)',
+      downLabel: '▼',
+      aLabel: 'A (JUMP)',
+      bLabel: 'B (RUN)',
+    },
+    createGame: (hs = 0) => {
+      const g = new HurdlesSprintGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'card-war-dx',
+    title: 'CARD WAR DX',
+    subtitle: 'Classic High-Card Battle & Tie-Breaker WARs',
+    genre: 'CARDS',
+    year: '1985',
+    defaultPalette: 'nokia',
+    controlsHint: 'Press [A] to flip cards — ties trigger a high-stakes WAR!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'FLIP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FLIP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new CardWarGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'number-rush-dx',
+    title: 'NUMBER RUSH DX',
+    subtitle: 'Collect 1 to 9 in Order Before the Clock Hits Zero',
+    genre: 'ARCADE',
+    year: '1987',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move • HOLD [A]: Dash • Touch 1→9 in order!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'DASH',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (DASH)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new NumberRushGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'plinko-drop-dx',
+    title: 'PLINKO DROP DX',
+    subtitle: 'Bounce Balls Through Pegs Into Jackpot Buckets',
+    genre: 'PACHINKO',
+    year: '1983',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Aim Dropper • [A]: Drop Ball into Multiplier Slots',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'DROP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (DROP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new PlinkoDropGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'parachute-rescue-dx',
+    title: 'PARACHUTE DX',
+    subtitle: 'Catch Falling Parachutists Before Sharks Strike',
+    genre: 'GAME & WATCH',
+    year: '1981',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Row Rescue Boat • HOLD [A]: Turbo Row',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'TURBO',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (TURBO)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new ParachuteRescueGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'lockpick-vault-dx',
+    title: 'LOCKPICK VAULT',
+    subtitle: 'Crack Vault Dials by Hitting Rotating Target Pins',
+    genre: 'TIMING',
+    year: '1988',
+    defaultPalette: 'nokia',
+    controlsHint: 'Press [A] exactly when the dial needle hits the target notch!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'PICK',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (PICK)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new LockpickVaultGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'laser-mirror-dx',
+    title: 'LASER MIRROR DX',
+    subtitle: 'Rotate Mirrors to Route the Laser Beam to Receiver',
+    genre: 'PUZZLE',
+    year: '1989',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Select Mirror • [A]: Flip / and \\ to Hit Receiver',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'FLIP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FLIP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new LaserMirrorGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
   {
     id: 'jetpack-dx',
     title: 'JETPACK DX',
