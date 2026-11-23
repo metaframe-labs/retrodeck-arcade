@@ -137,7 +137,19 @@ const DESKTOP_ICONS: DesktopIcon[] = [
 ];
 
 // Wide 36x10 (72x14 aspect ratio) Iconic Nokia 3310 Picture Message Banners!
-export type PicArtKey = 'COFFEE' | 'HEART' | 'SAD' | 'CAKE' | 'SNAKE';
+export type PicArtKey =
+  | 'COFFEE'
+  | 'SMILE'
+  | 'COOL'
+  | 'WINK'
+  | 'HEART'
+  | 'SAD'
+  | 'CAT'
+  | 'ALIEN'
+  | 'SKULL'
+  | 'MUSIC'
+  | 'CAKE'
+  | 'SNAKE';
 
 const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
   COFFEE: buildPixelSpans(
@@ -153,22 +165,77 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '...........###########..............',
       '.......###################..........',
     ],
-    2
+    2,
+    72,
+    20
+  ),
+  SMILE: buildPixelSpans(
+    [
+      '...........##############...........',
+      '.........##..............##.........',
+      '........#...###......###...#........',
+      '.......#....###......###....#.......',
+      '.......#....................#.......',
+      '.......#...##..........##...#.......',
+      '........#...###......###...#........',
+      '.........##...########...##.........',
+      '...........##############...........',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  COOL: buildPixelSpans(
+    [
+      '...........##############...........',
+      '.........##..............##.........',
+      '.......######################.......',
+      '.......#.#######....#######.#.......',
+      '.......#..#####......#####..#.......',
+      '.......#....................#.......',
+      '........#....##########....#........',
+      '.........##..............##.........',
+      '...........##############...........',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  WINK: buildPixelSpans(
+    [
+      '...........##############...........',
+      '.........##..............##.........',
+      '........#...###.............#.......',
+      '.......#....###.....#####...#.......',
+      '.......#....................#.......',
+      '.......#...##..........##...#.......',
+      '........#....##########....#........',
+      '.........##..............##.........',
+      '...........##############...........',
+      '....................................',
+    ],
+    2,
+    72,
+    20
   ),
   HEART: buildPixelSpans(
     [
-      '....#####...#####....####...####....',
-      '..#######.#######..######.######....',
-      '.#################.#############....',
-      '.#################.#############....',
-      '..###############...###########.....',
-      '...#############.....#########......',
-      '.....#########.........#####........',
-      '.......#####.............#..........',
-      '.........#..........................',
-      '....................................',
+      '..........#####.....#####...........',
+      '........########...########.........',
+      '.......#####################........',
+      '.......#####################........',
+      '........###################.........',
+      '.........#################..........',
+      '...........#############............',
+      '.............#########..............',
+      '...............#####................',
+      '.................#..................',
     ],
-    2
+    2,
+    72,
+    20
   ),
   SAD: buildPixelSpans(
     [
@@ -183,7 +250,77 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '...........##############...........',
       '....................................',
     ],
-    2
+    2,
+    72,
+    20
+  ),
+  CAT: buildPixelSpans(
+    [
+      '........##................##........',
+      '........###..............###........',
+      '........####.##########.####........',
+      '........#..................#........',
+      '.......#...###........###...#.......',
+      '......###........##........###......',
+      '.......#.......######.......#.......',
+      '........##................##........',
+      '..........################..........',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  ALIEN: buildPixelSpans(
+    [
+      '...........##..........##...........',
+      '............##........##............',
+      '..........################..........',
+      '.........####..######..####.........',
+      '........####################........',
+      '........#.################.#........',
+      '........#.#..............#.#........',
+      '...........###........###...........',
+      '....................................',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  SKULL: buildPixelSpans(
+    [
+      '...........##############...........',
+      '.........##################.........',
+      '........###....######....###........',
+      '........###....######....###........',
+      '........########.##.########........',
+      '..........################..........',
+      '...........##.##.##.##.##...........',
+      '...........##.##.##.##.##...........',
+      '....................................',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  MUSIC: buildPixelSpans(
+    [
+      '............################........',
+      '............################........',
+      '............##............##........',
+      '............##............##........',
+      '............##............##........',
+      '.........#####.........#####........',
+      '........######........######........',
+      '........######........######........',
+      '.........####..........####.........',
+      '....................................',
+    ],
+    2,
+    72,
+    20
   ),
   CAKE: buildPixelSpans(
     [
@@ -198,7 +335,9 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '.......#######################......',
       '.....###########################....',
     ],
-    2
+    2,
+    72,
+    20
   ),
   SNAKE: buildPixelSpans(
     [
@@ -213,7 +352,9 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '....................................',
       '....................................',
     ],
-    2
+    2,
+    72,
+    20
   ),
 };
 
@@ -232,8 +373,26 @@ const INITIAL_PIC_MESSAGES: NokiaPicSms[] = [
     artKey: 'COFFEE',
   },
   {
+    sender: '+358-SMILE',
+    title: 'GOOD VIBES',
+    text: 'HAVING A GREAT DAY! HOPE YOU ARE SMILING TOO :D',
+    artKey: 'SMILE',
+  },
+  {
+    sender: 'CYBER-COOL',
+    title: 'DEAL WITH IT',
+    text: 'TOO COOL FOR SMARTPHONES! SENT FROM MY 3310 B-)',
+    artKey: 'COOL',
+  },
+  {
+    sender: '+358-SECRET',
+    title: 'TONIGHT ;-)',
+    text: 'GOT A SECRET ARCADE PLAN FOR TONIGHT... CALL ME ;-)',
+    artKey: 'WINK',
+  },
+  {
     sender: 'NOKIA-LOVE',
-    title: 'TWIN HEARTS',
+    title: 'PIXEL HEART',
     text: 'MY LOVE LASTS LONGER THAN A 3310 BATTERY!',
     artKey: 'HEART',
   },
@@ -242,6 +401,30 @@ const INITIAL_PIC_MESSAGES: NokiaPicSms[] = [
     title: 'MISS YOU',
     text: 'WHERE ARE YOU? NO SMS FOR 2 DAYS :(',
     artKey: 'SAD',
+  },
+  {
+    sender: 'KITTY-3310',
+    title: 'MEOW =^.^=',
+    text: 'MEOW! JUST CHILLING AT HOME, WHAT ARE U UP TO?',
+    artKey: 'CAT',
+  },
+  {
+    sender: 'INVADER-80',
+    title: 'SPACE ALIEN',
+    text: 'EARTH ARCADE DEFENSES BREACHED! INSERT COIN!',
+    artKey: 'ALIEN',
+  },
+  {
+    sender: 'BOSS-RUSH',
+    title: 'GAME OVER',
+    text: 'YOU OWE ME A REMATCH AT THE ARCADE TONIGHT!',
+    artKey: 'SKULL',
+  },
+  {
+    sender: 'DJ-COMPOSER',
+    title: 'NEW RINGTONE',
+    text: 'JUST COMPOSED A NEW 8-BIT BANGER ON MY 3310!',
+    artKey: 'MUSIC',
   },
   {
     sender: 'PARTY-3310',
@@ -769,18 +952,34 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsBannerTimer = 10;
 
     try {
-      const prompt = `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only). Start your reply with one tag: [COFFEE], [HEART], [SAD], [CAKE], or [SNAKE].`;
+      const prompt = `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only). Start your reply with one tag: [COFFEE], [SMILE], [COOL], [WINK], [HEART], [SAD], [CAT], [ALIEN], [SKULL], [MUSIC], [CAKE], or [SNAKE].`;
       const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
       const cleaned = stripMarkdownForLcd(raw).toUpperCase();
 
-      let artKey: PicArtKey = 'COFFEE';
-      if (cleaned.includes('HEART') || cleaned.includes('LOVE')) artKey = 'HEART';
-      else if (cleaned.includes('SAD') || cleaned.includes('MISS')) artKey = 'SAD';
-      else if (cleaned.includes('CAKE') || cleaned.includes('BIRTH')) artKey = 'CAKE';
-      else if (cleaned.includes('SNAKE')) artKey = 'SNAKE';
+      const allKeys: PicArtKey[] = [
+        'COFFEE',
+        'SMILE',
+        'COOL',
+        'WINK',
+        'HEART',
+        'SAD',
+        'CAT',
+        'ALIEN',
+        'SKULL',
+        'MUSIC',
+        'CAKE',
+        'SNAKE',
+      ];
+      let artKey: PicArtKey = 'SMILE';
+      for (const k of allKeys) {
+        if (cleaned.includes(k)) {
+          artKey = k;
+          break;
+        }
+      }
 
       const body = cleaned
-        .replace(/\[(COFFEE|HEART|SAD|CAKE|SNAKE)\]/g, '')
+        .replace(/\[(COFFEE|SMILE|COOL|WINK|HEART|SAD|CAT|ALIEN|SKULL|MUSIC|CAKE|SNAKE)\]/g, '')
         .trim()
         .slice(0, 82);
 
