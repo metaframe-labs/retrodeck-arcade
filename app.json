@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "RetroDeck-8",
+    "slug": "retrodeck-8",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#05070A",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.metaframelabs.retrodeck8"
+    },
+    "android": {
+      "package": "com.metaframelabs.retrodeck8",
+      "adaptiveIcon": {
+        "backgroundColor": "#05070A"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
