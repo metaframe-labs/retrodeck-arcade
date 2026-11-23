@@ -1,6 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+
+const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
 import {
   ArcadeCartridgeDef,
   ArcadeGameInstance,
@@ -769,7 +772,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private fxModeIdx = 0;
 
   // Clock / Stopwatch / Countdown Timer state
-  private clockTab: 'sw' | 'cd' = 'sw';
+  private clockTab: 'clk' | 'sw' | 'cd' = 'clk';
+  private clockFace: 'analog' | 'digital' = 'analog';
   private swRunning = false;
   private swTime = 0;
   private swLap = 0;
@@ -862,6 +866,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
     loadBYOKConfig().then((cfg) => {
       this.byokConfig = cfg;
     });
+    AsyncStorage.getItem(CLOCK_FACE_STORAGE_KEY)
+      .then((val) => {
+        if (val === 'analog' || val === 'digital') {
+          this.clockFace = val;
+        }
+      })
+      .catch(() => {});
+  }
+
+  private toggleClockFace() {
+    this.clockFace = this.clockFace === 'analog' ? 'digital' : 'analog';
+    AsyncStorage.setItem(CLOCK_FACE_STORAGE_KEY, this.clockFace).catch(() => {});
   }
 
   private clearCanvas() {
@@ -1952,8 +1968,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'clock') {
       if (dir === 'left' || dir === 'right') {
-        this.clockTab = this.clockTab === 'sw' ? 'cd' : 'sw';
+        const tabs: ('clk' | 'sw' | 'cd')[] = ['clk', 'sw', 'cd'];
+        const cur = tabs.indexOf(this.clockTab);
+        this.clockTab =
+          dir === 'right'
+            ? tabs[(cur + 1) % tabs.length]
+            : tabs[(cur + tabs.length - 1) % tabs.length];
         return 'hit';
+      }
+      if (this.clockTab === 'clk') {
+        if (pressA) {
+          this.toggleClockFace();
+          return 'score';
+        }
+        return null;
       }
       if (this.clockTab === 'sw') {
         if (pressA) {
@@ -2104,14 +2132,29 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'setup') {
-      if (dir === 'up') this.setupIdx = (this.setupIdx + 3) % 4;
-      if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % 4;
+      if (dir === 'up') this.setupIdx = (this.setupIdx + 4) % 5;
+      if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % 5;
+      if (dir === 'left' || dir === 'right') {
+        if (this.setupIdx === 0) {
+          this.cb.onCyclePalette();
+          return 'score';
+        }
+        if (this.setupIdx === 1) {
+          this.cb.onToggleScanlines();
+          return 'score';
+        }
+        if (this.setupIdx === 2) {
+          this.toggleClockFace();
+          return 'score';
+        }
+      }
       if (dir) return 'hit';
       if (pressA) {
         if (this.setupIdx === 0) this.cb.onCyclePalette();
         else if (this.setupIdx === 1) this.cb.onToggleScanlines();
-        else if (this.setupIdx === 2) this.cb.onOpenCartVault();
-        else if (this.setupIdx === 3) {
+        else if (this.setupIdx === 2) this.toggleClockFace();
+        else if (this.setupIdx === 3) this.cb.onOpenCartVault();
+        else if (this.setupIdx === 4) {
           this.app = 'boot';
           this.bootTimer = 0;
         }
@@ -3123,75 +3166,211 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private renderClock(fg: string, bg: string) {
     const d = new Date();
-    const hh = String(d.getHours()).padStart(2, '0');
-    const mm = String(d.getMinutes()).padStart(2, '0');
-    const ss = String(d.getSeconds()).padStart(2, '0');
+    const hours = d.getHours();
+    const mins = d.getMinutes();
+    const secs = d.getSeconds();
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(mins).padStart(2, '0');
+    const ss = String(secs).padStart(2, '0');
+    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+    const dateStr = `${days[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`;
+
+    const secDeg = secs * 6;
+    const minDeg = mins * 6 + secs * 0.1;
+    const hourDeg = ((hours % 12) * 30) + mins * 0.5;
+    const dialSize = 84;
+    const center = dialSize / 2;
 
     return (
       <View style={styles.listWrap}>
         <View style={styles.aiTabsRow}>
-          <View
-            style={[
-              styles.aiTabPill,
-              { borderColor: fg, backgroundColor: this.clockTab === 'sw' ? fg : 'transparent' },
-            ]}
-          >
-            <Text style={[styles.aiTabTxt, { color: this.clockTab === 'sw' ? bg : fg }]}>
-              1.STOPWATCH
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.aiTabPill,
-              { borderColor: fg, backgroundColor: this.clockTab === 'cd' ? fg : 'transparent' },
-            ]}
-          >
-            <Text style={[styles.aiTabTxt, { color: this.clockTab === 'cd' ? bg : fg }]}>
-              2.COUNTDOWN
-            </Text>
-          </View>
+          {[
+            { id: 'clk', label: '1.CLOCK' },
+            { id: 'sw', label: '2.STOPWATCH' },
+            { id: 'cd', label: '3.TIMER' },
+          ].map((t) => {
+            const active = this.clockTab === t.id;
+            return (
+              <View
+                key={t.id}
+                style={[
+                  styles.aiTabPill,
+                  { borderColor: fg, backgroundColor: active ? fg : 'transparent' },
+                ]}
+              >
+                <Text style={[styles.aiTabTxt, { color: active ? bg : fg }]}>
+                  {t.label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
 
-        <View style={styles.centerBox}>
-          <Text style={[styles.clockDate, { color: fg }]}>
-            TIME {hh}:{mm}:{ss}
-          </Text>
-          {this.clockTab === 'sw' ? (
-            <View style={[styles.swBox, { borderColor: fg }]}>
-              <Text style={[styles.swLbl, { color: fg }]}>
-                STOPWATCH {this.swRunning ? '[RUN]' : '[STOP]'}
-              </Text>
-              <Text style={[styles.swTime, { color: fg }]}>{this.swTime.toFixed(2)}s</Text>
-              {this.swLap > 0 && (
-                <Text style={[styles.swLap, { color: fg }]}>LAP: {this.swLap.toFixed(2)}s</Text>
-              )}
-            </View>
-          ) : (
-            <View
-              style={[
-                styles.swBox,
-                {
-                  borderColor: fg,
-                  backgroundColor: this.cdAlarmActive ? fg : 'transparent',
-                },
-              ]}
-            >
-              <Text style={[styles.swLbl, { color: this.cdAlarmActive ? bg : fg }]}>
-                {this.cdAlarmActive
-                  ? '((( TIME UP! ALARM )))'
-                  : `COUNTDOWN (${this.cdPresetSec}s)`}
-              </Text>
-              <Text style={[styles.swTime, { color: this.cdAlarmActive ? bg : fg }]}>
-                {this.cdRemaining.toFixed(1)}s
-              </Text>
-            </View>
-          )}
-          <Text style={[styles.miniHint, { color: fg }]}>
-            {this.clockTab === 'sw'
-              ? '[A] START/STOP • [▲] RESET • [▼] LAP'
-              : '[A] START/STOP • [▲] +15S • [▼] -5S'}
-          </Text>
-        </View>
+        {this.clockTab === 'clk' ? (
+          <View style={styles.centerBox}>
+            {this.clockFace === 'analog' ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 }}>
+                {/* Analog Clock Dial */}
+                <View
+                  style={{
+                    width: dialSize,
+                    height: dialSize,
+                    borderRadius: center,
+                    borderWidth: 2,
+                    borderColor: fg,
+                    position: 'relative',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {/* 12 Hour Tick Marks */}
+                  {Array.from({ length: 12 }).map((_, i) => {
+                    const angle = (i * 30 - 90) * (Math.PI / 180);
+                    const r = center - 6;
+                    const isMajor = i % 3 === 0;
+                    const dotSize = isMajor ? 4 : 2;
+                    const tx = center + Math.cos(angle) * r - dotSize / 2 - 2;
+                    const ty = center + Math.sin(angle) * r - dotSize / 2 - 2;
+                    return (
+                      <View
+                        key={i}
+                        style={{
+                          position: 'absolute',
+                          left: tx,
+                          top: ty,
+                          width: dotSize,
+                          height: dotSize,
+                          backgroundColor: fg,
+                        }}
+                      />
+                    );
+                  })}
+
+                  {/* Hour Hand */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      width: 3,
+                      height: 20,
+                      backgroundColor: fg,
+                      borderRadius: 1.5,
+                      transform: [
+                        { rotate: `${hourDeg}deg` },
+                        { translateY: -9 },
+                      ],
+                    }}
+                  />
+
+                  {/* Minute Hand */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      width: 2,
+                      height: 29,
+                      backgroundColor: fg,
+                      borderRadius: 1,
+                      transform: [
+                        { rotate: `${minDeg}deg` },
+                        { translateY: -13 },
+                      ],
+                    }}
+                  />
+
+                  {/* Second Hand */}
+                  <View
+                    style={{
+                      position: 'absolute',
+                      width: 1,
+                      height: 33,
+                      backgroundColor: fg,
+                      opacity: 0.85,
+                      transform: [
+                        { rotate: `${secDeg}deg` },
+                        { translateY: -14 },
+                      ],
+                    }}
+                  />
+
+                  {/* Center Pivot */}
+                  <View
+                    style={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      backgroundColor: fg,
+                    }}
+                  />
+                </View>
+
+                {/* Digital & Date Side Readout */}
+                <View style={{ alignItems: 'flex-start', justifyContent: 'center' }}>
+                  <Text style={[styles.swLbl, { color: fg, opacity: 0.75 }]}>ANALOG WATCH</Text>
+                  <Text style={[styles.swTime, { color: fg, fontSize: 16 }]}>
+                    {hh}:{mm}:{ss}
+                  </Text>
+                  <Text style={[styles.clockDate, { color: fg, marginTop: 2, marginBottom: 0 }]}>
+                    {dateStr}
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.swBox, { borderColor: fg }]}>
+                <Text style={[styles.swLbl, { color: fg }]}>DIGITAL WATCH</Text>
+                <Text style={[styles.clockBig, { color: fg }]}>
+                  {hh}:{mm}:{ss}
+                </Text>
+                <Text style={[styles.clockDate, { color: fg, marginBottom: 0 }]}>
+                  {dateStr}
+                </Text>
+              </View>
+            )}
+            <Text style={[styles.miniHint, { color: fg }]}>
+              [A] {this.clockFace === 'analog' ? 'DIGITAL' : 'ANALOG'} • [◀/▶] TABS • ALSO IN SETUP
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.centerBox}>
+            <Text style={[styles.clockDate, { color: fg }]}>
+              TIME {hh}:{mm}:{ss}
+            </Text>
+            {this.clockTab === 'sw' ? (
+              <View style={[styles.swBox, { borderColor: fg }]}>
+                <Text style={[styles.swLbl, { color: fg }]}>
+                  STOPWATCH {this.swRunning ? '[RUN]' : '[STOP]'}
+                </Text>
+                <Text style={[styles.swTime, { color: fg }]}>{this.swTime.toFixed(2)}s</Text>
+                {this.swLap > 0 && (
+                  <Text style={[styles.swLap, { color: fg }]}>LAP: {this.swLap.toFixed(2)}s</Text>
+                )}
+              </View>
+            ) : (
+              <View
+                style={[
+                  styles.swBox,
+                  {
+                    borderColor: fg,
+                    backgroundColor: this.cdAlarmActive ? fg : 'transparent',
+                  },
+                ]}
+              >
+                <Text style={[styles.swLbl, { color: this.cdAlarmActive ? bg : fg }]}>
+                  {this.cdAlarmActive
+                    ? '((( TIME UP! ALARM )))'
+                    : `COUNTDOWN (${this.cdPresetSec}s)`}
+                </Text>
+                <Text style={[styles.swTime, { color: this.cdAlarmActive ? bg : fg }]}>
+                  {this.cdRemaining.toFixed(1)}s
+                </Text>
+              </View>
+            )}
+            <Text style={[styles.miniHint, { color: fg }]}>
+              {this.clockTab === 'sw'
+                ? '[A] START/STOP • [▲] RESET • [▼] LAP'
+                : '[A] START/STOP • [▲] +15S • [▼] -5S'}
+            </Text>
+          </View>
+        )}
       </View>
     );
   }
@@ -3640,6 +3819,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const items = [
       `PALETTE: ${this.cb.getPaletteName()}`,
       `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
+      `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
       'OPEN FULL CARTRIDGE VAULT',
       'REBOOT RETRODECK OS',
     ];
