@@ -130,12 +130,18 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 <Ionicons
                   name="heart"
                   size={12}
-                  color={palette.isLightLcd ? palette.bezelAccent : '#FF2A6D'}
+                  color={
+                    palette.isLightLcd || palette.id === 'thinkpad' || palette.id === 'oled'
+                      ? palette.bezelAccent
+                      : '#FF2A6D'
+                  }
                 />
                 <Text
                   style={[
                     styles.statLivesText,
-                    palette.isLightLcd && { color: palette.bezelAccent },
+                    (palette.isLightLcd || palette.id === 'thinkpad' || palette.id === 'oled') && {
+                      color: palette.bezelAccent,
+                    },
                   ]}
                 >
                   {stats.lives}
