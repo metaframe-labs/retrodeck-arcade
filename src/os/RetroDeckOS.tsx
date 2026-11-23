@@ -836,6 +836,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private dialR = 0;
   private dialC = 0;
   private dialBuffer = '';
+  private isNumericDeckActive = false;
   private callState: 'idle' | 'ringing' | 'connected' | 'info' | 'warranty' = 'idle';
   private warrantyPage = 0;
   private callTitle = '';
@@ -1136,6 +1137,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.dialBuffer = '';
     }
     return null;
+  }
+
+  public setNumericDeckActive(active: boolean) {
+    this.isNumericDeckActive = active;
   }
 
   public pressNumericKey(key: string) {
@@ -3166,6 +3171,53 @@ export class RetroDeckOS implements ArcadeGameInstance {
             {this.callState === 'ringing'
               ? '[A] ANSWER CALL   [B] REJECT'
               : '[A] / [B] END / BACK'}
+          </Text>
+        </View>
+      );
+    }
+
+    if (this.isNumericDeckActive) {
+      const blink = Math.floor(this.uptime * 2.5) % 2 === 0;
+      return (
+        <View style={styles.calcWrap}>
+          <View style={styles.compHeader}>
+            <Text style={[styles.compTitle, { color: fg }]}>NOKIA 3310 DIALER</Text>
+            <Text style={[styles.compBpm, { color: fg }]}>[NUM PAD]</Text>
+          </View>
+          <View
+            style={[
+              styles.swBox,
+              {
+                borderColor: fg,
+                flex: 1,
+                width: '100%',
+                justifyContent: 'center',
+                marginBottom: 4,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.clockBig,
+                {
+                  color: fg,
+                  fontSize: this.dialBuffer.length > 10 ? 16 : 22,
+                  textAlign: 'center',
+                  letterSpacing: 1.5,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {this.dialBuffer ? `${this.dialBuffer}${blink ? '_' : ' '}` : blink ? '_' : ' '}
+            </Text>
+            {!this.dialBuffer && (
+              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 4 }]}>
+                DIAL NUMBER OR *#0000# / *#06#
+              </Text>
+            )}
+          </View>
+          <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
+            [OK]: CALL   [DEL]: ERASE   [BACK]: DESKTOP
           </Text>
         </View>
       );

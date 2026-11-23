@@ -97,6 +97,10 @@ function RetroDeckConsole() {
 
   const palette = RETRO_PALETTES[paletteId];
 
+  useEffect(() => {
+    osRef.current.setNumericDeckActive?.(deckMode === 'num');
+  }, [deckMode]);
+
   // Load persisted OS theme & CRT scanlines setting on boot
   useEffect(() => {
     AsyncStorage.getItem(PALETTE_STORAGE_KEY)
