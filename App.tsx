@@ -72,6 +72,7 @@ function RetroDeckConsole() {
   const [devCartVisible, setDevCartVisible] = useState(false);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
+  const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
   const beepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const paletteIdRef = useRef<RetroPaletteId>(paletteId);
   const scanlinesRef = useRef<boolean>(scanlines);
@@ -180,50 +181,62 @@ function RetroDeckConsole() {
         if (playedSound) handleSoundEvent(playedSound);
         setStats(osRef.current.getStats());
       } else if (!isPaused) {
-        let playedSound: ArcadeSound | null = null;
-        while (accumulator >= FIXED_STEP) {
-          accumulator -= FIXED_STEP;
-          const s = gameRef.current.update(inputRef.current, FIXED_STEP);
-          if (s) playedSound = s;
-        }
-
-        if (playedSound) {
-          handleSoundEvent(playedSound);
-        }
-        const currentStats = gameRef.current.getStats();
-        setStats(currentStats);
-
-        // Record high score immediately if score increased
-        if (currentStats.score > 0) {
-          HighScoreService.recordScore(activeCart.id, currentStats.score);
-        }
-
-        // Game Over Global Controls: Navigate [A] RESTART or [B] EXIT OS
-        if (currentStats.gameOver && !isPaused) {
+        // If cartridge ready overlay is active, wait for [A] press before ticking game loop
+        if (cartridgeReady) {
           const input = inputRef.current;
           const prev = prevInputRef.current;
-
-          // Toggle selection with Left/Right/Up/Down
-          if ((input.left && !prev.left) || (input.up && !prev.up)) {
-            setGameOverMenuSelection(0);
-            handleSoundEvent('hit');
-          } else if ((input.right && !prev.right) || (input.down && !prev.down)) {
-            setGameOverMenuSelection(1);
+          if ((input.a && !prev.a) || (input.b && !prev.b)) {
+            setCartridgeReady(false);
             handleSoundEvent('hit');
           }
+          accumulator = 0;
+          prevInputRef.current = { ...inputRef.current };
+        } else {
+          let playedSound: ArcadeSound | null = null;
+          while (accumulator >= FIXED_STEP) {
+            accumulator -= FIXED_STEP;
+            const s = gameRef.current.update(inputRef.current, FIXED_STEP);
+            if (s) playedSound = s;
+          }
 
-          // [A] Button confirms Restart (or active selection)
-          if (input.a && !prev.a) {
-            handleReset();
-            handleSoundEvent('powerup');
+          if (playedSound) {
+            handleSoundEvent(playedSound);
           }
-          // [B] Button confirms Exit to OS Desktop
-          else if (input.b && !prev.b) {
-            handleGoHomeOS();
+          const currentStats = gameRef.current.getStats();
+          setStats(currentStats);
+
+          // Record high score immediately if score increased
+          if (currentStats.score > 0) {
+            HighScoreService.recordScore(activeCart.id, currentStats.score);
           }
+
+          // Game Over Global Controls: Navigate [A] RESTART or [B] EXIT OS
+          if (currentStats.gameOver && !isPaused) {
+            const input = inputRef.current;
+            const prev = prevInputRef.current;
+
+            // Toggle selection with Left/Right/Up/Down
+            if ((input.left && !prev.left) || (input.up && !prev.up)) {
+              setGameOverMenuSelection(0);
+              handleSoundEvent('hit');
+            } else if ((input.right && !prev.right) || (input.down && !prev.down)) {
+              setGameOverMenuSelection(1);
+              handleSoundEvent('hit');
+            }
+
+            // [A] Button confirms Restart (or active selection)
+            if (input.a && !prev.a) {
+              handleReset();
+              handleSoundEvent('powerup');
+            }
+            // [B] Button confirms Exit to OS Desktop
+            else if (input.b && !prev.b) {
+              handleGoHomeOS();
+            }
+          }
+
+          prevInputRef.current = { ...inputRef.current };
         }
-
-        prevInputRef.current = { ...inputRef.current };
       } else {
         accumulator = 0;
       }
@@ -249,6 +262,8 @@ function RetroDeckConsole() {
     gameRef.current = nextGame;
     setActiveCart(cart);
     setStats(gameRef.current.getStats());
+    setCartridgeReady(true);
+    setGameOverMenuSelection(0);
     setIsPaused(false);
     setOsMode(false);
     setKeyboardMode(false);
@@ -263,6 +278,8 @@ function RetroDeckConsole() {
     gameRef.current = nextGame;
     setActiveCart(cart);
     setStats(gameRef.current.getStats());
+    setCartridgeReady(true);
+    setGameOverMenuSelection(0);
     setIsPaused(false);
     setOsMode(false);
     setKeyboardMode(false);
@@ -321,6 +338,7 @@ function RetroDeckConsole() {
     }
     gameRef.current.reset();
     setStats(gameRef.current.getStats());
+    setCartridgeReady(true);
     setGameOverMenuSelection(0);
     setIsPaused(false);
   };
@@ -416,6 +434,11 @@ function RetroDeckConsole() {
           onRestartGame={handleReset}
           onReturnToOS={handleGoHomeOS}
           gameOverMenuSelection={gameOverMenuSelection}
+          cartridgeReady={cartridgeReady}
+          onStartCartridge={() => {
+            setCartridgeReady(false);
+            handleSoundEvent('hit');
+          }}
         />
 
         {/* Controls Hint Strip */}

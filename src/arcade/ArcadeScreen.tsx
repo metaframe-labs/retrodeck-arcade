@@ -17,6 +17,8 @@ interface ArcadeScreenProps {
   onRestartGame?: () => void;
   onReturnToOS?: () => void;
   gameOverMenuSelection?: number; // 0: RESTART, 1: OS DESKTOP
+  cartridgeReady?: boolean;
+  onStartCartridge?: () => void;
 }
 
 export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
@@ -32,6 +34,8 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   onRestartGame,
   onReturnToOS,
   gameOverMenuSelection = 0,
+  cartridgeReady = false,
+  onStartCartridge,
 }) => {
   const [size, setSize] = useState({ w: 320, h: 240 });
 
@@ -181,8 +185,8 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         {/* Render Live Game Entities */}
         {game.renderEntities(palette)}
 
-        {/* Main Menu / Title Screen Overlay */}
-        {stats.isMenu && !isPaused && !stats.gameOver && (
+        {/* Main Menu / Title Screen Overlay (Unified across all 100 carts) */}
+        {!isOsMode && !isPaused && !stats.gameOver && (stats.isMenu || cartridgeReady) && (
           <View
             style={[
               styles.titleOverlay,
@@ -224,7 +228,8 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             </View>
 
             <View style={styles.titleActionWrap}>
-              <View
+              <Pressable
+                onPress={onStartCartridge}
                 style={[
                   styles.startPill,
                   {
@@ -242,7 +247,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 >
                   PRESS [A] TO START
                 </Text>
-              </View>
+              </Pressable>
               {stats.subMessage && (
                 <Text
                   style={[
