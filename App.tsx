@@ -24,10 +24,27 @@ import {
 } from './src/theme/palettes';
 import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
+import { RetroDeckOS } from './src/os/RetroDeckOS';
+
+const OS_GAMEPAD_LABELS = {
+  left: '◀',
+  right: '▶',
+  up: '▲',
+  down: '▼',
+  a: 'OK',
+  b: 'BACK',
+  leftLabel: '◀',
+  rightLabel: '▶',
+  upLabel: '▲',
+  downLabel: '▼',
+  aLabel: 'A (OK)',
+  bLabel: 'B (BACK)',
+};
 
 function RetroDeckConsole() {
   const insets = useSafeAreaInsets();
   const initialCart = ARCADE_CARTRIDGES.find((c) => c.id === 'bounce-retro') || ARCADE_CARTRIDGES[0];
+  const [osMode, setOsMode] = useState(true);
   const [activeCart, setActiveCart] = useState<ArcadeCartridgeDef>(initialCart);
   const gameRef = useRef<ArcadeGameInstance>(initialCart.createGame(HighScoreService.getHighScore(initialCart.id)));
   const inputRef = useRef<ArcadeInput>({
@@ -48,6 +65,12 @@ function RetroDeckConsole() {
   const [devCartVisible, setDevCartVisible] = useState(false);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const beepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const paletteIdRef = useRef<RetroPaletteId>(paletteId);
+  const scanlinesRef = useRef<boolean>(scanlines);
+  const highScoresRef = useRef<Record<string, number>>(highScores);
+  paletteIdRef.current = paletteId;
+  scanlinesRef.current = scanlines;
+  highScoresRef.current = highScores;
 
   const palette = RETRO_PALETTES[paletteId];
 
@@ -113,7 +136,16 @@ function RetroDeckConsole() {
       if (delta > MAX_ACCUM) delta = MAX_ACCUM;
       accumulator += delta;
 
-      if (!isPaused) {
+      if (osMode) {
+        let playedSound: ArcadeSound | null = null;
+        while (accumulator >= FIXED_STEP) {
+          accumulator -= FIXED_STEP;
+          const s = osRef.current.update(inputRef.current, FIXED_STEP);
+          if (s) playedSound = s;
+        }
+        if (playedSound) handleSoundEvent(playedSound);
+        setStats(osRef.current.getStats());
+      } else if (!isPaused) {
         let playedSound: ArcadeSound | null = null;
         while (accumulator >= FIXED_STEP) {
           accumulator -= FIXED_STEP;
@@ -140,7 +172,7 @@ function RetroDeckConsole() {
 
     rafId = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(rafId);
-  }, [isPaused, handleSoundEvent, activeCart.id]);
+  }, [isPaused, osMode, handleSoundEvent, activeCart.id]);
 
   // Handle Keypad input
   const handleButtonChange = useCallback((btn: ArcadeButton, pressed: boolean) => {
@@ -155,6 +187,7 @@ function RetroDeckConsole() {
     setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());
     setIsPaused(false);
+    setOsMode(false);
   }, []);
 
   // Burn & Load Custom Sucrase Dev Cartridge
@@ -165,10 +198,42 @@ function RetroDeckConsole() {
     setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());
     setIsPaused(false);
+    setOsMode(false);
     handleSoundEvent('powerup');
   }, [handleSoundEvent]);
 
+  const handleCyclePalette = useCallback(() => {
+    setPaletteId((prev) => {
+      const idx = PALETTE_ORDER.indexOf(prev);
+      return PALETTE_ORDER[(idx + 1) % PALETTE_ORDER.length];
+    });
+  }, []);
+
+  const osRef = useRef<RetroDeckOS>(
+    new RetroDeckOS({
+      getCartridges: () => ARCADE_CARTRIDGES,
+      getHighScores: () => highScoresRef.current,
+      onLaunchGame: (cart) => handleSelectCartridge(cart),
+      onOpenCartVault: () => setBayVisible(true),
+      onCyclePalette: () => handleCyclePalette(),
+      onToggleScanlines: () => setScanlines((s) => !s),
+      getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
+      getScanlines: () => scanlinesRef.current,
+    })
+  );
+
+  const handleGoHomeOS = () => {
+    osRef.current.goDesktop();
+    setOsMode(true);
+    setIsPaused(false);
+    handleSoundEvent('hit');
+  };
+
   const handleReset = () => {
+    if (osMode) {
+      osRef.current.reset();
+      return;
+    }
     const savedHighScore = HighScoreService.getHighScore(activeCart.id);
     if (gameRef.current.setHighScore) {
       gameRef.current.setHighScore(savedHighScore);
@@ -176,11 +241,6 @@ function RetroDeckConsole() {
     gameRef.current.reset();
     setStats(gameRef.current.getStats());
     setIsPaused(false);
-  };
-
-  const handleCyclePalette = () => {
-    const idx = PALETTE_ORDER.indexOf(paletteId);
-    setPaletteId(PALETTE_ORDER[(idx + 1) % PALETTE_ORDER.length]);
   };
 
   // Full-Page Cartridge Vault Screen
@@ -229,9 +289,9 @@ function RetroDeckConsole() {
         <View style={styles.topBar}>
           <View style={styles.brandCluster}>
             <Text style={[styles.brandTag, { color: palette.bezelAccent }]}>
-              METAFRAME // ARCADE
+              METAFRAME // POCKET OS
             </Text>
-            <Text style={styles.brandTitle}>RETRODECK-8</Text>
+            <Text style={styles.brandTitle}>RETRODECK OS</Text>
           </View>
 
           <View style={styles.topActions}>
@@ -260,46 +320,65 @@ function RetroDeckConsole() {
           </View>
         </View>
 
-        {/* 4:3 Retro Arcade Viewport */}
+        {/* 4:3 Retro Arcade / OS Viewport */}
         <ArcadeScreen
-          game={gameRef.current}
+          game={osMode ? osRef.current : gameRef.current}
           stats={stats}
           palette={palette}
           scanlines={scanlines}
-          isPaused={isPaused}
+          isPaused={osMode ? false : isPaused}
           isBeeping={isBeeping}
-          cartridgeTitle={activeCart.title}
+          cartridgeTitle={osMode ? osRef.current.getCurrentTitle() : activeCart.title}
+          isOsMode={osMode}
+          cartCount={ARCADE_CARTRIDGES.length}
         />
 
         {/* Controls Hint Strip */}
         <View style={styles.hintBar}>
           <Text style={styles.hintText} numberOfLines={1}>
-            {activeCart.controlsHint}
+            {osMode ? osRef.current.getControlsHint() : activeCart.controlsHint}
           </Text>
         </View>
 
         {/* Console Utility Toolbar */}
         <View style={styles.toolbar}>
           <Pressable
+            onPress={handleGoHomeOS}
+            style={[
+              styles.toolBtn,
+              osMode && { borderColor: palette.bezelAccent, backgroundColor: `${palette.bezelAccent}22` },
+            ]}
+          >
+            <Ionicons
+              name="desktop-outline"
+              size={14}
+              color={osMode ? palette.bezelAccent : '#CBD5E1'}
+            />
+            <Text style={[styles.toolText, osMode && { color: palette.bezelAccent }]}>
+              OS
+            </Text>
+          </Pressable>
+
+          <Pressable
             onPress={() => setIsPaused((p) => !p)}
             style={[
               styles.toolBtn,
-              isPaused && { borderColor: '#FF9F0A', backgroundColor: 'rgba(255,159,10,0.14)' },
+              !osMode && isPaused && { borderColor: '#FF9F0A', backgroundColor: 'rgba(255,159,10,0.14)' },
             ]}
           >
             <Ionicons
               name={isPaused ? 'play' : 'pause'}
               size={14}
-              color={isPaused ? '#FF9F0A' : '#CBD5E1'}
+              color={!osMode && isPaused ? '#FF9F0A' : '#CBD5E1'}
             />
-            <Text style={[styles.toolText, isPaused && { color: '#FF9F0A' }]}>
+            <Text style={[styles.toolText, !osMode && isPaused && { color: '#FF9F0A' }]}>
               {isPaused ? 'RESUME' : 'PAUSE'}
             </Text>
           </Pressable>
 
           <Pressable onPress={handleReset} style={styles.toolBtn}>
             <Ionicons name="refresh" size={14} color="#CBD5E1" />
-            <Text style={styles.toolText}>RESTART</Text>
+            <Text style={styles.toolText}>{osMode ? 'REBOOT' : 'RESET'}</Text>
           </Pressable>
 
           <Pressable
@@ -352,7 +431,7 @@ function RetroDeckConsole() {
           {/* Keypad Controls Area */}
           <View style={styles.keypadContainer}>
             <RetroKeypad
-              labels={activeCart.gamepadLabels}
+              labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
               accentColor={palette.bezelAccent}
               onButtonChange={handleButtonChange}
             />

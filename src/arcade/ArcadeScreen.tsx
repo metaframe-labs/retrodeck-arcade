@@ -12,6 +12,8 @@ interface ArcadeScreenProps {
   isPaused: boolean;
   isBeeping: boolean;
   cartridgeTitle: string;
+  isOsMode?: boolean;
+  cartCount?: number;
 }
 
 export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
@@ -22,6 +24,8 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   isPaused,
   isBeeping,
   cartridgeTitle,
+  isOsMode = false,
+  cartCount = 100,
 }) => {
   const [size, setSize] = useState({ w: 320, h: 240 });
 
@@ -82,60 +86,77 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             </View>
           )}
 
-          <View style={styles.statBadgePill}>
-            <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
-              LVL {stats.level}
-            </Text>
-          </View>
+          {isOsMode ? (
+            <>
+              <View style={styles.statBadgePill}>
+                <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
+                  RAM 64K
+                </Text>
+              </View>
+              <View style={styles.statBadgePill}>
+                <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
+                  {cartCount} ROMS
+                </Text>
+              </View>
+            </>
+          ) : (
+            <>
+              <View style={styles.statBadgePill}>
+                <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
+                  LVL {stats.level}
+                </Text>
+              </View>
 
-          <View
-            style={[
-              styles.statBadgePill,
-              palette.isLightLcd && {
-                backgroundColor: 'rgba(23, 38, 22, 0.12)',
-                borderColor: `${palette.bezelAccent}55`,
-              },
-            ]}
-          >
-            <Ionicons
-              name="heart"
-              size={12}
-              color={palette.isLightLcd ? palette.bezelAccent : '#FF2A6D'}
-            />
-            <Text
-              style={[
-                styles.statLivesText,
-                palette.isLightLcd && { color: palette.bezelAccent },
-              ]}
-            >
-              {stats.lives}
-            </Text>
-          </View>
+              <View
+                style={[
+                  styles.statBadgePill,
+                  palette.isLightLcd && {
+                    backgroundColor: 'rgba(23, 38, 22, 0.12)',
+                    borderColor: `${palette.bezelAccent}55`,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="heart"
+                  size={12}
+                  color={palette.isLightLcd ? palette.bezelAccent : '#FF2A6D'}
+                />
+                <Text
+                  style={[
+                    styles.statLivesText,
+                    palette.isLightLcd && { color: palette.bezelAccent },
+                  ]}
+                >
+                  {stats.lives}
+                </Text>
+              </View>
 
-          <View
-            style={[
-              styles.scorePillWrap,
-              {
-                borderColor: `${palette.bezelAccent}55`,
-                backgroundColor: 'rgba(5, 10, 18, 0.7)',
-              },
-            ]}
-          >
-            <Text style={[styles.scoreLabelTag, { color: palette.bezelAccent }]}>
-              PTS
-            </Text>
-            <Text
-              style={[
-                styles.scoreBadge,
-                {
-                  color: palette.isLightLcd ? palette.bezelAccent : palette.pixelOn,
-                  textShadowColor: palette.isLightLcd ? undefined : palette.pixelGlow,
-                },
-              ]}
-            >
-              {stats.score.toString().padStart(6, '0')}
-            </Text>
-          </View>
+              <View
+                style={[
+                  styles.scorePillWrap,
+                  {
+                    borderColor: `${palette.bezelAccent}55`,
+                    backgroundColor: 'rgba(5, 10, 18, 0.7)',
+                  },
+                ]}
+              >
+                <Text style={[styles.scoreLabelTag, { color: palette.bezelAccent }]}>
+                  PTS
+                </Text>
+                <Text
+                  style={[
+                    styles.scoreBadge,
+                    {
+                      color: palette.isLightLcd ? palette.bezelAccent : palette.pixelOn,
+                      textShadowColor: palette.isLightLcd ? undefined : palette.pixelGlow,
+                    },
+                  ]}
+                >
+                  {stats.score.toString().padStart(6, '0')}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
       </View>
 
