@@ -40,6 +40,7 @@ type OsAppId =
   | 'desktop'
   | 'arcade'
   | 'ai'
+  | 'wap'
   | 'synth'
   | 'phone'
   | 'sms'
@@ -124,6 +125,7 @@ interface DesktopIcon {
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
   { id: 'ai', label: 'CHAT', icon: 'chatbubble-ellipses' },
+  { id: 'wap', label: 'WAP', icon: 'globe' },
   { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
   { id: 'phone', label: 'PHONE', icon: 'call' },
   { id: 'sms', label: 'SMS', icon: 'mail' },
@@ -131,10 +133,54 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'calc', label: 'CALC', icon: 'calculator' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
   { id: 'paint', label: 'PAINT', icon: 'brush' },
-  { id: 'stats', label: 'STATS', icon: 'trophy' },
   { id: 'term', label: 'SHELL', icon: 'terminal' },
   { id: 'setup', label: 'SETUP', icon: 'settings' },
 ];
+
+const WAP_BOOKMARKS = [
+  'https://www.metaframelabs.space/',
+  'https://news.ycombinator.com/',
+  'https://lite.cnn.com/',
+  'https://en.m.wikipedia.org/wiki/Nokia_3310',
+  'https://github.com/neurodivergent-dev',
+];
+
+function parseHtmlToWapLines(html: string): string[] {
+  const cleaned = html
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<svg[\s\S]*?<\/svg>/gi, '')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/<title[^>]*>([\s\S]*?)<\/title>/gi, '\n=== $1 ===\n')
+    .replace(/<h[1-3][^>]*>([\s\S]*?)<\/h[1-3]>/gi, '\n[ $1 ]\n')
+    .replace(/<li[^>]*>/gi, '\n• ')
+    .replace(/<(p|div|section|header|article|tr|br|h[4-6])[^>]*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&mdash;/gi, ' - ')
+    .replace(/&ndash;/gi, '-')
+    .replace(/&middot;/gi, '·')
+    .replace(/&rarr;/gi, '->')
+    .replace(/&darr;/gi, 'v')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>');
+
+  const rawLines = cleaned
+    .split('\n')
+    .map((l) => l.replace(/\s+/g, ' ').trim())
+    .filter((l) => l.length > 1);
+
+  const out: string[] = [];
+  for (const line of rawLines) {
+    out.push(...wrapTextLines(line, 33));
+    if (out.length >= 140) break;
+  }
+  return out.length > 0 ? out : ['(EMPTY WAP DECK)'];
+}
 
 // Wide 36x10 (72x14 aspect ratio) Iconic Nokia 3310 Picture Message Banners!
 export type PicArtKey =
@@ -655,6 +701,26 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private paintR = 4;
   private paintC = 7;
 
+  // Nokia WAP 1.1 Browser state
+  private wapUrl = 'https://www.metaframelabs.space/';
+  private wapBookmarkIdx = 0;
+  private wapLoading = false;
+  private wapScroll = 0;
+  private wapFetchedOnce = false;
+  private wapLines: string[] = [
+    '=== METAFRAME LABS ===',
+    '// AI-NATIVE · PRIVACY-FIRST',
+    "[ WE DON'T BUILD WEBSITES. ]",
+    '[ WE BUILD MINDS. ]',
+    'MetaFrame Labs turns data,',
+    'intelligence & ideas into',
+    'real-world AI products.',
+    '• 7 products on Google Play',
+    '• 100% privacy-first design',
+    '• 1 mission: ideas -> products',
+    '[A]: ENTER URL  [◀/▶]: SITES',
+  ];
+
   // Real Interactive Shell (rdsh) state
   private termIdx = -1;
   private termCwd = '/home';
@@ -750,6 +816,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'desktop') return 'RETRODECK OS';
     if (this.app === 'synth') return '3310 COMPOSER';
     if (this.app === 'sms') return '3310 PIC-SMS';
+    if (this.app === 'wap') return 'NOKIA WAP 1.1';
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -774,6 +841,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return this.aiTab === 'chat'
           ? '[▲]/[▼]: Scroll • [A]: Type/Send • [▶]: BYOK Setup • [B]: Exit'
           : '[▲]/[▼]: Select • [◀]/[▶]: Provider • [A]: Edit Key/Model';
+      case 'wap':
+        return '[▲]/[▼]: Scroll Page • [◀]/[▶]: Bookmarks • [A]: Type URL / Go';
       case 'calc':
         return 'D-PAD: Key • [A]: Press (FX = Currency Converter) • [B]: Exit';
       case 'clock':
@@ -805,6 +874,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
     placeholder: string;
     secure: boolean;
   } {
+    if (this.app === 'wap') {
+      return {
+        targetLabel: 'WAP URL',
+        value: this.wapUrl,
+        placeholder: 'https://www.metaframelabs.space/',
+        secure: false,
+      };
+    }
     if (this.app === 'term') {
       return {
         targetLabel: `RDSH ${this.termCwd}$`,
@@ -841,6 +918,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public setKeyboardText(next: string) {
     this.idleTimer = 0;
+    if (this.app === 'wap') {
+      this.wapUrl = next;
+      return;
+    }
     if (this.app === 'term') {
       this.termInput = next;
       return;
@@ -871,6 +952,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public submitKeyboard() {
     this.idleTimer = 0;
+    if (this.app === 'wap') {
+      this.cb.onRequestKeyboard?.(false);
+      this.fetchWapPage(this.wapUrl);
+      return;
+    }
     if (this.app === 'term') {
       const cmd = this.termInput.trim() || 'help';
       this.termInput = '';
@@ -1003,6 +1089,41 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
   }
 
+  private async fetchWapPage(rawUrl: string) {
+    if (this.wapLoading) return;
+    let url = rawUrl.trim();
+    if (!url) url = 'https://www.metaframelabs.space/';
+    if (!/^https?:\/\//i.test(url)) {
+      url = `https://${url}`;
+    }
+    this.wapUrl = url;
+    this.wapLoading = true;
+    this.wapScroll = 0;
+    this.cb.onPlaySound?.('shoot');
+
+    try {
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': 'Nokia3330/1.0 (RetroDeckOS WAP 1.1)',
+          Accept: 'text/html,application/xhtml+xml,text/plain',
+        },
+      });
+      const text = await res.text();
+      this.wapLines = parseHtmlToWapLines(text);
+      this.cb.onPlaySound?.('powerup');
+    } catch (err: any) {
+      this.wapLines = [
+        '=== WAP CONNECTION ERROR ===',
+        `URL: ${url.slice(0, 28)}`,
+        `ERR: ${(err?.message || 'UNREACHABLE').toUpperCase().slice(0, 28)}`,
+        'CHECK URL OR TRY ANOTHER SITE.',
+      ];
+      this.cb.onPlaySound?.('die');
+    } finally {
+      this.wapLoading = false;
+    }
+  }
+
   private cycleProvider(delta: number) {
     const idx = BYOK_PROVIDERS.findIndex((p) => p.id === this.byokConfig.activeProvider);
     const nextIdx = (idx + delta + BYOK_PROVIDERS.length) % BYOK_PROVIDERS.length;
@@ -1131,6 +1252,39 @@ export class RetroDeckOS implements ArcadeGameInstance {
         if (this.app === 'ai') {
           this.kbdTarget = 'chat';
         }
+        if (this.app === 'wap' && !this.wapFetchedOnce) {
+          this.wapFetchedOnce = true;
+          this.fetchWapPage(this.wapUrl);
+        }
+        return 'score';
+      }
+      return null;
+    }
+
+    if (this.app === 'wap') {
+      if (dir === 'up') {
+        this.wapScroll = Math.max(0, this.wapScroll - 1);
+        return 'hit';
+      }
+      if (dir === 'down') {
+        this.wapScroll = Math.min(Math.max(0, this.wapLines.length - 6), this.wapScroll + 1);
+        return 'hit';
+      }
+      if (dir === 'left') {
+        this.wapBookmarkIdx =
+          (this.wapBookmarkIdx + WAP_BOOKMARKS.length - 1) % WAP_BOOKMARKS.length;
+        this.wapUrl = WAP_BOOKMARKS[this.wapBookmarkIdx];
+        this.fetchWapPage(this.wapUrl);
+        return 'score';
+      }
+      if (dir === 'right') {
+        this.wapBookmarkIdx = (this.wapBookmarkIdx + 1) % WAP_BOOKMARKS.length;
+        this.wapUrl = WAP_BOOKMARKS[this.wapBookmarkIdx];
+        this.fetchWapPage(this.wapUrl);
+        return 'score';
+      }
+      if (pressA) {
+        this.cb.onRequestKeyboard?.(true);
         return 'score';
       }
       return null;
@@ -1850,6 +2004,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return 'powerup';
     }
 
+    if (bin === 'wap' || bin === 'curl') {
+      const targetUrl = arg.trim() || 'https://www.metaframelabs.space/';
+      this.app = 'wap';
+      this.fetchWapPage(targetUrl);
+      return 'powerup';
+    }
+
+    if (bin === 'stats') {
+      this.app = 'stats';
+      return 'score';
+    }
+
     if (bin === 'ai' || bin === 'ask') {
       if (!arg) {
         this.pushTermLines(['usage: ai <your question>']);
@@ -1981,6 +2147,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'desktop' && this.renderDesktop(fg, bg)}
           {this.app === 'arcade' && this.renderArcadeBrowser(fg, bg)}
           {this.app === 'ai' && this.renderAiApp(fg, bg)}
+          {this.app === 'wap' && this.renderWap(fg, bg)}
           {this.app === 'synth' && this.renderSynth(fg, bg)}
           {this.app === 'phone' && this.renderPhone(fg, bg)}
           {this.app === 'sms' && this.renderSms(fg, bg)}
@@ -2031,6 +2198,50 @@ export class RetroDeckOS implements ArcadeGameInstance {
             </View>
           );
         })}
+      </View>
+    );
+  }
+
+  private renderWap(fg: string, bg: string) {
+    const cleanHost = this.wapUrl.replace(/^https?:\/\/(www\.)?/i, '').slice(0, 26);
+    const slice = this.wapLines.slice(this.wapScroll, this.wapScroll + 6);
+
+    return (
+      <View style={styles.listWrap}>
+        {/* Top WAP Address Bar */}
+        <View
+          style={[
+            styles.aiPromptBar,
+            {
+              borderColor: fg,
+              backgroundColor: fg,
+              marginBottom: 4,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
+          ]}
+        >
+          <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
+            {this.wapLoading ? 'WAP: CONNECTING...' : `WAP://${cleanHost}`}
+          </Text>
+          <Text style={[styles.aiPromptTxt, { color: bg }]}>
+            {this.wapScroll + 1}/{this.wapLines.length}
+          </Text>
+        </View>
+
+        {/* WML Monochrome Page Content */}
+        <View style={[styles.aiChatBox, { borderColor: fg, marginBottom: 2 }]}>
+          {slice.map((line, i) => (
+            <Text key={i} style={[styles.aiChatLine, { color: fg }]} numberOfLines={1}>
+              {line}
+            </Text>
+          ))}
+        </View>
+
+        <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
+          [▲/▼] SCROLL • [◀/▶] SITES • [A/KBD] ENTER URL
+        </Text>
       </View>
     );
   }
