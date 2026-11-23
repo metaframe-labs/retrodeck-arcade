@@ -198,7 +198,7 @@ async function callOpenAICompatibleChat(
 export async function callBYOKAIChat(
   chatMessages: BYOKChatMessage[],
   config: BYOKConfig,
-  systemPrompt: string = 'You are RetroDeck OS AI running on a Nokia 3310 monochrome LCD (320x240). Keep answers concise, punchy, and helpful.'
+  systemPrompt: string = 'You are RetroDeck OS AI running on a Nokia 3310 monochrome LCD (320x240). Respond in PLAIN TEXT ONLY. Do NOT use Markdown, asterisks (**), hashtags (#), or backticks (`). Keep answers short, direct, and punchy.'
 ): Promise<string> {
   const provider = config.activeProvider || 'gemini';
   const apiKey = config.keys?.[provider]?.trim() || '';

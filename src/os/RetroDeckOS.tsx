@@ -92,9 +92,25 @@ const TERM_CMDS = [
   'reboot',
 ];
 
+function stripMarkdownForLcd(raw: string): string {
+  return raw
+    .replace(/```[a-zA-Z0-9_-]*\n?/g, '')
+    .replace(/```/g, '')
+    .replace(/^#{1,6}\s+(.+)$/gm, '[$1]')
+    .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/\*(.+?)\*/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/^\s*[-*+]\s+/gm, '• ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .trim();
+}
+
 function wrapTextLines(text: string, maxCols = 34): string[] {
   const out: string[] = [];
-  const paragraphs = text.replace(/\r/g, '').split('\n');
+  const cleaned = stripMarkdownForLcd(text);
+  const paragraphs = cleaned.replace(/\r/g, '').split('\n');
   for (const p of paragraphs) {
     const trimmed = p.trim();
     if (!trimmed) continue;
