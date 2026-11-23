@@ -73,6 +73,8 @@ function RetroDeckConsole() {
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
+  const cartridgeReadyRef = useRef<boolean>(true);
+  cartridgeReadyRef.current = cartridgeReady;
   const beepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const paletteIdRef = useRef<RetroPaletteId>(paletteId);
   const scanlinesRef = useRef<boolean>(scanlines);
@@ -182,13 +184,14 @@ function RetroDeckConsole() {
         setStats(osRef.current.getStats());
       } else if (!isPaused) {
         // If cartridge ready overlay is active, wait for [A] press or tap before starting
-        if (cartridgeReady) {
+        if (cartridgeReadyRef.current) {
           const input = inputRef.current;
           if (input.a || input.b) {
+            cartridgeReadyRef.current = false;
             setCartridgeReady(false);
             handleSoundEvent('hit');
             // If the active game also has an internal isMenu, kick-start it
-            if (stats.isMenu) {
+            if (gameRef.current.getStats().isMenu) {
               gameRef.current.update({ ...input, a: true }, FIXED_STEP);
             }
           }
@@ -265,6 +268,7 @@ function RetroDeckConsole() {
     gameRef.current = nextGame;
     setActiveCart(cart);
     setStats(gameRef.current.getStats());
+    cartridgeReadyRef.current = true;
     setCartridgeReady(true);
     setGameOverMenuSelection(0);
     setIsPaused(false);
@@ -284,7 +288,7 @@ function RetroDeckConsole() {
       down: false,
       left: false,
       right: false,
-      a: true, // mark A as previously down so user must release and press again!
+      a: false,
       b: false,
     };
   }, []);
@@ -298,6 +302,7 @@ function RetroDeckConsole() {
     gameRef.current = nextGame;
     setActiveCart(cart);
     setStats(gameRef.current.getStats());
+    cartridgeReadyRef.current = true;
     setCartridgeReady(true);
     setGameOverMenuSelection(0);
     setIsPaused(false);
@@ -316,7 +321,7 @@ function RetroDeckConsole() {
       down: false,
       left: false,
       right: false,
-      a: true,
+      a: false,
       b: false,
     };
     handleSoundEvent('powerup');
@@ -472,9 +477,10 @@ function RetroDeckConsole() {
           gameOverMenuSelection={gameOverMenuSelection}
           cartridgeReady={cartridgeReady}
           onStartCartridge={() => {
+            cartridgeReadyRef.current = false;
             setCartridgeReady(false);
             handleSoundEvent('hit');
-            if (stats.isMenu) {
+            if (gameRef.current.getStats().isMenu) {
               gameRef.current.update(
                 { up: false, down: false, left: false, right: false, a: true, b: false },
                 1 / 60
