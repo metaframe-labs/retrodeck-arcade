@@ -58,9 +58,40 @@ interface PixelSpan {
   h: number;
 }
 
-/** Run-length encodes a bitmap string array into minimal horizontal rects for locked 60 FPS */
-function buildPixelSpans(rows: string[], px: number): PixelSpan[] {
+/** Run-length encodes a bitmap string array into centered horizontal rects for locked 60 FPS */
+function buildPixelSpans(
+  rows: string[],
+  px: number,
+  targetW?: number,
+  targetH?: number
+): PixelSpan[] {
   const spans: PixelSpan[] = [];
+  let minC = 9999;
+  let maxC = -1;
+  let minR = 9999;
+  let maxR = -1;
+
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r];
+    for (let c = 0; c < row.length; c++) {
+      if (row[c] !== '.') {
+        if (c < minC) minC = c;
+        if (c > maxC) maxC = c;
+        if (r < minR) minR = r;
+        if (r > maxR) maxR = r;
+      }
+    }
+  }
+
+  if (maxC < minC) return spans;
+
+  const boxW = targetW ?? (rows[0]?.length || 0) * px;
+  const boxH = targetH ?? rows.length * px;
+  const drawnW = (maxC - minC + 1) * px;
+  const drawnH = (maxR - minR + 1) * px;
+  const offsetX = Math.round((boxW - drawnW) / 2) - minC * px;
+  const offsetY = Math.round((boxH - drawnH) / 2) - minR * px;
+
   for (let r = 0; r < rows.length; r++) {
     const row = rows[r];
     let c = 0;
@@ -70,8 +101,8 @@ function buildPixelSpans(rows: string[], px: number): PixelSpan[] {
         while (c < row.length && row[c] !== '.') c++;
         spans.push({
           key: `${r}-${start}`,
-          x: start * px,
-          y: r * px,
+          x: start * px + offsetX,
+          y: r * px + offsetY,
           w: (c - start) * px,
           h: px,
         });
@@ -375,33 +406,33 @@ interface NokiaPicSms {
 
 const INITIAL_PIC_MESSAGES: NokiaPicSms[] = [
   {
-    sender: '0532-KAHVE',
-    title: 'KAHVE MOLASI',
-    text: 'BI KAHVE ICELIM MI? KONTORUM BITTI CALDIR :)',
+    sender: '+358-COFFEE',
+    title: 'COFFEE BREAK',
+    text: 'NEED A COFFEE BREAK? CALL ME BACK WHEN FREE :)',
     artKey: 'COFFEE',
   },
   {
     sender: 'NOKIA-LOVE',
-    title: 'CIFT KALP',
-    text: 'SENI NOKIA 3310 SARJI GIBI HIC BITMEDEN...',
+    title: 'TWIN HEARTS',
+    text: 'MY LOVE LASTS LONGER THAN A 3310 BATTERY!',
     artKey: 'HEART',
   },
   {
-    sender: '0542-DOST',
-    title: 'UZGUN SURAT',
-    text: 'NEREDESIN? 2 GUNDUR HIC MESAJ ATMADIN :(',
+    sender: '+358-FRIEND',
+    title: 'MISS YOU',
+    text: 'WHERE ARE YOU? NO SMS FOR 2 DAYS :(',
     artKey: 'SAD',
   },
   {
-    sender: 'DOGUM-GUNU',
-    title: 'PASTA 3310',
-    text: 'IYI KI DOGDUN! (BU RESIMLI MESAJ 2 KONTOR)',
+    sender: 'PARTY-3310',
+    title: 'BIRTHDAY',
+    text: 'HAPPY BIRTHDAY! (THIS PICTURE SMS COST 2 CREDITS)',
     artKey: 'CAKE',
   },
   {
     sender: 'SNAKE-KING',
-    title: 'YILAN REKORU',
-    text: 'YILANDA 9999 PUAN YAPTIM GECEBILEN VAR MI?',
+    title: 'SNAKE II',
+    text: 'JUST SCORED 9999 ON SNAKE II! CAN YOU BEAT IT?',
     artKey: 'SNAKE',
   },
 ];
@@ -887,15 +918,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsBannerTimer = 10;
 
     try {
-      const prompt = `Sana Nokia 3310'dan resimli mesaj geldi: [${cur.title}] "${cur.text}". Sen de 2000'ler Nokia 3310 kullanicisi gibi esprili, kisa (maksimum 75 karakter) Turkce bir SMS cevabi yaz. Cevabinin en basina su 5 etikettten birini koy: [COFFEE], [HEART], [SAD], [CAKE] veya [SNAKE].`;
+      const prompt = `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only). Start your reply with one tag: [COFFEE], [HEART], [SAD], [CAKE], or [SNAKE].`;
       const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
       const cleaned = stripMarkdownForLcd(raw).toUpperCase();
 
       let artKey: PicArtKey = 'COFFEE';
-      if (cleaned.includes('HEART') || cleaned.includes('KALP')) artKey = 'HEART';
-      else if (cleaned.includes('SAD') || cleaned.includes('UZGUN')) artKey = 'SAD';
-      else if (cleaned.includes('CAKE') || cleaned.includes('PASTA')) artKey = 'CAKE';
-      else if (cleaned.includes('SNAKE') || cleaned.includes('YILAN')) artKey = 'SNAKE';
+      if (cleaned.includes('HEART') || cleaned.includes('LOVE')) artKey = 'HEART';
+      else if (cleaned.includes('SAD') || cleaned.includes('MISS')) artKey = 'SAD';
+      else if (cleaned.includes('CAKE') || cleaned.includes('BIRTH')) artKey = 'CAKE';
+      else if (cleaned.includes('SNAKE')) artKey = 'SNAKE';
 
       const body = cleaned
         .replace(/\[(COFFEE|HEART|SAD|CAKE|SNAKE)\]/g, '')
@@ -905,7 +936,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.smsList.unshift({
         sender: `${meta.shortName}-3310`,
         title: `${meta.shortName} PIC-SMS`,
-        text: body || 'SLM! KONTORUM AZ, YILANDA REKOR KIRDIM XD',
+        text: body || 'HEY! LOW ON CREDITS, CALL ME BACK ON MY 3310 XD',
         artKey,
       });
       if (this.smsList.length > 10) this.smsList.pop();
@@ -2114,7 +2145,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
           {this.smsBannerTimer > 0
             ? this.smsBanner
-            : `[A] ${meta.shortName}'A RESIMLI SMS YOLLA & CEVAP AL`}
+            : `[A] SEND PIC-SMS TO ${meta.shortName} & GET REPLY`}
         </Text>
       </View>
     );
@@ -2582,6 +2613,7 @@ const styles = StyleSheet.create({
   picBannerBox: {
     width: 72,
     height: 20,
+    alignSelf: 'center',
     marginVertical: 2,
   },
   smsBodyTxt: {
