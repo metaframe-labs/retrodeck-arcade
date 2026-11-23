@@ -6,83 +6,6 @@ import { RetroPalette } from '../../theme/palettes';
 const ARENA_W = 320;
 const ARENA_H = 240;
 
-// Authentic 8x8 Pixel Bitmaps for Space Invaders (Frame 0 & Frame 1)
-// 1 = solid pixel, 0 = empty space
-const SPRITE_SQUID: [number[][], number[][]] = [
-  // Frame 0
-  [
-    [0,0,0,1,1,0,0,0],
-    [0,0,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,0],
-    [1,1,0,1,1,0,1,1],
-    [1,1,1,1,1,1,1,1],
-    [0,0,1,0,0,1,0,0],
-    [0,1,0,1,1,0,1,0],
-    [1,0,1,0,0,1,0,1],
-  ],
-  // Frame 1 (tentacles in)
-  [
-    [0,0,0,1,1,0,0,0],
-    [0,0,1,1,1,1,0,0],
-    [0,1,1,1,1,1,1,0],
-    [1,1,0,1,1,0,1,1],
-    [1,1,1,1,1,1,1,1],
-    [0,1,0,0,0,0,1,0],
-    [1,0,0,1,1,0,0,1],
-    [0,1,0,0,0,0,1,0],
-  ],
-];
-
-const SPRITE_CRAB: [number[][], number[][]] = [
-  // Frame 0 (hands up)
-  [
-    [0,0,1,0,0,0,0,1,0,0],
-    [0,0,0,1,0,0,1,0,0,0],
-    [0,0,1,1,1,1,1,1,0,0],
-    [0,1,1,0,1,1,0,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1],
-    [1,0,1,1,1,1,1,1,0,1],
-    [1,0,1,0,0,0,0,1,0,1],
-    [0,0,0,1,1,1,1,0,0,0],
-  ],
-  // Frame 1 (hands down)
-  [
-    [0,0,1,0,0,0,0,1,0,0],
-    [1,0,0,1,0,0,1,0,0,1],
-    [1,0,1,1,1,1,1,1,0,1],
-    [1,1,1,0,1,1,0,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1],
-    [0,1,1,1,1,1,1,1,1,0],
-    [0,0,1,0,0,0,0,1,0,0],
-    [0,1,0,0,0,0,0,0,1,0],
-  ],
-];
-
-const SPRITE_OCTOPUS: [number[][], number[][]] = [
-  // Frame 0
-  [
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,0,0,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1],
-    [0,0,1,1,0,0,1,1,0,0],
-    [0,1,1,0,1,1,0,1,1,0],
-    [1,1,0,0,0,0,0,0,1,1],
-  ],
-  // Frame 1
-  [
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,1,1,1,1,1,1,1,1,0],
-    [1,1,1,1,1,1,1,1,1,1],
-    [1,1,1,0,0,1,1,1,1,1],
-    [1,1,1,1,1,1,1,1,1,1],
-    [0,0,0,1,1,1,1,0,0,0],
-    [0,0,1,1,0,0,1,1,0,0],
-    [0,1,1,0,0,0,0,1,1,0],
-  ],
-];
-
 interface Bullet {
   id: number;
   x: number;
@@ -115,16 +38,16 @@ interface MysteryShip {
 }
 
 export class SpaceInvadersGame implements ArcadeGameInstance {
-  private playerX = ARENA_W / 2 - 9;
+  private playerX = ARENA_W / 2 - 10;
   private readonly playerY = 210;
-  private readonly playerW = 18;
+  private readonly playerW = 20;
   private readonly playerH = 10;
   private playerSpeed = 160;
 
   private aliens: Alien[] = [];
   private alienDir = 1; // 1 = right, -1 = left
   private alienMoveTimer = 0;
-  private baseStepInterval = 0.9; // Relaxed authentic start pace
+  private baseStepInterval = 0.9;
   private alienFrame = 0;
 
   private bullets: Bullet[] = [];
@@ -164,7 +87,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
   }
 
   public init(): void {
-    this.playerX = ARENA_W / 2 - 9;
+    this.playerX = ARENA_W / 2 - 10;
     this.score = 0;
     this.lives = 3;
     this.wave = 1;
@@ -319,8 +242,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       return 'levelclear';
     }
 
-    // Balanced march curve: relaxed at start, smoothly speeds up as invaders are destroyed
-    const aliveRatio = livingAliens.length / this.aliens.length; // 1.0 down to 0.03
+    const aliveRatio = livingAliens.length / this.aliens.length;
     const currentStepInterval = Math.max(0.08, this.baseStepInterval * Math.pow(aliveRatio, 0.75));
 
     this.alienMoveTimer += dt;
@@ -354,7 +276,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       }
     }
 
-    // Alien Shooting (Paced so player isn't instantly overwhelmed)
+    // Alien Shooting
     this.alienShootTimer -= dt;
     if (this.alienShootTimer <= 0 && livingAliens.length > 0) {
       this.alienShootTimer = Math.max(0.6, 2.0 - (this.wave - 1) * 0.15);
@@ -441,7 +363,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           b.y <= this.playerY + this.playerH
         ) {
           this.bullets.splice(bi, 1);
-          this.createExplosion(this.playerX + 9, this.playerY + 5);
+          this.createExplosion(this.playerX + 10, this.playerY + 5);
           this.lives--;
           if (this.lives <= 0) {
             this.gameOver = true;
@@ -459,9 +381,9 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
   }
 
   private createExplosion(x: number, y: number): void {
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      const speed = 30 + Math.random() * 40;
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI * 2 * i) / 6;
+      const speed = 25 + Math.random() * 30;
       this.particles.push({
         id: this.nextEntityId++,
         x,
@@ -470,24 +392,24 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
         vy: Math.sin(angle) * speed,
         size: 2,
         color: '#FFF',
-        life: 0.35,
-        decay: 1.8,
+        life: 0.3,
+        decay: 2.2,
       });
     }
   }
 
   private createSparks(x: number, y: number): void {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 2; i++) {
       this.particles.push({
         id: this.nextEntityId++,
         x,
         y,
-        vx: (Math.random() - 0.5) * 40,
-        vy: (Math.random() - 0.5) * 40,
+        vx: (Math.random() - 0.5) * 30,
+        vy: (Math.random() - 0.5) * 30,
         size: 1.5,
         color: '#FFF',
-        life: 0.2,
-        decay: 3,
+        life: 0.15,
+        decay: 4,
       });
     }
   }
@@ -527,50 +449,121 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           </View>
         )}
 
-        {/* Pixel Aliens (Rendered with real retro pixel matrix, not square blobs) */}
+        {/* Lightweight Compound Aliens (Solid 60FPS, no micro-view explosion) */}
         {this.aliens.map((alien) => {
           if (!alien.alive) return null;
 
-          const matrix =
-            alien.row === 0
-              ? SPRITE_SQUID[this.alienFrame]
-              : alien.row < 3
-              ? SPRITE_CRAB[this.alienFrame]
-              : SPRITE_OCTOPUS[this.alienFrame];
-
-          const pSize = 1.7; // pixel scale
-
-          return (
-            <View
-              key={alien.id}
-              style={[
-                styles.pixelAlienContainer,
-                {
-                  left: alien.x,
-                  top: alien.y,
-                },
-              ]}
-            >
-              {matrix.map((row, r) =>
-                row.map((val, c) => {
-                  if (val === 0) return null;
-                  return (
-                    <View
-                      key={`p-${r}-${c}`}
-                      style={{
-                        position: 'absolute',
-                        left: c * pSize,
-                        top: r * pSize,
-                        width: pSize,
-                        height: pSize,
-                        backgroundColor: pixelColor,
-                      }}
-                    />
-                  );
-                })
-              )}
-            </View>
-          );
+          if (alien.row === 0) {
+            // SQUID
+            return (
+              <View
+                key={alien.id}
+                style={[
+                  styles.alienSquidWrap,
+                  { left: alien.x, top: alien.y },
+                  this.alienFrame === 1 && { transform: [{ scaleX: 0.85 }] },
+                ]}
+              >
+                <View style={[styles.squidHead, { backgroundColor: pixelColor }]} />
+                <View style={styles.squidTentaclesRow}>
+                  <View style={[styles.squidTentacle, { backgroundColor: pixelColor }]} />
+                  <View style={[styles.squidTentacle, { backgroundColor: pixelColor }]} />
+                  <View style={[styles.squidTentacle, { backgroundColor: pixelColor }]} />
+                </View>
+              </View>
+            );
+          } else if (alien.row < 3) {
+            // CRAB
+            return (
+              <View
+                key={alien.id}
+                style={[styles.alienCrabWrap, { left: alien.x, top: alien.y }]}
+              >
+                {/* Claws */}
+                <View style={styles.crabClawsRow}>
+                  <View
+                    style={[
+                      styles.crabClaw,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { height: 2 },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.crabClaw,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { height: 2 },
+                    ]}
+                  />
+                </View>
+                {/* Body */}
+                <View style={[styles.crabBody, { backgroundColor: pixelColor }]}>
+                  <View style={[styles.crabEye, { backgroundColor: palette.screenBg }]} />
+                  <View style={[styles.crabEye, { backgroundColor: palette.screenBg }]} />
+                </View>
+                {/* Legs */}
+                <View style={styles.crabLegsRow}>
+                  <View
+                    style={[
+                      styles.crabLeg,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { transform: [{ rotate: '25deg' }] },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.crabLeg,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { transform: [{ rotate: '-25deg' }] },
+                    ]}
+                  />
+                </View>
+              </View>
+            );
+          } else {
+            // OCTOPUS
+            return (
+              <View
+                key={alien.id}
+                style={[styles.alienOctoWrap, { left: alien.x, top: alien.y }]}
+              >
+                <View style={[styles.octoHead, { backgroundColor: pixelColor }]}>
+                  <View style={[styles.octoEye, { backgroundColor: palette.screenBg }]} />
+                  <View style={[styles.octoEye, { backgroundColor: palette.screenBg }]} />
+                </View>
+                <View style={styles.octoTentaclesRow}>
+                  <View
+                    style={[
+                      styles.octoTentacle,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { transform: [{ scaleY: 1.4 }] },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.octoTentacle,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 0 && { transform: [{ scaleY: 1.4 }] },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.octoTentacle,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 1 && { transform: [{ scaleY: 1.4 }] },
+                    ]}
+                  />
+                  <View
+                    style={[
+                      styles.octoTentacle,
+                      { backgroundColor: pixelColor },
+                      this.alienFrame === 0 && { transform: [{ scaleY: 1.4 }] },
+                    ]}
+                  />
+                </View>
+              </View>
+            );
+          }
         })}
 
         {/* Bunkers / Shields */}
@@ -618,6 +611,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
             ]}
           >
             <View style={[styles.cannonTip, { backgroundColor: pixelColor }]} />
+            <View style={[styles.cannonBody, { backgroundColor: pixelColor }]} />
             <View style={[styles.cannonBase, { backgroundColor: pixelColor }]} />
           </View>
         )}
@@ -664,27 +658,133 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
 }
 
 const styles = StyleSheet.create({
+  // SQUID ALIEN
+  alienSquidWrap: {
+    position: 'absolute',
+    width: 14,
+    height: 12,
+    alignItems: 'center',
+  },
+  squidHead: {
+    width: 12,
+    height: 7,
+    borderTopLeftRadius: 6,
+    borderTopRightRadius: 6,
+    borderBottomLeftRadius: 2,
+    borderBottomRightRadius: 2,
+  },
+  squidTentaclesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 10,
+    marginTop: 1,
+  },
+  squidTentacle: {
+    width: 2,
+    height: 4,
+    borderRadius: 0.5,
+  },
+
+  // CRAB ALIEN
+  alienCrabWrap: {
+    position: 'absolute',
+    width: 16,
+    height: 12,
+    alignItems: 'center',
+  },
+  crabClawsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 16,
+  },
+  crabClaw: {
+    width: 3,
+    height: 3,
+    borderRadius: 0.5,
+  },
+  crabBody: {
+    width: 14,
+    height: 6,
+    borderRadius: 2,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+  },
+  crabEye: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+  },
+  crabLegsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 12,
+    marginTop: 0.5,
+  },
+  crabLeg: {
+    width: 2,
+    height: 3,
+    borderRadius: 0.5,
+  },
+
+  // OCTOPUS ALIEN
+  alienOctoWrap: {
+    position: 'absolute',
+    width: 16,
+    height: 13,
+    alignItems: 'center',
+  },
+  octoHead: {
+    width: 14,
+    height: 7,
+    borderTopLeftRadius: 5,
+    borderTopRightRadius: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingTop: 1,
+  },
+  octoEye: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+  },
+  octoTentaclesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: 14,
+    marginTop: 0.5,
+  },
+  octoTentacle: {
+    width: 2,
+    height: 4,
+    borderRadius: 0.5,
+  },
+
+  // PLAYER CANNON
   playerCannon: {
     position: 'absolute',
-    width: 18,
+    width: 20,
     height: 10,
     alignItems: 'center',
   },
   cannonTip: {
     width: 4,
+    height: 3,
+    borderRadius: 0.5,
+  },
+  cannonBody: {
+    width: 12,
+    height: 3,
+    borderTopLeftRadius: 2,
+    borderTopRightRadius: 2,
+  },
+  cannonBase: {
+    width: 20,
     height: 4,
     borderRadius: 1,
   },
-  cannonBase: {
-    width: 18,
-    height: 6,
-    borderRadius: 2,
-  },
-  pixelAlienContainer: {
-    position: 'absolute',
-    width: 18,
-    height: 14,
-  },
+
   shieldCell: {
     position: 'absolute',
     width: 5,
