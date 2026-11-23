@@ -9,18 +9,7 @@ const ARENA_H = 240;
 // Authentic curated Sokoban puzzles
 // '#' = Wall, '.' = Target, '$' = Box, '*' = Box on Target, '@' = Player, '+' = Player on Target, ' ' = Floor
 const SOKOBAN_LEVELS: string[][] = [
-  // Level 1: Classic Beginner
-  [
-    '  ##### ',
-    '###   # ',
-    '# $ # ##',
-    '# #  . #',
-    '#    . #',
-    '## #   #',
-    ' #@  ###',
-    ' #####  ',
-  ],
-  // Level 2: Warehouse Double
+  // Level 1: Micro Beginner (2 Boxes, 2 Targets)
   [
     '######  ',
     '# .. #  ',
@@ -29,7 +18,18 @@ const SOKOBAN_LEVELS: string[][] = [
     '#      #',
     '########',
   ],
-  // Level 3: Cross Warehouse
+  // Level 2: Classic L-Room (2 Boxes, 2 Targets)
+  [
+    '  ##### ',
+    '###   # ',
+    '# $ # ##',
+    '# $  . #',
+    '#    . #',
+    '## #   #',
+    ' #@  ###',
+    ' #####  ',
+  ],
+  // Level 3: Cross Warehouse (3 Boxes, 3 Targets)
   [
     '  ####  ',
     '###  ###',
@@ -39,7 +39,7 @@ const SOKOBAN_LEVELS: string[][] = [
     '#  . ###',
     '######  ',
   ],
-  // Level 4: The Quad Lock
+  // Level 4: The Quad Lock (4 Boxes, 4 Targets)
   [
     '####### ',
     '#     # ',
@@ -49,7 +49,7 @@ const SOKOBAN_LEVELS: string[][] = [
     '#     # ',
     '####### ',
   ],
-  // Level 5: Challenge Chamber
+  // Level 5: Challenge Chamber (3 Boxes, 3 Targets)
   [
     ' ###### ',
     ' #    # ',
