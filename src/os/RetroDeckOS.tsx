@@ -2547,6 +2547,110 @@ export class RetroDeckOS implements ArcadeGameInstance {
     return `${hh}:${mm}`;
   }
 
+  private renderAnalogDial(fg: string, dialSize = 84) {
+    const d = new Date();
+    const hours = d.getHours();
+    const mins = d.getMinutes();
+    const secs = d.getSeconds();
+    const secDeg = secs * 6;
+    const minDeg = mins * 6 + secs * 0.1;
+    const hourDeg = ((hours % 12) * 30) + mins * 0.5;
+    const center = dialSize / 2;
+    const scale = dialSize / 84;
+
+    return (
+      <View
+        style={{
+          width: dialSize,
+          height: dialSize,
+          borderRadius: center,
+          borderWidth: 2,
+          borderColor: fg,
+          position: 'relative',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {Array.from({ length: 12 }).map((_, i) => {
+          const angle = (i * 30 - 90) * (Math.PI / 180);
+          const r = center - 6;
+          const isMajor = i % 3 === 0;
+          const dotSize = isMajor ? 4 : 2;
+          const tx = center + Math.cos(angle) * r - dotSize / 2 - 2;
+          const ty = center + Math.sin(angle) * r - dotSize / 2 - 2;
+          return (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: tx,
+                top: ty,
+                width: dotSize,
+                height: dotSize,
+                backgroundColor: fg,
+              }}
+            />
+          );
+        })}
+
+        {/* Hour Hand */}
+        <View
+          style={{
+            position: 'absolute',
+            width: 3,
+            height: Math.round(20 * scale),
+            backgroundColor: fg,
+            borderRadius: 1.5,
+            transform: [
+              { rotate: `${hourDeg}deg` },
+              { translateY: -Math.round(9 * scale) },
+            ],
+          }}
+        />
+
+        {/* Minute Hand */}
+        <View
+          style={{
+            position: 'absolute',
+            width: 2,
+            height: Math.round(29 * scale),
+            backgroundColor: fg,
+            borderRadius: 1,
+            transform: [
+              { rotate: `${minDeg}deg` },
+              { translateY: -Math.round(13 * scale) },
+            ],
+          }}
+        />
+
+        {/* Second Hand */}
+        <View
+          style={{
+            position: 'absolute',
+            width: 1,
+            height: Math.round(33 * scale),
+            backgroundColor: fg,
+            opacity: 0.85,
+            transform: [
+              { rotate: `${secDeg}deg` },
+              { translateY: -Math.round(14 * scale) },
+            ],
+          }}
+        />
+
+        {/* Center Pivot */}
+        <View
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: fg,
+          }}
+        />
+      </View>
+    );
+  }
+
   public renderEntities(palette: RetroPalette): React.ReactNode {
     const fg = this.torchInvert ? palette.screenBg : palette.pixelOn;
     const bg = this.torchInvert ? palette.pixelOn : palette.screenBg;
@@ -2592,17 +2696,46 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </View>
 
           <View style={[styles.centerBox, { transform: [{ translateY: driftY }] }]}>
-            <View style={[styles.swBox, { borderColor: fg, paddingHorizontal: 22, paddingVertical: 10 }]}>
-              <Text style={[styles.swLbl, { color: fg }]}>
-                {NOKIA_OPERATORS[this.operatorIdx]} // 3310
-              </Text>
-              <Text style={[styles.clockBig, { color: fg }]}>
-                {hh}:{mm}:{ss}
-              </Text>
-              <Text style={[styles.swLap, { color: fg }]}>
-                KEYGUARD LOCKED ({NOKIA_PROFILES[this.profileIdx]})
-              </Text>
-            </View>
+            {this.clockFace === 'analog' ? (
+              <View
+                style={[
+                  styles.swBox,
+                  {
+                    borderColor: fg,
+                    paddingHorizontal: 18,
+                    paddingVertical: 8,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 14,
+                  },
+                ]}
+              >
+                {this.renderAnalogDial(fg, 76)}
+                <View style={{ alignItems: 'flex-start' }}>
+                  <Text style={[styles.swLbl, { color: fg }]}>
+                    {NOKIA_OPERATORS[this.operatorIdx]} // 3310
+                  </Text>
+                  <Text style={[styles.swTime, { color: fg, fontSize: 16, marginVertical: 2 }]}>
+                    {hh}:{mm}:{ss}
+                  </Text>
+                  <Text style={[styles.swLap, { color: fg }]}>
+                    KEYGUARD ({NOKIA_PROFILES[this.profileIdx]})
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <View style={[styles.swBox, { borderColor: fg, paddingHorizontal: 22, paddingVertical: 10 }]}>
+                <Text style={[styles.swLbl, { color: fg }]}>
+                  {NOKIA_OPERATORS[this.operatorIdx]} // 3310
+                </Text>
+                <Text style={[styles.clockBig, { color: fg }]}>
+                  {hh}:{mm}:{ss}
+                </Text>
+                <Text style={[styles.swLap, { color: fg }]}>
+                  KEYGUARD LOCKED ({NOKIA_PROFILES[this.profileIdx]})
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={[styles.osFooter, { borderTopColor: fg, backgroundColor: this.unlockStage ? fg : 'transparent' }]}>
@@ -3176,12 +3309,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
     const dateStr = `${days[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`;
 
-    const secDeg = secs * 6;
-    const minDeg = mins * 6 + secs * 0.1;
-    const hourDeg = ((hours % 12) * 30) + mins * 0.5;
-    const dialSize = 84;
-    const center = dialSize / 2;
-
     return (
       <View style={styles.listWrap}>
         <View style={styles.aiTabsRow}>
@@ -3211,97 +3338,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <View style={styles.centerBox}>
             {this.clockFace === 'analog' ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 }}>
-                {/* Analog Clock Dial */}
-                <View
-                  style={{
-                    width: dialSize,
-                    height: dialSize,
-                    borderRadius: center,
-                    borderWidth: 2,
-                    borderColor: fg,
-                    position: 'relative',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {/* 12 Hour Tick Marks */}
-                  {Array.from({ length: 12 }).map((_, i) => {
-                    const angle = (i * 30 - 90) * (Math.PI / 180);
-                    const r = center - 6;
-                    const isMajor = i % 3 === 0;
-                    const dotSize = isMajor ? 4 : 2;
-                    const tx = center + Math.cos(angle) * r - dotSize / 2 - 2;
-                    const ty = center + Math.sin(angle) * r - dotSize / 2 - 2;
-                    return (
-                      <View
-                        key={i}
-                        style={{
-                          position: 'absolute',
-                          left: tx,
-                          top: ty,
-                          width: dotSize,
-                          height: dotSize,
-                          backgroundColor: fg,
-                        }}
-                      />
-                    );
-                  })}
-
-                  {/* Hour Hand */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      width: 3,
-                      height: 20,
-                      backgroundColor: fg,
-                      borderRadius: 1.5,
-                      transform: [
-                        { rotate: `${hourDeg}deg` },
-                        { translateY: -9 },
-                      ],
-                    }}
-                  />
-
-                  {/* Minute Hand */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      width: 2,
-                      height: 29,
-                      backgroundColor: fg,
-                      borderRadius: 1,
-                      transform: [
-                        { rotate: `${minDeg}deg` },
-                        { translateY: -13 },
-                      ],
-                    }}
-                  />
-
-                  {/* Second Hand */}
-                  <View
-                    style={{
-                      position: 'absolute',
-                      width: 1,
-                      height: 33,
-                      backgroundColor: fg,
-                      opacity: 0.85,
-                      transform: [
-                        { rotate: `${secDeg}deg` },
-                        { translateY: -14 },
-                      ],
-                    }}
-                  />
-
-                  {/* Center Pivot */}
-                  <View
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor: fg,
-                    }}
-                  />
-                </View>
+                {this.renderAnalogDial(fg, 84)}
 
                 {/* Digital & Date Side Readout */}
                 <View style={{ alignItems: 'flex-start', justifyContent: 'center' }}>
