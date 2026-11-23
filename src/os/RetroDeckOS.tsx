@@ -1509,11 +1509,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'profiles') {
       if (dir === 'up') {
-        this.profRow = (this.profRow + 5) % 6;
+        this.profRow = (this.profRow + 6) % 7;
         return 'hit';
       }
       if (dir === 'down') {
-        this.profRow = (this.profRow + 1) % 6;
+        this.profRow = (this.profRow + 1) % 7;
         return 'hit';
       }
       if (pressA || dir === 'left' || dir === 'right') {
@@ -1524,29 +1524,35 @@ export class RetroDeckOS implements ArcadeGameInstance {
           RetroAudioEngine.setMuted(NOKIA_PROFILES[this.profileIdx] === 'SILENT');
           return 'score';
         } else if (this.profRow === 1) {
+          // VOLUME CONTROL (0% to 100% in 10% steps)
+          const curVol = RetroAudioEngine.getVolume();
+          const nextVol = Math.round(Math.max(0, Math.min(1, curVol + step * 0.1)) * 10) / 10;
+          RetroAudioEngine.setVolume(nextVol);
+          return nextVol > 0 ? 'hit' : null;
+        } else if (this.profRow === 2) {
           this.ringtoneIdx =
             (this.ringtoneIdx + step + this.songs.length) % this.songs.length;
           const ring = this.songs[this.ringtoneIdx];
           RetroAudioEngine.playNokiaMelody(ring.notes, ring.bpm);
           return null;
-        } else if (this.profRow === 2) {
+        } else if (this.profRow === 3) {
           this.smsToneIdx =
             (this.smsToneIdx + step + NOKIA_SMS_TONES.length) % NOKIA_SMS_TONES.length;
           const st = NOKIA_SMS_TONES[this.smsToneIdx];
           RetroAudioEngine.playNokiaMelody(st.notes, st.bpm);
           return null;
-        } else if (this.profRow === 3) {
+        } else if (this.profRow === 4) {
           const curStyle = RetroAudioEngine.getKeySoundStyle();
           const curIdx = KEYPAD_SOUND_STYLES.findIndex((s) => s.id === curStyle);
           const nextIdx =
             (curIdx + step + KEYPAD_SOUND_STYLES.length) % KEYPAD_SOUND_STYLES.length;
           RetroAudioEngine.setKeySoundStyle(KEYPAD_SOUND_STYLES[nextIdx].id);
           return 'hit';
-        } else if (this.profRow === 4) {
+        } else if (this.profRow === 5) {
           this.operatorIdx =
             (this.operatorIdx + step + NOKIA_OPERATORS.length) % NOKIA_OPERATORS.length;
           return 'score';
-        } else if (this.profRow === 5) {
+        } else if (this.profRow === 6) {
           if (pressA) {
             this.keyLocked = true;
             this.unlockStage = false;
@@ -2875,17 +2881,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const activeKeyStyle =
       KEYPAD_SOUND_STYLES.find((s) => s.id === RetroAudioEngine.getKeySoundStyle()) ||
       KEYPAD_SOUND_STYLES[0];
+    const volPct = Math.round(RetroAudioEngine.getVolume() * 100);
+    const bars = Math.round(volPct / 10);
+    const volBar = '█'.repeat(bars) + '░'.repeat(10 - bars);
+
     const rows = [
       `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
+      `VOLUME: < [${volBar}] ${volPct}% >`,
       `RINGTONE: < ${activeRing.title.trim()} >`,
       `SMS TONE: < ${activeSms.title} >`,
-      `KEYPAD SOUND: < ${activeKeyStyle.name} >`,
+      `KEY SOUND: < ${activeKeyStyle.name} >`,
       `OPERATOR: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
       `[A] LOCK KEYS • [◀/▶] TORCH: ${this.torchInvert ? 'ON' : 'OFF'}`,
     ];
     return (
       <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>3310 PROFILES & RINGTONES</Text>
+        <Text style={[styles.subHeader, { color: fg }]}>3310 PROFILES & AUDIO</Text>
         {rows.map((label, i) => {
           const sel = i === this.profRow;
           return (
@@ -2896,8 +2907,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 {
                   borderColor: fg,
                   backgroundColor: sel ? fg : 'transparent',
-                  paddingVertical: 4.5,
-                  marginBottom: 3.5,
+                  paddingVertical: 3.5,
+                  marginBottom: 2.5,
                 },
               ]}
             >

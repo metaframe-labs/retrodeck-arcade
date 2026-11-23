@@ -4,6 +4,7 @@ import { ArcadeSound } from '../arcade/types';
 import { bytesToBase64 } from '../core/base64';
 
 const KEY_SOUND_STORAGE_KEY = '@retrodeck8_key_sound_v1';
+const VOLUME_STORAGE_KEY = '@retrodeck8_volume_v1';
 
 export type KeypadSoundStyle =
   | 'classic'
@@ -69,7 +70,7 @@ export function synthesizeRetroSoundUri(
 ): string {
   let duration = 0.10;
   if (sound === 'hit') {
-    if (keyStyle === 'thock') duration = 0.045;
+    if (keyStyle === 'thock') duration = 0.065;
     else if (keyStyle === 'gameboy') duration = 0.055;
     else if (keyStyle === 'nokia') duration = 0.038;
     else if (keyStyle === 'bubble') duration = 0.05;
@@ -96,12 +97,15 @@ export function synthesizeRetroSoundUri(
         if (keyStyle === 'silent') {
           sample = 128;
         } else if (keyStyle === 'thock') {
-          // Deep tactile mechanical keyboard thock (low warm sine drop + clean 4ms transient)
-          const freq = 210 - progress * 135;
-          const env = Math.pow(1 - progress, 1.8);
-          const body = Math.sin(2 * Math.PI * freq * t);
-          const snap = progress < 0.08 ? Math.sin(2 * Math.PI * 620 * t) * (1 - progress / 0.08) * 0.45 : 0;
-          sample = Math.floor(128 + (body * 0.85 + snap) * 112 * env);
+          // Punchy tactile mechanical keyboard thock (audible on phone speakers)
+          const freq = 290 - progress * 165;
+          const env = Math.pow(1 - progress, 1.35);
+          const warmBody = Math.tanh(Math.sin(2 * Math.PI * freq * t) * 2.6);
+          const transient = progress < 0.12
+            ? Math.sin(2 * Math.PI * 860 * t) * (1 - progress / 0.12) * 0.55
+            : 0;
+          const mixed = Math.max(-1, Math.min(1, warmBody * 0.85 + transient));
+          sample = Math.floor(128 + mixed * 124 * env);
         } else if (keyStyle === 'gameboy') {
           // Crisp warm Game Boy two-step menu blip (660 Hz -> 880 Hz, 25% pulse duty)
           const freq = progress < 0.42 ? 660 : 880;
@@ -290,9 +294,40 @@ export class RetroAudioEngine {
   private static soundUris: Partial<Record<ArcadeSound, string>> = {};
   private static isInitialized = false;
   private static isMuted = false;
+  private static masterVolume = 1.0; // 0.0 to 1.0
   private static keySoundStyle: KeypadSoundStyle = 'classic';
   private static melodyPlayer: any = null;
   private static notePlayer: any = null;
+
+  public static getVolume(): number {
+    return this.masterVolume;
+  }
+
+  public static setVolume(vol: number, persist = true): void {
+    const clamped = Math.max(0, Math.min(1, Math.round(vol * 10) / 10));
+    this.masterVolume = clamped;
+    if (persist) {
+      AsyncStorage.setItem(VOLUME_STORAGE_KEY, String(clamped)).catch(() => {});
+    }
+    if (clamped === 0) {
+      this.stopNokiaMelody();
+    }
+    // Update active pools immediately
+    Object.values(this.pools).forEach((list) => {
+      if (list) {
+        list.forEach((p) => {
+          try {
+            if (p) p.volume = Platform.OS === 'web' ? clamped * 0.9 : clamped;
+          } catch {}
+        });
+      }
+    });
+    if (this.melodyPlayer) {
+      try {
+        this.melodyPlayer.volume = Platform.OS === 'web' ? clamped * 0.9 : clamped;
+      } catch {}
+    }
+  }
 
   public static getKeySoundStyle(): KeypadSoundStyle {
     return this.keySoundStyle;
@@ -321,7 +356,7 @@ export class RetroAudioEngine {
         for (let v = 0; v < 3; v++) {
           const player = SafeExpoAudio.createAudioPlayer(newUri, { keepAudioSessionActive: true });
           if (player) {
-            player.volume = 1.0;
+            player.volume = this.masterVolume;
             voiceList.push(player);
           }
         }
@@ -334,8 +369,8 @@ export class RetroAudioEngine {
       try {
         const a1 = new Audio(newUri);
         const a2 = new Audio(newUri);
-        a1.volume = 0.9;
-        a2.volume = 0.9;
+        a1.volume = this.masterVolume * 0.9;
+        a2.volume = this.masterVolume * 0.9;
         this.pools.hit = [a1, a2];
         this.poolIndex.hit = 0;
       } catch {
@@ -373,7 +408,7 @@ export class RetroAudioEngine {
   } {
     this.stopNokiaMelody();
     const { uri, events, totalSec } = synthesizeNokiaMelodyUri(notation, bpm);
-    if (this.isMuted) {
+    if (this.isMuted || this.masterVolume <= 0) {
       return { events, totalSec };
     }
 
@@ -381,7 +416,7 @@ export class RetroAudioEngine {
       try {
         const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
         if (p) {
-          p.volume = 1.0;
+          p.volume = this.masterVolume;
           this.melodyPlayer = p;
           p.play();
         }
@@ -391,7 +426,7 @@ export class RetroAudioEngine {
     } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
       try {
         const a = new Audio(uri);
-        a.volume = 0.9;
+        a.volume = this.masterVolume * 0.9;
         this.melodyPlayer = a;
         a.play().catch(() => {});
       } catch {
@@ -403,7 +438,7 @@ export class RetroAudioEngine {
   }
 
   public static playNokiaNote(token: string, bpm: number = 160): void {
-    if (this.isMuted) return;
+    if (this.isMuted || this.masterVolume <= 0) return;
     const { uri } = synthesizeNokiaMelodyUri(token, bpm);
     if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
       try {
@@ -412,7 +447,7 @@ export class RetroAudioEngine {
         }
         const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
         if (p) {
-          p.volume = 1.0;
+          p.volume = this.masterVolume;
           this.notePlayer = p;
           p.play();
         }
@@ -422,7 +457,7 @@ export class RetroAudioEngine {
     } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
       try {
         const a = new Audio(uri);
-        a.volume = 0.9;
+        a.volume = this.masterVolume * 0.9;
         a.play().catch(() => {});
       } catch {
         // ignore
@@ -465,6 +500,13 @@ export class RetroAudioEngine {
       const savedStyle = await AsyncStorage.getItem(KEY_SOUND_STORAGE_KEY);
       if (savedStyle && KEYPAD_SOUND_STYLES.some((s) => s.id === savedStyle)) {
         this.keySoundStyle = savedStyle as KeypadSoundStyle;
+      }
+      const savedVol = await AsyncStorage.getItem(VOLUME_STORAGE_KEY);
+      if (savedVol !== null) {
+        const parsed = parseFloat(savedVol);
+        if (!Number.isNaN(parsed)) {
+          this.masterVolume = Math.max(0, Math.min(1, parsed));
+        }
       }
     } catch {
       // ignore storage read failure
@@ -519,7 +561,7 @@ export class RetroAudioEngine {
                 keepAudioSessionActive: true,
               });
               if (player) {
-                player.volume = 1.0;
+                player.volume = this.masterVolume;
                 voiceList.push(player);
               }
             } catch (err) {
@@ -541,8 +583,8 @@ export class RetroAudioEngine {
           const uri = this.soundUris[s]!;
           const a1 = new Audio(uri);
           const a2 = new Audio(uri);
-          a1.volume = 0.9;
-          a2.volume = 0.9;
+          a1.volume = this.masterVolume * 0.9;
+          a2.volume = this.masterVolume * 0.9;
           this.pools[s] = [a1, a2];
           this.poolIndex[s] = 0;
         } catch {
@@ -553,7 +595,7 @@ export class RetroAudioEngine {
   }
 
   public static play(sound: ArcadeSound): void {
-    if (this.isMuted) return;
+    if (this.isMuted || this.masterVolume <= 0) return;
     // 1. Native Mobile (expo-audio)
     if (Platform.OS !== 'web') {
       try {
@@ -564,7 +606,7 @@ export class RetroAudioEngine {
           const player = pool[idx];
 
           if (player) {
-            player.volume = 1.0;
+            player.volume = this.masterVolume;
             if (typeof player.seekTo === 'function') {
               player.seekTo(0)
                 .then(() => {
@@ -582,10 +624,10 @@ export class RetroAudioEngine {
 
         // Lazy fallback if not pre-initialized
         if (SafeExpoAudio?.createAudioPlayer) {
-          const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound);
+          const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle);
           const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
           if (p) {
-            p.volume = 1.0;
+            p.volume = this.masterVolume;
             p.play();
           }
         }
@@ -602,13 +644,14 @@ export class RetroAudioEngine {
         const idx = (this.poolIndex[sound] || 0) % pool.length;
         this.poolIndex[sound] = (idx + 1) % pool.length;
         const audio = pool[idx];
+        audio.volume = this.masterVolume * 0.9;
         audio.currentTime = 0;
         audio.play().catch(() => {});
         return;
       }
-      const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound);
+      const uri = this.soundUris[sound] || synthesizeRetroSoundUri(sound, this.keySoundStyle);
       const audio = new Audio(uri);
-      audio.volume = 0.9;
+      audio.volume = this.masterVolume * 0.9;
       audio.play().catch(() => {});
     } catch {
       // Ignore
