@@ -10,6 +10,7 @@ const PALETTE_STORAGE_KEY = '@retrodeck8_palette_v1';
 const SCANLINES_STORAGE_KEY = '@retrodeck8_scanlines_v1';
 
 import { ArcadeButton, RetroKeypad } from './src/components/RetroKeypad';
+import { RetroKeyboardDeck } from './src/components/RetroKeyboardDeck';
 import { ArcadeScreen } from './src/arcade/ArcadeScreen';
 import { CartridgeBayPage } from './src/components/CartridgeBayPage';
 import { DevCartModal } from './src/components/DevCartModal';
@@ -65,6 +66,8 @@ function RetroDeckConsole() {
   const [scanlines, setScanlines] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [isBeeping, setIsBeeping] = useState(false);
+  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [, setKbdTick] = useState(0);
   const [bayVisible, setBayVisible] = useState(false);
   const [devCartVisible, setDevCartVisible] = useState(false);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
@@ -212,6 +215,7 @@ function RetroDeckConsole() {
     setStats(gameRef.current.getStats());
     setIsPaused(false);
     setOsMode(false);
+    setKeyboardMode(false);
   }, []);
 
   // Burn & Load Custom Sucrase Dev Cartridge (preserve user's active OS theme)
@@ -225,6 +229,7 @@ function RetroDeckConsole() {
     setStats(gameRef.current.getStats());
     setIsPaused(false);
     setOsMode(false);
+    setKeyboardMode(false);
     handleSoundEvent('powerup');
   }, [handleSoundEvent]);
 
@@ -255,8 +260,12 @@ function RetroDeckConsole() {
       onToggleScanlines: () => handleToggleScanlines(),
       getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
+      onRequestKeyboard: (open) => setKeyboardMode(open),
+      onPlaySound: (s) => handleSoundEvent(s),
     })
   );
+
+  const kbdBinding = osRef.current.getKeyboardBinding();
 
   const handleGoHomeOS = () => {
     osRef.current.goDesktop();
@@ -395,22 +404,47 @@ function RetroDeckConsole() {
             </Text>
           </Pressable>
 
-          <Pressable
-            onPress={() => setIsPaused((p) => !p)}
-            style={[
-              styles.toolBtn,
-              !osMode && isPaused && { borderColor: '#FF9F0A', backgroundColor: 'rgba(255,159,10,0.14)' },
-            ]}
-          >
-            <Ionicons
-              name={isPaused ? 'play' : 'pause'}
-              size={14}
-              color={!osMode && isPaused ? '#FF9F0A' : '#CBD5E1'}
-            />
-            <Text style={[styles.toolText, !osMode && isPaused && { color: '#FF9F0A' }]}>
-              {isPaused ? 'RESUME' : 'PAUSE'}
-            </Text>
-          </Pressable>
+          {osMode ? (
+            <Pressable
+              onPress={() => {
+                setKeyboardMode((k) => !k);
+                handleSoundEvent('hit');
+              }}
+              style={[
+                styles.toolBtn,
+                keyboardMode && {
+                  borderColor: palette.bezelAccent,
+                  backgroundColor: `${palette.bezelAccent}22`,
+                },
+              ]}
+            >
+              <Ionicons
+                name={keyboardMode ? 'game-controller-outline' : 'keypad-outline'}
+                size={14}
+                color={keyboardMode ? palette.bezelAccent : '#CBD5E1'}
+              />
+              <Text style={[styles.toolText, keyboardMode && { color: palette.bezelAccent }]}>
+                {keyboardMode ? 'PAD' : 'KBD'}
+              </Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={() => setIsPaused((p) => !p)}
+              style={[
+                styles.toolBtn,
+                isPaused && { borderColor: '#FF9F0A', backgroundColor: 'rgba(255,159,10,0.14)' },
+              ]}
+            >
+              <Ionicons
+                name={isPaused ? 'play' : 'pause'}
+                size={14}
+                color={isPaused ? '#FF9F0A' : '#CBD5E1'}
+              />
+              <Text style={[styles.toolText, isPaused && { color: '#FF9F0A' }]}>
+                {isPaused ? 'RESUME' : 'PAUSE'}
+              </Text>
+            </Pressable>
+          )}
 
           <Pressable onPress={handleReset} style={styles.toolBtn}>
             <Ionicons name="refresh" size={14} color="#CBD5E1" />
@@ -450,12 +484,19 @@ function RetroDeckConsole() {
               <View style={styles.speakerSlot} />
               <View style={styles.speakerSlot} />
             </View>
-            <View style={styles.chassisBadgeContainer}>
+            <Pressable
+              onPress={() => {
+                if (!osMode) setOsMode(true);
+                setKeyboardMode((k) => !k);
+                handleSoundEvent('hit');
+              }}
+              style={styles.chassisBadgeContainer}
+            >
               <View style={[styles.statusLed, { backgroundColor: palette.bezelAccent }]} />
               <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
-                ARCADE CONTROLLER DECK
+                {keyboardMode ? 'QWERTY COMMUNICATOR DECK [TAP FOR PAD]' : 'ARCADE CONTROLLER DECK [TAP FOR KBD]'}
               </Text>
-            </View>
+            </Pressable>
             <View style={styles.speakerGrille}>
               <View style={styles.speakerSlot} />
               <View style={styles.speakerSlot} />
@@ -464,13 +505,32 @@ function RetroDeckConsole() {
             </View>
           </View>
 
-          {/* Keypad Controls Area */}
+          {/* Keypad or QWERTY Keyboard Controls Area */}
           <View style={styles.keypadContainer}>
-            <RetroKeypad
-              labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
-              accentColor={palette.bezelAccent}
-              onButtonChange={handleButtonChange}
-            />
+            {keyboardMode ? (
+              <RetroKeyboardDeck
+                accentColor={palette.bezelAccent}
+                value={kbdBinding.value}
+                placeholder={kbdBinding.placeholder}
+                targetLabel={kbdBinding.targetLabel}
+                secure={kbdBinding.secure}
+                onChangeText={(next) => {
+                  osRef.current.setKeyboardText(next);
+                  setKbdTick((t) => (t + 1) % 100000);
+                }}
+                onSubmit={() => {
+                  osRef.current.submitKeyboard();
+                  setKbdTick((t) => (t + 1) % 100000);
+                }}
+                onSwitchToGamepad={() => setKeyboardMode(false)}
+              />
+            ) : (
+              <RetroKeypad
+                labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
+                accentColor={palette.bezelAccent}
+                onButtonChange={handleButtonChange}
+              />
+            )}
           </View>
         </View>
       </View>

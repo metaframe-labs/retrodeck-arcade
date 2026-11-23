@@ -8,6 +8,17 @@ import {
   ArcadeStats,
 } from '../arcade/types';
 import { RetroPalette } from '../theme/palettes';
+import {
+  BYOK_PROVIDERS,
+  BYOKChatMessage,
+  BYOKConfig,
+  DEFAULT_BYOK_CONFIG,
+  callBYOKAIChat,
+  getProviderMeta,
+  getProviderModel,
+  loadBYOKConfig,
+  saveBYOKConfig,
+} from '../services/byokAiService';
 
 export interface RetroDeckOSCallbacks {
   getCartridges: () => ArcadeCartridgeDef[];
@@ -18,17 +29,19 @@ export interface RetroDeckOSCallbacks {
   onToggleScanlines: () => void;
   getPaletteName: () => string;
   getScanlines: () => boolean;
+  onRequestKeyboard?: (open: boolean) => void;
+  onPlaySound?: (sound: ArcadeSound) => void;
 }
 
 type OsAppId =
   | 'boot'
   | 'desktop'
   | 'arcade'
+  | 'ai'
   | 'calc'
   | 'clock'
   | 'synth'
   | 'paint'
-  | 'notes'
   | 'stats'
   | 'term'
   | 'setup';
@@ -41,11 +54,11 @@ interface DesktopIcon {
 
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', code: '[+]', label: 'GAMES' },
+  { id: 'ai', code: 'AI*', label: 'AI BYOK' },
   { id: 'calc', code: '1+2', label: 'CALC' },
   { id: 'clock', code: '12:0', label: 'CLOCK' },
   { id: 'synth', code: 'SFX', label: 'SYNTH' },
   { id: 'paint', code: 'PIX', label: 'PAINT' },
-  { id: 'notes', code: 'TXT', label: 'NOTES' },
   { id: 'stats', code: 'TOP', label: 'STATS' },
   { id: 'term', code: '$>_', label: 'SHELL' },
   { id: 'setup', code: 'SYS', label: 'SETUP' },
@@ -79,6 +92,29 @@ const TERM_CMDS = [
   'reboot',
 ];
 
+function wrapTextLines(text: string, maxCols = 34): string[] {
+  const out: string[] = [];
+  const paragraphs = text.replace(/\r/g, '').split('\n');
+  for (const p of paragraphs) {
+    const trimmed = p.trim();
+    if (!trimmed) continue;
+    const words = trimmed.split(/\s+/);
+    let cur = '';
+    for (const w of words) {
+      if (!cur) {
+        cur = w.slice(0, maxCols);
+      } else if (cur.length + 1 + w.length <= maxCols) {
+        cur += ' ' + w;
+      } else {
+        out.push(cur);
+        cur = w.slice(0, maxCols);
+      }
+    }
+    if (cur) out.push(cur);
+  }
+  return out.length > 0 ? out : ['...'];
+}
+
 export class RetroDeckOS implements ArcadeGameInstance {
   private cb: RetroDeckOSCallbacks;
   private app: OsAppId = 'boot';
@@ -95,6 +131,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // In-LCD Arcade Browser
   private gameIdx = 0;
+
+  // AI & BYOK state
+  private byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
+  private aiTab: 'chat' | 'byok' = 'chat';
+  private byokRow = 0; // 0: Provider, 1: API Key, 2: Model, 3: Back to Chat
+  private kbdTarget: 'chat' | 'key' | 'model' = 'chat';
+  private aiPrompt = '';
+  private aiLoading = false;
+  private aiStatus = 'READY';
+  private chatHistory: BYOKChatMessage[] = [];
+  private chatLines: string[] = [
+    'AI> WELCOME TO RETRODECK AI!',
+    'AI> PRESS [KBD] OR [A] TO TYPE,',
+    'AI> OR [RIGHT] FOR BYOK KEYS.',
+  ];
+  private chatScroll = 0;
 
   // Calculator state
   private calcR = 0;
@@ -119,22 +171,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private paintR = 4;
   private paintC = 7;
 
-  // Notes state
-  private noteIdx = 0;
-  private notes: { title: string; done: boolean }[] = [
-    { title: 'BEAT 100 GAMES', done: false },
-    { title: 'TRY BOSS RUSH 100', done: false },
-    { title: 'TEST 8-BIT SYNTH', done: true },
-    { title: 'DRAW PIXEL ART', done: false },
-    { title: 'CHECK TOP SCORES', done: false },
-  ];
-
   // Terminal state
   private termIdx = 0;
   private termOut: string[] = [
-    'RETRODECK OS v1.0 (ARM64)',
-    'TYPE: D-PAD + [A] TO RUN',
-    'READY. 100 ROMS MOUNTED.',
+    'RETRODECK OS v1.1 (ARM64)',
+    'BYOK AI ENGINE MOUNTED',
+    'READY. 100 ROMS + AI ACTIVE.',
   ];
 
   // Setup state
@@ -143,13 +185,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
   constructor(cb: RetroDeckOSCallbacks) {
     this.cb = cb;
     this.clearCanvas();
+    loadBYOKConfig().then((cfg) => {
+      this.byokConfig = cfg;
+    });
   }
 
   private clearCanvas() {
     this.paintGrid = Array.from({ length: this.paintH }, () =>
       Array(this.paintW).fill(false)
     );
-    // Draw a tiny retro smiley on boot
     this.paintGrid[2][5] = true;
     this.paintGrid[2][10] = true;
     this.paintGrid[6][5] = true;
@@ -176,22 +220,31 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.app = 'desktop';
     this.prevA = true;
     this.prevB = true;
+    this.cb.onRequestKeyboard?.(false);
   }
 
   public getCurrentTitle(): string {
     if (this.app === 'boot') return 'BIOS BOOT';
     if (this.app === 'desktop') return 'RETRODECK OS';
+    if (this.app === 'ai') {
+      const meta = getProviderMeta(this.byokConfig.activeProvider);
+      return `RD-AI // ${meta.shortName}`;
+    }
     return `RD-OS // ${this.app.toUpperCase()}`;
   }
 
   public getControlsHint(): string {
     switch (this.app) {
       case 'boot':
-        return 'Booting RetroDeck OS v1.0... Press [A] to skip';
+        return 'Booting RetroDeck OS... Press [A] to skip';
       case 'desktop':
-        return 'D-PAD: Select App • [A]: Open • CARTS: Full Vault';
+        return 'D-PAD: Select App • [A]: Open • KBD: Toggle Keyboard';
       case 'arcade':
         return '[▲]/[▼]: Browse 100 Games • [A]: Launch • [B]: Desktop';
+      case 'ai':
+        return this.aiTab === 'chat'
+          ? '[▲]/[▼]: Scroll • [A]: Type/Send • [▶]: BYOK Setup • [B]: Exit'
+          : '[▲]/[▼]: Select • [◀]/[▶]: Provider • [A]: Edit Key/Model';
       case 'calc':
         return 'D-PAD: Key • [A]: Press • [B]: Back to Desktop';
       case 'clock':
@@ -200,8 +253,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return 'D-PAD: Select Sound • [A]: Play SFX • [B]: Desktop';
       case 'paint':
         return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
-      case 'notes':
-        return '[▲]/[▼]: Select • [A]: Check/Uncheck • [B]: Desktop';
       case 'stats':
         return 'Viewing Arcade High Scores & Rank • [B]: Desktop';
       case 'term':
@@ -211,6 +262,129 @@ export class RetroDeckOS implements ArcadeGameInstance {
       default:
         return 'D-PAD: Navigate • [A]: Select • [B]: Back';
     }
+  }
+
+  // Keyboard Bridge for RetroKeyboardDeck
+  public getKeyboardBinding(): {
+    targetLabel: string;
+    value: string;
+    placeholder: string;
+    secure: boolean;
+  } {
+    const pid = this.byokConfig.activeProvider;
+    const meta = getProviderMeta(pid);
+    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
+      return {
+        targetLabel: `${meta.shortName} KEY`,
+        value: this.byokConfig.keys[pid] || '',
+        placeholder: meta.keyPlaceholder || 'PASTE API KEY...',
+        secure: false,
+      };
+    }
+    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'model') {
+      return {
+        targetLabel: `${meta.shortName} MDL`,
+        value: getProviderModel(pid, this.byokConfig),
+        placeholder: meta.defaultModel,
+        secure: false,
+      };
+    }
+    return {
+      targetLabel: 'AI PROMPT',
+      value: this.aiPrompt,
+      placeholder: 'ASK RETRODECK AI...',
+      secure: false,
+    };
+  }
+
+  public setKeyboardText(next: string) {
+    const pid = this.byokConfig.activeProvider;
+    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
+      this.byokConfig = {
+        ...this.byokConfig,
+        keys: { ...this.byokConfig.keys, [pid]: next },
+      };
+      saveBYOKConfig(this.byokConfig);
+      return;
+    }
+    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'model') {
+      this.byokConfig = {
+        ...this.byokConfig,
+        models: { ...this.byokConfig.models, [pid]: next },
+      };
+      saveBYOKConfig(this.byokConfig);
+      return;
+    }
+    this.aiPrompt = next;
+    if (this.app !== 'ai') {
+      this.app = 'ai';
+      this.aiTab = 'chat';
+    }
+  }
+
+  public submitKeyboard() {
+    if (this.app === 'ai' && this.aiTab === 'byok') {
+      saveBYOKConfig(this.byokConfig);
+      this.aiStatus = 'SAVED!';
+      this.cb.onPlaySound?.('score');
+      this.cb.onRequestKeyboard?.(false);
+      return;
+    }
+    if (this.app !== 'ai') {
+      this.app = 'ai';
+      this.aiTab = 'chat';
+    }
+    this.sendAiMessage();
+  }
+
+  private appendChatLines(prefix: string, text: string) {
+    const wrapped = wrapTextLines(`${prefix} ${text}`, 33);
+    this.chatLines.push(...wrapped);
+    if (this.chatLines.length > 60) {
+      this.chatLines = this.chatLines.slice(this.chatLines.length - 60);
+    }
+    this.chatScroll = Math.max(0, this.chatLines.length - 6);
+  }
+
+  private async sendAiMessage() {
+    const msg = this.aiPrompt.trim();
+    if (!msg || this.aiLoading) return;
+    this.aiPrompt = '';
+    this.appendChatLines('YOU>', msg);
+    this.chatHistory.push({ role: 'user', content: msg });
+    if (this.chatHistory.length > 10) {
+      this.chatHistory = this.chatHistory.slice(-10);
+    }
+
+    this.aiLoading = true;
+    this.aiStatus = 'THINKING...';
+    this.cb.onPlaySound?.('shoot');
+
+    try {
+      const reply = await callBYOKAIChat(this.chatHistory, this.byokConfig);
+      const clean = reply.trim() || '(EMPTY)';
+      this.chatHistory.push({ role: 'assistant', content: clean });
+      this.appendChatLines('AI>', clean);
+      this.aiStatus = 'OK';
+      this.cb.onPlaySound?.('powerup');
+    } catch (err: any) {
+      const errMsg = err?.message || 'API ERROR';
+      this.appendChatLines('ERR>', errMsg.toUpperCase());
+      this.aiStatus = 'ERR';
+      this.cb.onPlaySound?.('die');
+    } finally {
+      this.aiLoading = false;
+    }
+  }
+
+  private cycleProvider(delta: number) {
+    const idx = BYOK_PROVIDERS.findIndex((p) => p.id === this.byokConfig.activeProvider);
+    const nextIdx = (idx + delta + BYOK_PROVIDERS.length) % BYOK_PROVIDERS.length;
+    this.byokConfig = {
+      ...this.byokConfig,
+      activeProvider: BYOK_PROVIDERS[nextIdx].id,
+    };
+    saveBYOKConfig(this.byokConfig);
   }
 
   public update(input: ArcadeInput, dt: number): ArcadeSound | null {
@@ -236,6 +410,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     // Global B = return to desktop from any sub-app
     if (this.app !== 'desktop' && pressB) {
       this.app = 'desktop';
+      this.cb.onRequestKeyboard?.(false);
       return 'hit';
     }
 
@@ -258,7 +433,84 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
       if (pressA) {
         this.app = DESKTOP_ICONS[this.deskIdx].id;
+        if (this.app === 'ai') {
+          this.kbdTarget = 'chat';
+        }
         return 'score';
+      }
+      return null;
+    }
+
+    if (this.app === 'ai') {
+      if (this.aiTab === 'chat') {
+        if (dir === 'up') {
+          this.chatScroll = Math.max(0, this.chatScroll - 1);
+          return 'hit';
+        }
+        if (dir === 'down') {
+          this.chatScroll = Math.min(Math.max(0, this.chatLines.length - 6), this.chatScroll + 1);
+          return 'hit';
+        }
+        if (dir === 'right') {
+          this.aiTab = 'byok';
+          this.byokRow = 0;
+          this.kbdTarget = 'key';
+          return 'hit';
+        }
+        if (pressA) {
+          this.kbdTarget = 'chat';
+          if (this.aiPrompt.trim().length > 0) {
+            this.sendAiMessage();
+          } else {
+            this.cb.onRequestKeyboard?.(true);
+          }
+          return 'score';
+        }
+      } else {
+        // BYOK tab
+        if (dir === 'up') {
+          this.byokRow = (this.byokRow + 3) % 4;
+          this.kbdTarget = this.byokRow === 2 ? 'model' : 'key';
+          return 'hit';
+        }
+        if (dir === 'down') {
+          this.byokRow = (this.byokRow + 1) % 4;
+          this.kbdTarget = this.byokRow === 2 ? 'model' : 'key';
+          return 'hit';
+        }
+        if (dir === 'left') {
+          if (this.byokRow === 0) {
+            this.cycleProvider(-1);
+          } else {
+            this.aiTab = 'chat';
+            this.kbdTarget = 'chat';
+          }
+          return 'hit';
+        }
+        if (dir === 'right') {
+          if (this.byokRow === 0) {
+            this.cycleProvider(1);
+            return 'hit';
+          }
+        }
+        if (pressA) {
+          if (this.byokRow === 0) {
+            this.cycleProvider(1);
+            return 'score';
+          } else if (this.byokRow === 1) {
+            this.kbdTarget = 'key';
+            this.cb.onRequestKeyboard?.(true);
+            return 'score';
+          } else if (this.byokRow === 2) {
+            this.kbdTarget = 'model';
+            this.cb.onRequestKeyboard?.(true);
+            return 'score';
+          } else {
+            this.aiTab = 'chat';
+            this.kbdTarget = 'chat';
+            return 'score';
+          }
+        }
       }
       return null;
     }
@@ -329,17 +581,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (pressA) {
         this.paintGrid[this.paintR][this.paintC] = !this.paintGrid[this.paintR][this.paintC];
         return 'hit';
-      }
-      return null;
-    }
-
-    if (this.app === 'notes') {
-      if (dir === 'up') this.noteIdx = (this.noteIdx + this.notes.length - 1) % this.notes.length;
-      if (dir === 'down') this.noteIdx = (this.noteIdx + 1) % this.notes.length;
-      if (dir) return 'hit';
-      if (pressA) {
-        this.notes[this.noteIdx].done = !this.notes[this.noteIdx].done;
-        return 'score';
       }
       return null;
     }
@@ -415,12 +656,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const carts = this.cb.getCartridges();
     if (cmd === 'neofetch') {
       this.termOut = [
-        'OS: RetroDeck OS v1.0',
-        `ROMS: ${carts.length} CARTRIDGES`,
+        'OS: RetroDeck OS v1.1',
+        `ROMS: ${carts.length} + BYOK AI`,
         `UP: ${Math.floor(this.uptime)}s  PAL: ${this.cb.getPaletteName()}`,
       ];
     } else if (cmd === 'uname -a') {
-      this.termOut = ['RetroDeckOS 1.0.0 arm64', 'LCD 320x240 60Hz MONO', 'SYNTH-8BIT ACTIVE'];
+      this.termOut = ['RetroDeckOS 1.1.0 arm64', 'LCD 320x240 60Hz MONO', 'BYOK-LLM + SYNTH-8BIT'];
     } else if (cmd === 'ls /carts') {
       this.termOut = [
         `TOTAL ${carts.length} CARTS MOUNTED`,
@@ -467,7 +708,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={[styles.container, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={[styles.bootLogo, { color: fg }]}>RETRODECK OS</Text>
-          <Text style={[styles.bootSub, { color: fg }]}>POCKET KERNEL v1.0</Text>
+          <Text style={[styles.bootSub, { color: fg }]}>POCKET AI KERNEL v1.1</Text>
           <View style={[styles.bootBar, { borderColor: fg }]}>
             <View style={{ width: `${pct}%`, height: '100%', backgroundColor: fg }} />
           </View>
@@ -475,7 +716,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             {pct < 35
               ? 'MEM CHECK: 64KB OK'
               : pct < 75
-              ? `MOUNTING ${this.cb.getCartridges().length} CARTS...`
+              ? `MOUNTING ${this.cb.getCartridges().length} CARTS + BYOK...`
               : 'STARTING DESKTOP...'}
           </Text>
         </View>
@@ -487,7 +728,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         {/* OS Top Status Bar */}
         <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
           <Text style={[styles.osBarTxt, { color: bg }]}>
-            {this.app === 'desktop' ? 'RD-OS 1.0' : `< ${this.app.toUpperCase()}`}
+            {this.app === 'desktop' ? 'RD-OS 1.1' : `< ${this.app.toUpperCase()}`}
           </Text>
           <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
           <Text style={[styles.osBarTxt, { color: bg }]}>BAT[###]</Text>
@@ -497,11 +738,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <View style={styles.osBody}>
           {this.app === 'desktop' && this.renderDesktop(fg, bg)}
           {this.app === 'arcade' && this.renderArcadeBrowser(fg, bg)}
+          {this.app === 'ai' && this.renderAiApp(fg, bg)}
           {this.app === 'calc' && this.renderCalc(fg, bg)}
           {this.app === 'clock' && this.renderClock(fg, bg)}
           {this.app === 'synth' && this.renderSynth(fg, bg)}
           {this.app === 'paint' && this.renderPaint(fg, bg)}
-          {this.app === 'notes' && this.renderNotes(fg, bg)}
           {this.app === 'stats' && this.renderStats(fg, bg)}
           {this.app === 'term' && this.renderTerm(fg, bg)}
           {this.app === 'setup' && this.renderSetup(fg, bg)}
@@ -509,9 +750,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
         {/* OS Footer Taskbar */}
         <View style={[styles.osFooter, { borderTopColor: fg }]}>
-          <Text style={[styles.footerTxt, { color: fg }]}>
+          <Text style={[styles.footerTxt, { color: fg }]} numberOfLines={1}>
             {this.app === 'desktop'
-              ? '[A] OPEN   [D-PAD] MOVE'
+              ? '[A] OPEN   [D-PAD] MOVE   [KBD] KEYBOARD'
+              : this.app === 'ai'
+              ? '[A] KBD/SEND   [◀/▶] TAB   [B] DESKTOP'
               : '[A] ACTION   [B] DESKTOP'}
           </Text>
         </View>
@@ -540,6 +783,116 @@ export class RetroDeckOS implements ArcadeGameInstance {
             </View>
           );
         })}
+      </View>
+    );
+  }
+
+  private renderAiApp(fg: string, bg: string) {
+    const pid = this.byokConfig.activeProvider;
+    const meta = getProviderMeta(pid);
+    const hasKey = !meta.requiresKey || Boolean(this.byokConfig.keys[pid]?.trim());
+    const rawKey = this.byokConfig.keys[pid] || '';
+    const maskedKey = rawKey
+      ? rawKey.length > 8
+        ? `${rawKey.slice(0, 5)}...${rawKey.slice(-3)}`
+        : 'SET (***)'
+      : 'NOT SET [PRESS A]';
+
+    return (
+      <View style={styles.listWrap}>
+        {/* Top Tab Strip: CHAT | BYOK */}
+        <View style={styles.aiTabsRow}>
+          <View
+            style={[
+              styles.aiTabPill,
+              {
+                borderColor: fg,
+                backgroundColor: this.aiTab === 'chat' ? fg : 'transparent',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.aiTabTxt,
+                { color: this.aiTab === 'chat' ? bg : fg },
+              ]}
+            >
+              1.CHAT ({meta.shortName})
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.aiTabPill,
+              {
+                borderColor: fg,
+                backgroundColor: this.aiTab === 'byok' ? fg : 'transparent',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.aiTabTxt,
+                { color: this.aiTab === 'byok' ? bg : fg },
+              ]}
+            >
+              2.BYOK [{hasKey ? 'KEY:OK' : 'NO KEY'}]
+            </Text>
+          </View>
+        </View>
+
+        {this.aiTab === 'chat' ? (
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
+            {/* Nokia LCD Chat Transcript */}
+            <View style={[styles.aiChatBox, { borderColor: fg }]}>
+              {this.chatLines.slice(this.chatScroll, this.chatScroll + 6).map((line, idx) => (
+                <Text
+                  key={idx}
+                  style={[styles.aiChatLine, { color: fg }]}
+                  numberOfLines={1}
+                >
+                  {line}
+                </Text>
+              ))}
+            </View>
+
+            {/* Bottom Prompt Input Box */}
+            <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
+              <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
+                {this.aiLoading
+                  ? `> [${meta.shortName} THINKING...]`
+                  : `> ${this.aiPrompt || 'PRESS [KBD] OR [A] TO CHAT_'}`}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            {[
+              `PROVIDER: < ${meta.name.toUpperCase()} >`,
+              `API KEY: ${maskedKey}`,
+              `MODEL: ${getProviderModel(pid, this.byokConfig)}`,
+              '>> BACK TO AI CHAT <<',
+            ].map((rowLabel, rIdx) => {
+              const sel = rIdx === this.byokRow;
+              return (
+                <View
+                  key={rIdx}
+                  style={[
+                    styles.setupRow,
+                    { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                  ]}
+                >
+                  <Text
+                    style={[styles.setupTxt, { color: sel ? bg : fg }]}
+                    numberOfLines={1}
+                  >
+                    {sel ? '> ' : '  '}
+                    {rowLabel}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
       </View>
     );
   }
@@ -688,27 +1041,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <Text style={[styles.miniHint, { color: fg }]}>
           POS ({this.paintC},{this.paintR}) • [A] TOGGLE PIXEL
         </Text>
-      </View>
-    );
-  }
-
-  private renderNotes(fg: string, bg: string) {
-    return (
-      <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>POCKET CHECKLIST</Text>
-        {this.notes.map((n, i) => {
-          const sel = i === this.noteIdx;
-          return (
-            <View
-              key={i}
-              style={[styles.listRow, { backgroundColor: sel ? fg : 'transparent' }]}
-            >
-              <Text style={[styles.listTxt, { color: sel ? bg : fg }]}>
-                [{n.done ? 'X' : ' '}] {n.title}
-              </Text>
-            </View>
-          );
-        })}
       </View>
     );
   }
@@ -926,6 +1258,47 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontFamily: 'monospace',
     marginLeft: 6,
+  },
+  aiTabsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 5,
+  },
+  aiTabPill: {
+    flex: 1,
+    borderWidth: 1.5,
+    paddingVertical: 3,
+    alignItems: 'center',
+  },
+  aiTabTxt: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  aiChatBox: {
+    flex: 1,
+    borderWidth: 1.5,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+    justifyContent: 'flex-start',
+    marginBottom: 5,
+  },
+  aiChatLine: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    lineHeight: 16,
+  },
+  aiPromptBar: {
+    height: 22,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  aiPromptTxt: {
+    fontSize: 9,
+    fontWeight: '900',
+    fontFamily: 'monospace',
   },
   calcWrap: {
     flex: 1,
