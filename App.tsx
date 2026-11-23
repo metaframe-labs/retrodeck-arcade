@@ -464,7 +464,17 @@ function RetroDeckConsole() {
               ]}
             >
               <Ionicons name="color-palette-outline" size={15} color={palette.bezelAccent} />
-              <View style={[styles.paletteDot, { backgroundColor: palette.pixelOn }]} />
+              <View
+                style={[
+                  styles.paletteDot,
+                  {
+                    backgroundColor: palette.screenBg,
+                    borderColor: palette.bezelAccent,
+                  },
+                ]}
+              >
+                <View style={[styles.paletteDotCore, { backgroundColor: palette.pixelOn }]} />
+              </View>
             </Pressable>
 
             <Pressable
@@ -817,9 +827,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   paletteDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paletteDotCore: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   cartBtn: {
     flexDirection: 'row',
