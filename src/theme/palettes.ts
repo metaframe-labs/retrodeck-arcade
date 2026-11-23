@@ -10,7 +10,15 @@ export type RetroPaletteId =
   | 'gameboy_pocket'
   | 'virtualboy'
   | 'matrix'
-  | 'solarized';
+  | 'solarized'
+  | 'gameboy_light'
+  | 'macintosh'
+  | 'commodore64'
+  | 'dracula'
+  | 'nord'
+  | 'vaporwave'
+  | 'pipboy'
+  | 'sunset';
 
 export interface RetroPalette {
   id: RetroPaletteId;
@@ -58,6 +66,16 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     textMuted: '#68774E',
     isLightLcd: true,
   },
+  gameboy_light: {
+    id: 'gameboy_light',
+    name: 'GB LIGHT',
+    screenBg: '#003B36',
+    pixelOn: '#00FFA3',
+    pixelGlow: 'rgba(0, 255, 163, 0.45)',
+    scanlineColor: 'rgba(0, 0, 0, 0.22)',
+    bezelAccent: '#00FFA3',
+    textMuted: '#008F7A',
+  },
   phosphor: {
     id: 'phosphor',
     name: 'PHOSPHOR GREEN',
@@ -68,6 +86,16 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     bezelAccent: '#00FFAA',
     textMuted: '#5B9A84',
   },
+  pipboy: {
+    id: 'pipboy',
+    name: 'PIP-BOY 3000',
+    screenBg: '#021808',
+    pixelOn: '#1FF742',
+    pixelGlow: 'rgba(31, 247, 66, 0.65)',
+    scanlineColor: 'rgba(0, 0, 0, 0.35)',
+    bezelAccent: '#1FF742',
+    textMuted: '#148C2B',
+  },
   amber: {
     id: 'amber',
     name: 'AMBER CRT',
@@ -77,6 +105,27 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     scanlineColor: 'rgba(0, 0, 0, 0.3)',
     bezelAccent: '#FFB000',
     textMuted: '#A87924',
+  },
+  commodore64: {
+    id: 'commodore64',
+    name: 'COMMODORE 64',
+    screenBg: '#40318D',
+    pixelOn: '#8A7CE6',
+    pixelGlow: 'rgba(138, 124, 230, 0.45)',
+    scanlineColor: 'rgba(0, 0, 0, 0.25)',
+    bezelAccent: '#8A7CE6',
+    textMuted: '#6859B8',
+  },
+  macintosh: {
+    id: 'macintosh',
+    name: 'MACINTOSH 1984',
+    screenBg: '#E7E8EB',
+    pixelOn: '#1A1B1E',
+    pixelGlow: 'rgba(26, 27, 30, 0.2)',
+    scanlineColor: 'rgba(0, 0, 0, 0.06)',
+    bezelAccent: '#B8BAC2',
+    textMuted: '#737785',
+    isLightLcd: true,
   },
   crimson: {
     id: 'crimson',
@@ -118,6 +167,26 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     bezelAccent: '#FF007F',
     textMuted: '#844D9E',
   },
+  vaporwave: {
+    id: 'vaporwave',
+    name: 'VAPORWAVE PURPLE',
+    screenBg: '#1E0E38',
+    pixelOn: '#05FFA1',
+    pixelGlow: 'rgba(5, 255, 161, 0.55)',
+    scanlineColor: 'rgba(0, 0, 0, 0.25)',
+    bezelAccent: '#FF71CE',
+    textMuted: '#8B65A8',
+  },
+  sunset: {
+    id: 'sunset',
+    name: 'NEON SUNSET',
+    screenBg: '#1C0B1B',
+    pixelOn: '#FF7B00',
+    pixelGlow: 'rgba(255, 123, 0, 0.6)',
+    scanlineColor: 'rgba(0, 0, 0, 0.28)',
+    bezelAccent: '#FF0055',
+    textMuted: '#9B456E',
+  },
   matrix: {
     id: 'matrix',
     name: 'MATRIX CODE',
@@ -127,6 +196,26 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     scanlineColor: 'rgba(0, 0, 0, 0.3)',
     bezelAccent: '#00FF41',
     textMuted: '#2D8045',
+  },
+  dracula: {
+    id: 'dracula',
+    name: 'DRACULA GOTH',
+    screenBg: '#21222C',
+    pixelOn: '#BD93F9',
+    pixelGlow: 'rgba(189, 147, 249, 0.5)',
+    scanlineColor: 'rgba(0, 0, 0, 0.25)',
+    bezelAccent: '#BD93F9',
+    textMuted: '#6272A4',
+  },
+  nord: {
+    id: 'nord',
+    name: 'NORD FROST',
+    screenBg: '#242933',
+    pixelOn: '#88C0D0',
+    pixelGlow: 'rgba(136, 192, 208, 0.45)',
+    scanlineColor: 'rgba(0, 0, 0, 0.22)',
+    bezelAccent: '#81A1C1',
+    textMuted: '#4C566A',
   },
   solarized: {
     id: 'solarized',
@@ -151,16 +240,24 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
 };
 
 export const PALETTE_ORDER: RetroPaletteId[] = [
-  'nokia',
   'gameboy',
+  'nokia',
   'gameboy_pocket',
+  'gameboy_light',
+  'macintosh',
+  'commodore64',
   'phosphor',
+  'pipboy',
   'amber',
   'crimson',
   'virtualboy',
   'cyberpunk',
   'synthwave',
+  'vaporwave',
+  'sunset',
   'matrix',
+  'dracula',
+  'nord',
   'solarized',
   'oled',
 ];
