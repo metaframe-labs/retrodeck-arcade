@@ -267,6 +267,23 @@ function RetroDeckConsole() {
     setIsPaused(false);
     setOsMode(false);
     setKeyboardMode(false);
+    // Clear button inputs so the [A] press that launched the game from OS/Bay doesn't bleed through
+    inputRef.current = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: false,
+      b: false,
+    };
+    prevInputRef.current = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: true, // mark A as previously down so user must release and press again!
+      b: false,
+    };
   }, []);
 
   // Burn & Load Custom Sucrase Dev Cartridge (preserve user's active OS theme)
@@ -283,6 +300,22 @@ function RetroDeckConsole() {
     setIsPaused(false);
     setOsMode(false);
     setKeyboardMode(false);
+    inputRef.current = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: false,
+      b: false,
+    };
+    prevInputRef.current = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: true,
+      b: false,
+    };
     handleSoundEvent('powerup');
   }, [handleSoundEvent]);
 
