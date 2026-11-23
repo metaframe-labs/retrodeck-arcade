@@ -1189,8 +1189,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
     // Calculator
     if (this.app === 'calc') {
       if (key === 'DEL' || key === 'CLR') this.pressCalcKey('C');
-      else if (key === 'OK' || key === '#') this.pressCalcKey('=');
+      else if (key === 'OK') this.pressCalcKey('=');
       else if (key === '*') this.pressCalcKey('*');
+      else if (key === '#') this.pressCalcKey('FX');
       else if ('0123456789'.includes(key)) this.pressCalcKey(key);
       this.cb.onPlaySound?.('hit');
       return;
@@ -2930,6 +2931,62 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const numVal = parseFloat(this.calcDisplay) || 0;
     const converted =
       this.fxModeIdx > 0 ? `${(numVal * fx.rate).toFixed(2)} ${fx.unit}` : '';
+
+    if (this.isNumericDeckActive) {
+      return (
+        <View style={styles.calcWrap}>
+          <View style={styles.compHeader}>
+            <Text style={[styles.compTitle, { color: fg }]}>
+              NOKIA CALC // {fx.label}
+            </Text>
+            <Text style={[styles.compBpm, { color: fg }]}>
+              {this.calcOp ? `[OP: ${this.calcOp}]` : '[NUM PAD]'}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.swBox,
+              {
+                borderColor: fg,
+                flex: 1,
+                width: '100%',
+                justifyContent: 'center',
+                alignItems: 'flex-end',
+                paddingHorizontal: 14,
+                marginBottom: 4,
+              },
+            ]}
+          >
+            {this.calcAcc !== null && this.calcOp ? (
+              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginBottom: 2 }]}>
+                {this.calcAcc} {this.calcOp}
+              </Text>
+            ) : null}
+            <Text
+              style={[
+                styles.clockBig,
+                {
+                  color: fg,
+                  fontSize: this.calcDisplay.length > 9 ? 18 : 26,
+                  letterSpacing: 1,
+                },
+              ]}
+              numberOfLines={1}
+            >
+              {this.calcDisplay}
+            </Text>
+            {converted ? (
+              <Text style={[styles.swLap, { color: fg, marginTop: 4 }]} numberOfLines={1}>
+                = {converted}
+              </Text>
+            ) : null}
+          </View>
+          <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
+            [OK]: =   [*]: ×   [#]: FX   [DEL]: C
+          </Text>
+        </View>
+      );
+    }
 
     return (
       <View style={styles.calcWrap}>
