@@ -115,7 +115,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelOn: '#FF007F',
     pixelGlow: 'rgba(255, 0, 127, 0.55)',
     scanlineColor: 'rgba(0, 0, 0, 0.25)',
-    bezelAccent: '#9D00FF',
+    bezelAccent: '#FF007F',
     textMuted: '#844D9E',
   },
   matrix: {
@@ -145,7 +145,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelOn: '#F2F6FF',
     pixelGlow: 'rgba(242, 246, 255, 0.45)',
     scanlineColor: 'rgba(0, 0, 0, 0.22)',
-    bezelAccent: '#00E5FF',
+    bezelAccent: '#F2F6FF',
     textMuted: '#788496',
   },
 };
