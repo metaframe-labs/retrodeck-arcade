@@ -54,7 +54,7 @@ interface DesktopIcon {
 
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', code: '[+]', label: 'GAMES' },
-  { id: 'ai', code: 'AI*', label: 'AI BYOK' },
+  { id: 'ai', code: 'AI', label: 'AI' },
   { id: 'calc', code: '1+2', label: 'CALC' },
   { id: 'clock', code: '12:0', label: 'CLOCK' },
   { id: 'synth', code: 'SFX', label: 'SYNTH' },
