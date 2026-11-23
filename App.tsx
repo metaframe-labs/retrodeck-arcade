@@ -181,13 +181,16 @@ function RetroDeckConsole() {
         if (playedSound) handleSoundEvent(playedSound);
         setStats(osRef.current.getStats());
       } else if (!isPaused) {
-        // If cartridge ready overlay is active, wait for [A] press before ticking game loop
+        // If cartridge ready overlay is active, wait for [A] press or tap before starting
         if (cartridgeReady) {
           const input = inputRef.current;
-          const prev = prevInputRef.current;
-          if ((input.a && !prev.a) || (input.b && !prev.b)) {
+          if (input.a || input.b) {
             setCartridgeReady(false);
             handleSoundEvent('hit');
+            // If the active game also has an internal isMenu, kick-start it
+            if (stats.isMenu) {
+              gameRef.current.update({ ...input, a: true }, FIXED_STEP);
+            }
           }
           accumulator = 0;
           prevInputRef.current = { ...inputRef.current };
@@ -471,6 +474,12 @@ function RetroDeckConsole() {
           onStartCartridge={() => {
             setCartridgeReady(false);
             handleSoundEvent('hit');
+            if (stats.isMenu) {
+              gameRef.current.update(
+                { up: false, down: false, left: false, right: false, a: true, b: false },
+                1 / 60
+              );
+            }
           }}
         />
 
