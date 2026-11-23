@@ -125,6 +125,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new BossRushGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -153,6 +154,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new BubbleShooterGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -181,6 +183,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new SumoRingGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -209,6 +212,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new LaserDodgeGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -237,6 +241,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new TugOfWarGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -265,6 +270,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new PipeConnectGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -293,6 +299,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new JoustKnightsGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -321,6 +328,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new CraneClawGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -349,6 +357,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new IceSliderGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -377,6 +386,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new ElevatorActionGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -405,6 +415,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new BattleshipGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -433,6 +444,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new BalloonPopGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -461,6 +473,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new MeteorShieldGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -489,6 +502,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new HurdlesSprintGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -517,6 +531,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new CardWarGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -545,6 +560,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new NumberRushGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -573,6 +589,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new PlinkoDropGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -601,6 +618,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new ParachuteRescueGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -629,6 +647,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new LockpickVaultGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },
@@ -657,6 +676,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     },
     createGame: (hs = 0) => {
       const g = new LaserMirrorGame();
+      g.init();
       g.setHighScore(hs);
       return g;
     },

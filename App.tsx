@@ -182,7 +182,10 @@ function RetroDeckConsole() {
   // Cartridge Swap
   const handleSelectCartridge = useCallback((cart: ArcadeCartridgeDef) => {
     const savedHighScore = HighScoreService.getHighScore(cart.id);
-    gameRef.current = cart.createGame(savedHighScore);
+    const nextGame = cart.createGame(savedHighScore);
+    nextGame.init();
+    if (nextGame.setHighScore) nextGame.setHighScore(savedHighScore);
+    gameRef.current = nextGame;
     setActiveCart(cart);
     setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());
@@ -193,7 +196,10 @@ function RetroDeckConsole() {
   // Burn & Load Custom Sucrase Dev Cartridge
   const handleBurnCustomCartridge = useCallback((cart: ArcadeCartridgeDef) => {
     const savedHighScore = HighScoreService.getHighScore(cart.id);
-    gameRef.current = cart.createGame(savedHighScore);
+    const nextGame = cart.createGame(savedHighScore);
+    nextGame.init();
+    if (nextGame.setHighScore) nextGame.setHighScore(savedHighScore);
+    gameRef.current = nextGame;
     setActiveCart(cart);
     setPaletteId(cart.defaultPalette);
     setStats(gameRef.current.getStats());

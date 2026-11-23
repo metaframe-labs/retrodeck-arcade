@@ -75,6 +75,11 @@ export class PipeConnectGame implements ArcadeGameInstance {
   private timer = 60;
   private clearDelay = 0;
 
+  constructor(highScore = 0) {
+    this.highScore = highScore;
+    this.reset();
+  }
+
   public init() {
     this.reset();
   }
@@ -281,10 +286,10 @@ export class PipeConnectGame implements ArcadeGameInstance {
             },
           ]}
         >
-          {this.grid.map((row, r) =>
-            row.map((m, c) => {
+          {(this.grid || []).map((row, r) =>
+            (row || []).map((m, c) => {
               const isCur = r === this.curR && c === this.curC;
-              const isFilled = this.filled[r][c];
+              const isFilled = Boolean(this.filled && this.filled[r] && this.filled[r][c]);
               const thickness = isFilled ? 8 : 4;
               return (
                 <View
