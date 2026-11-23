@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import {
   ArcadeCartridgeDef,
@@ -1190,8 +1190,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'calc') {
       if (key === 'DEL' || key === 'CLR') this.pressCalcKey('C');
       else if (key === 'OK') this.pressCalcKey('=');
-      else if (key === '*') this.pressCalcKey('*');
-      else if (key === '#') this.pressCalcKey('FX');
+      else if (key === '*') {
+        const ops = ['+', '-', '*', '/'];
+        const curIdx = this.calcOp ? ops.indexOf(this.calcOp) : -1;
+        const nextOp = ops[(curIdx + 1) % ops.length];
+        if (this.calcAcc === null) {
+          this.pressCalcKey(nextOp);
+        } else {
+          this.calcOp = nextOp;
+          this.calcFresh = true;
+        }
+      } else if (key === '#') this.pressCalcKey('FX');
       else if ('0123456789'.includes(key)) this.pressCalcKey(key);
       this.cb.onPlaySound?.('hit');
       return;
@@ -2933,6 +2942,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.fxModeIdx > 0 ? `${(numVal * fx.rate).toFixed(2)} ${fx.unit}` : '';
 
     if (this.isNumericDeckActive) {
+      const opBtns: { label: string; key: string }[] = [
+        { label: '+', key: '+' },
+        { label: '-', key: '-' },
+        { label: '×', key: '*' },
+        { label: '÷', key: '/' },
+        { label: '.', key: '.' },
+        { label: 'FX', key: 'FX' },
+      ];
       return (
         <View style={styles.calcWrap}>
           <View style={styles.compHeader}>
@@ -2953,7 +2970,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 justifyContent: 'center',
                 alignItems: 'flex-end',
                 paddingHorizontal: 14,
-                marginBottom: 4,
+                marginBottom: 6,
               },
             ]}
           >
@@ -2981,9 +2998,38 @@ export class RetroDeckOS implements ArcadeGameInstance {
               </Text>
             ) : null}
           </View>
-          <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-            [OK]: =   [*]: ×   [#]: FX   [DEL]: C
-          </Text>
+          {/* Single-row touchable operators (+, -, ×, ÷, ., FX) */}
+          <View style={{ flexDirection: 'row', gap: 4, height: 26, marginBottom: 2 }}>
+            {opBtns.map((op) => {
+              const active = this.calcOp === op.key;
+              return (
+                <Pressable
+                  key={op.key}
+                  onPress={() => {
+                    this.pressCalcKey(op.key);
+                    this.cb.onPlaySound?.('hit');
+                  }}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1.5,
+                    borderColor: fg,
+                    backgroundColor: active ? fg : 'transparent',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.compKeyTxt,
+                      { color: active ? bg : fg, fontSize: 10 },
+                    ]}
+                  >
+                    {op.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
       );
     }
