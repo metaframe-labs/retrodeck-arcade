@@ -692,48 +692,50 @@ export class BounceGame implements ArcadeGameInstance {
 
     return (
       <View style={StyleSheet.absoluteFill}>
-        {/* In-Game HUD Badge: Golden Hoops Counter */}
-        <View
-          style={[
-            styles.hudBadge,
-            isLight && {
-              backgroundColor: 'rgba(23, 38, 22, 0.15)',
-              borderColor: palette.pixelOn,
-            },
-          ]}
-        >
+        {/* In-Game HUD Badge: Golden Hoops Counter (only when playing, not in menu) */}
+        {!this.isMenu && (
           <View
             style={[
-              styles.hudRingIcon,
-              isLight && { borderColor: palette.pixelOn },
-            ]}
-          />
-          <Text
-            style={[
-              styles.hudText,
-              isLight && { color: palette.pixelOn },
+              styles.hudBadge,
+              isLight && {
+                backgroundColor: 'rgba(23, 38, 22, 0.15)',
+                borderColor: palette.pixelOn,
+              },
             ]}
           >
-            {collectedCount}/{this.hoops.length}
-          </Text>
-          {this.exitDoor.open && (
             <View
               style={[
-                styles.exitOpenBadge,
-                isLight && { backgroundColor: palette.pixelOn },
+                styles.hudRingIcon,
+                isLight && { borderColor: palette.pixelOn },
+              ]}
+            />
+            <Text
+              style={[
+                styles.hudText,
+                isLight && { color: palette.pixelOn },
               ]}
             >
-              <Text
+              {collectedCount}/{this.hoops.length}
+            </Text>
+            {this.exitDoor.open && (
+              <View
                 style={[
-                  styles.exitOpenText,
-                  isLight && { color: palette.screenBg },
+                  styles.exitOpenBadge,
+                  isLight && { backgroundColor: palette.pixelOn },
                 ]}
               >
-                EXIT OPEN
-              </Text>
-            </View>
-          )}
-        </View>
+                <Text
+                  style={[
+                    styles.exitOpenText,
+                    isLight && { color: palette.screenBg },
+                  ]}
+                >
+                  EXIT OPEN
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {/* Platforms & Ground */}
         {this.platforms.map((p, idx) => (
