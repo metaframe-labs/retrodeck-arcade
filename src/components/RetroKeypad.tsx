@@ -22,6 +22,9 @@ export interface GamepadButtonLabels {
 interface RetroKeypadProps {
   labels?: GamepadButtonLabels;
   accentColor: string;
+  buttonBg?: string;
+  buttonBorder?: string;
+  centerBg?: string;
   onButtonChange: (btn: ArcadeButton, pressed: boolean) => void;
 }
 
@@ -54,6 +57,9 @@ function parseActionLabel(
 export const RetroKeypad: React.FC<RetroKeypadProps> = ({
   labels,
   accentColor,
+  buttonBg = '#121A26',
+  buttonBorder = '#26374D',
+  centerBg = '#090D14',
   onButtonChange,
 }) => {
   const [pressed, setPressed] = useState<Record<ArcadeButton, boolean>>({
@@ -126,6 +132,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             onPressOut={() => handlePressOut('up')}
             style={[
               styles.dpadBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
               pressed.up && [
                 styles.dpadBtnPressed,
                 {
@@ -149,6 +156,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             onPressOut={() => handlePressOut('left')}
             style={[
               styles.dpadBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
               pressed.left && [
                 styles.dpadBtnPressed,
                 {
@@ -163,7 +171,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             </Text>
           </Pressable>
 
-          <View style={styles.dpadCenter} />
+          <View style={[styles.dpadCenter, { backgroundColor: centerBg, borderColor: buttonBorder }]} />
 
           <Pressable
             hitSlop={BUTTON_HIT_SLOP}
@@ -171,6 +179,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             onPressOut={() => handlePressOut('right')}
             style={[
               styles.dpadBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
               pressed.right && [
                 styles.dpadBtnPressed,
                 {
@@ -194,6 +203,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             onPressOut={() => handlePressOut('down')}
             style={[
               styles.dpadBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
               pressed.down && [
                 styles.dpadBtnPressed,
                 {
@@ -221,6 +231,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             style={[
               styles.actionBtn,
               styles.btnB,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
               pressed.b && [
                 styles.actionBtnPressed,
                 {
@@ -263,7 +274,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             style={[
               styles.actionBtn,
               styles.btnA,
-              { borderColor: `${accentColor}AA` },
+              { backgroundColor: buttonBg, borderColor: `${accentColor}AA` },
               pressed.a && [
                 styles.actionBtnPressed,
                 {

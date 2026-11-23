@@ -14,6 +14,7 @@ import { RetroKeyboardDeck } from './src/components/RetroKeyboardDeck';
 import { ArcadeScreen } from './src/arcade/ArcadeScreen';
 import { CartridgeBayPage } from './src/components/CartridgeBayPage';
 import { DevCartModal } from './src/components/DevCartModal';
+import { ThemePickerModal } from './src/components/ThemePickerModal';
 import { ARCADE_CARTRIDGES } from './src/arcade/cartridges';
 import {
   ArcadeCartridgeDef,
@@ -70,6 +71,7 @@ function RetroDeckConsole() {
   const [, setKbdTick] = useState(0);
   const [bayVisible, setBayVisible] = useState(false);
   const [devCartVisible, setDevCartVisible] = useState(false);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
@@ -327,6 +329,12 @@ function RetroDeckConsole() {
     handleSoundEvent('powerup');
   }, [handleSoundEvent]);
 
+  const handleSelectPalette = useCallback((next: RetroPaletteId) => {
+    setPaletteId(next);
+    AsyncStorage.setItem(PALETTE_STORAGE_KEY, next).catch(() => {});
+    handleSoundEvent('score');
+  }, [handleSoundEvent]);
+
   const handleCyclePalette = useCallback(() => {
     setPaletteId((prev) => {
       const idx = PALETTE_ORDER.indexOf(prev);
@@ -387,7 +395,7 @@ function RetroDeckConsole() {
   // Full-Page Cartridge Vault Screen
   if (bayVisible) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, { backgroundColor: palette.chassisBg }]}>
         <StatusBar style="light" />
         <CartridgeBayPage
           cartridges={ARCADE_CARTRIDGES}
@@ -419,6 +427,7 @@ function RetroDeckConsole() {
       style={[
         styles.root,
         {
+          backgroundColor: palette.chassisBg,
           paddingTop: Math.max(insets.top, 12),
           paddingBottom: Math.max(insets.bottom, 6),
         },
@@ -430,15 +439,28 @@ function RetroDeckConsole() {
         <View style={styles.topBar}>
           <View style={styles.brandCluster}>
             <Text style={[styles.brandTag, { color: palette.bezelAccent }]}>
-              METAFRAME // POCKET OS
+              METAFRAME // {palette.name}
             </Text>
             <Text style={styles.brandTitle}>RETRODECK OS</Text>
           </View>
 
           <View style={styles.topActions}>
             <Pressable
-              onPress={handleCyclePalette}
-              style={[styles.paletteBtn, { borderColor: `${palette.bezelAccent}55` }]}
+              onPress={() => {
+                setThemeModalVisible(true);
+                handleSoundEvent('hit');
+              }}
+              onLongPress={() => {
+                handleCyclePalette();
+                handleSoundEvent('score');
+              }}
+              style={[
+                styles.paletteBtn,
+                {
+                  backgroundColor: palette.surfaceBg,
+                  borderColor: `${palette.bezelAccent}66`,
+                },
+              ]}
             >
               <Ionicons name="color-palette-outline" size={15} color={palette.bezelAccent} />
               <View style={[styles.paletteDot, { backgroundColor: palette.pixelOn }]} />
@@ -446,7 +468,13 @@ function RetroDeckConsole() {
 
             <Pressable
               onPress={() => setDevCartVisible(true)}
-              style={[styles.paletteBtn, { borderColor: `${palette.bezelAccent}55` }]}
+              style={[
+                styles.paletteBtn,
+                {
+                  backgroundColor: palette.surfaceBg,
+                  borderColor: `${palette.bezelAccent}66`,
+                },
+              ]}
             >
               <Ionicons name="game-controller-outline" size={15} color={palette.bezelAccent} />
             </Pressable>
@@ -502,6 +530,10 @@ function RetroDeckConsole() {
             onPress={handleGoHomeOS}
             style={[
               styles.toolBtn,
+              {
+                backgroundColor: palette.surfaceBg,
+                borderColor: palette.surfaceBorder,
+              },
               osMode && { borderColor: palette.bezelAccent, backgroundColor: `${palette.bezelAccent}22` },
             ]}
           >
@@ -523,6 +555,10 @@ function RetroDeckConsole() {
               }}
               style={[
                 styles.toolBtn,
+                {
+                  backgroundColor: palette.surfaceBg,
+                  borderColor: palette.surfaceBorder,
+                },
                 keyboardMode && {
                   borderColor: palette.bezelAccent,
                   backgroundColor: `${palette.bezelAccent}22`,
@@ -543,6 +579,10 @@ function RetroDeckConsole() {
               onPress={() => setIsPaused((p) => !p)}
               style={[
                 styles.toolBtn,
+                {
+                  backgroundColor: palette.surfaceBg,
+                  borderColor: palette.surfaceBorder,
+                },
                 isPaused && { borderColor: '#FF9F0A', backgroundColor: 'rgba(255,159,10,0.14)' },
               ]}
             >
@@ -557,14 +597,30 @@ function RetroDeckConsole() {
             </Pressable>
           )}
 
-          <Pressable onPress={handleReset} style={styles.toolBtn}>
+          <Pressable
+            onPress={handleReset}
+            style={[
+              styles.toolBtn,
+              {
+                backgroundColor: palette.surfaceBg,
+                borderColor: palette.surfaceBorder,
+              },
+            ]}
+          >
             <Ionicons name="refresh" size={14} color="#CBD5E1" />
             <Text style={styles.toolText}>{osMode ? 'REBOOT' : 'RESET'}</Text>
           </Pressable>
 
           <Pressable
             onPress={handleToggleScanlines}
-            style={[styles.toolBtn, scanlines && { borderColor: `${palette.bezelAccent}77` }]}
+            style={[
+              styles.toolBtn,
+              {
+                backgroundColor: palette.surfaceBg,
+                borderColor: palette.surfaceBorder,
+              },
+              scanlines && { borderColor: `${palette.bezelAccent}88` },
+            ]}
           >
             <Ionicons
               name="tv-outline"
@@ -578,7 +634,13 @@ function RetroDeckConsole() {
 
           <Pressable
             onPress={() => setBayVisible(true)}
-            style={[styles.toolBtn, { borderColor: `${palette.bezelAccent}55` }]}
+            style={[
+              styles.toolBtn,
+              {
+                backgroundColor: palette.surfaceBg,
+                borderColor: `${palette.bezelAccent}66`,
+              },
+            ]}
           >
             <Ionicons name="albums-outline" size={14} color={palette.bezelAccent} />
             <Text style={[styles.toolText, { color: palette.bezelAccent }]}>CARTS</Text>
@@ -586,14 +648,24 @@ function RetroDeckConsole() {
         </View>
 
         {/* Integrated Handheld Controller Chassis */}
-        <View style={styles.controllerDeck}>
+        <View
+          style={[
+            styles.controllerDeck,
+            {
+              backgroundColor: palette.deckBg,
+              borderTopColor: palette.surfaceBorder,
+              borderLeftColor: palette.surfaceBorder,
+              borderRightColor: palette.surfaceBorder,
+            },
+          ]}
+        >
           {/* Chassis Top Accent Strip with Speaker Grilles & Badge */}
           <View style={styles.chassisHeader}>
             <View style={styles.speakerGrille}>
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
             </View>
             <Pressable
               onPress={() => {
@@ -609,10 +681,10 @@ function RetroDeckConsole() {
               </Text>
             </Pressable>
             <View style={styles.speakerGrille}>
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
-              <View style={styles.speakerSlot} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
+              <View style={[styles.speakerSlot, { backgroundColor: palette.surfaceBorder }]} />
             </View>
           </View>
 
@@ -639,6 +711,9 @@ function RetroDeckConsole() {
               <RetroKeypad
                 labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
                 accentColor={palette.bezelAccent}
+                buttonBg={palette.buttonBg}
+                buttonBorder={palette.buttonBorder}
+                centerBg={palette.bezelBg}
                 onButtonChange={handleButtonChange}
               />
             )}
@@ -652,6 +727,19 @@ function RetroDeckConsole() {
         accentColor={palette.bezelAccent}
         onClose={() => setDevCartVisible(false)}
         onLoadCustomCartridge={handleBurnCustomCartridge}
+      />
+
+      {/* Visual Hardware & LCD Theme Studio Modal */}
+      <ThemePickerModal
+        visible={themeModalVisible}
+        activePaletteId={paletteId}
+        activePalette={palette}
+        onSelectPalette={handleSelectPalette}
+        onCyclePalette={() => {
+          handleCyclePalette();
+          handleSoundEvent('hit');
+        }}
+        onClose={() => setThemeModalVisible(false)}
       />
     </View>
   );

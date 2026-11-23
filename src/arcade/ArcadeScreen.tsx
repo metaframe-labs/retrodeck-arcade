@@ -71,7 +71,15 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   }, [scanlines, size.h, palette.scanlineColor]);
 
   return (
-    <View style={[styles.bezel, { borderColor: `${palette.bezelAccent}44` }]}>
+    <View
+      style={[
+        styles.bezel,
+        {
+          backgroundColor: palette.bezelBg,
+          borderColor: `${palette.bezelAccent}55`,
+        },
+      ]}
+    >
       {/* Top Bezel Status Strip */}
       <View style={styles.bezelHeader}>
         <View style={styles.ledRow}>
