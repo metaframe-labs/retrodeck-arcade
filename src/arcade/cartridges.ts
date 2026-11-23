@@ -9,8 +9,33 @@ import { SpaceInvadersGame } from './games/SpaceInvadersGame';
 import { HeliRescueGame } from './games/HeliRescueGame';
 import { SokobanGame } from './games/SokobanGame';
 import { TowerClimberGame } from './games/TowerClimberGame';
+import { PacBoyGame } from './games/PacBoyGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'pac-boy',
+    title: 'PAC-BOY DX',
+    subtitle: 'Classic Maze Chase, Dots & Ghost Hunting',
+    genre: 'ARCADE MAZE',
+    year: '1980',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Navigate Maze. Eat Power Pellets [O] to Hunt Ghosts!',
+    gamepadLabels: {
+      up: '▲',
+      down: '▼',
+      left: '◀',
+      right: '▶',
+      a: 'START',
+      b: 'PAUSE',
+      upLabel: '▲',
+      downLabel: '▼',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      aLabel: 'A',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new PacBoyGame(hs),
+  },
   {
     id: 'heli-rescue',
     title: 'NOKIA HELI RESCUE',
