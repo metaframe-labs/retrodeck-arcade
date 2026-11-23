@@ -6,6 +6,83 @@ import { RetroPalette } from '../../theme/palettes';
 const ARENA_W = 320;
 const ARENA_H = 240;
 
+// Authentic 8x8 Pixel Bitmaps for Space Invaders (Frame 0 & Frame 1)
+// 1 = solid pixel, 0 = empty space
+const SPRITE_SQUID: [number[][], number[][]] = [
+  // Frame 0
+  [
+    [0,0,0,1,1,0,0,0],
+    [0,0,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,0],
+    [1,1,0,1,1,0,1,1],
+    [1,1,1,1,1,1,1,1],
+    [0,0,1,0,0,1,0,0],
+    [0,1,0,1,1,0,1,0],
+    [1,0,1,0,0,1,0,1],
+  ],
+  // Frame 1 (tentacles in)
+  [
+    [0,0,0,1,1,0,0,0],
+    [0,0,1,1,1,1,0,0],
+    [0,1,1,1,1,1,1,0],
+    [1,1,0,1,1,0,1,1],
+    [1,1,1,1,1,1,1,1],
+    [0,1,0,0,0,0,1,0],
+    [1,0,0,1,1,0,0,1],
+    [0,1,0,0,0,0,1,0],
+  ],
+];
+
+const SPRITE_CRAB: [number[][], number[][]] = [
+  // Frame 0 (hands up)
+  [
+    [0,0,1,0,0,0,0,1,0,0],
+    [0,0,0,1,0,0,1,0,0,0],
+    [0,0,1,1,1,1,1,1,0,0],
+    [0,1,1,0,1,1,0,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,1,1,1,1,1,1,0,1],
+    [1,0,1,0,0,0,0,1,0,1],
+    [0,0,0,1,1,1,1,0,0,0],
+  ],
+  // Frame 1 (hands down)
+  [
+    [0,0,1,0,0,0,0,1,0,0],
+    [1,0,0,1,0,0,1,0,0,1],
+    [1,0,1,1,1,1,1,1,0,1],
+    [1,1,1,0,1,1,0,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [0,1,1,1,1,1,1,1,1,0],
+    [0,0,1,0,0,0,0,1,0,0],
+    [0,1,0,0,0,0,0,0,1,0],
+  ],
+];
+
+const SPRITE_OCTOPUS: [number[][], number[][]] = [
+  // Frame 0
+  [
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,0,0,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,1,1,0,1,1,0,1,1,0],
+    [1,1,0,0,0,0,0,0,1,1],
+  ],
+  // Frame 1
+  [
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,1,1,1,1,1,1,1,1,0],
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,1,1,0,0,1,1,1,1,1],
+    [1,1,1,1,1,1,1,1,1,1],
+    [0,0,0,1,1,1,1,0,0,0],
+    [0,0,1,1,0,0,1,1,0,0],
+    [0,1,1,0,0,0,0,1,1,0],
+  ],
+];
+
 interface Bullet {
   id: number;
   x: number;
@@ -16,8 +93,8 @@ interface Bullet {
 
 interface Alien {
   id: number;
-  row: number; // 0..3 (0: top squid, 1: crab, 2: crab, 3: octopus)
-  col: number; // 0..9
+  row: number; // 0: squid, 1: crab, 2: crab, 3: octopus
+  col: number; // 0..8
   x: number;
   y: number;
   alive: boolean;
@@ -26,7 +103,7 @@ interface Alien {
 interface ShieldBlock {
   x: number;
   y: number;
-  hp: number; // 3 -> 2 -> 1 -> 0
+  hp: number;
 }
 
 interface MysteryShip {
@@ -39,7 +116,7 @@ interface MysteryShip {
 
 export class SpaceInvadersGame implements ArcadeGameInstance {
   private playerX = ARENA_W / 2 - 9;
-  private readonly playerY = 208;
+  private readonly playerY = 210;
   private readonly playerW = 18;
   private readonly playerH = 10;
   private playerSpeed = 160;
@@ -47,16 +124,16 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
   private aliens: Alien[] = [];
   private alienDir = 1; // 1 = right, -1 = left
   private alienMoveTimer = 0;
-  private alienStepInterval = 0.55;
-  private alienFrame = 0; // 0 or 1 for classic stepping animation
+  private baseStepInterval = 0.9; // Relaxed authentic start pace
+  private alienFrame = 0;
 
   private bullets: Bullet[] = [];
   private playerShootCooldown = 0;
-  private alienShootTimer = 1.2;
+  private alienShootTimer = 2.0;
 
   private shields: ShieldBlock[] = [];
   private mysteryShip: MysteryShip | null = null;
-  private mysteryTimer = 18;
+  private mysteryTimer = 20;
 
   private score = 0;
   private highScore = 0;
@@ -96,7 +173,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
     this.bullets = [];
     this.particles = [];
     this.mysteryShip = null;
-    this.mysteryTimer = 18;
+    this.mysteryTimer = 20;
 
     this.initShields();
     this.spawnAlienFleet();
@@ -104,15 +181,13 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
 
   private initShields(): void {
     this.shields = [];
-    // 4 bunkers across width
-    const bunkerXs = [45, 115, 185, 255];
-    const bunkerY = 178;
+    const bunkerXs = [42, 112, 182, 252];
+    const bunkerY = 176;
 
     bunkerXs.forEach((bx) => {
-      // 4 columns x 3 rows per bunker, middle bottom notched out
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 4; c++) {
-          if (r === 2 && (c === 1 || c === 2)) continue; // arch notch
+          if (r === 2 && (c === 1 || c === 2)) continue;
           this.shields.push({
             x: bx + c * 6,
             y: bunkerY + r * 5,
@@ -128,7 +203,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
     const rows = 4;
     const cols = 9;
     const startX = 35;
-    const startY = 32 + Math.min(this.wave - 1, 4) * 8; // Higher waves start closer
+    const startY = 32 + Math.min(this.wave - 1, 4) * 6;
 
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
@@ -137,7 +212,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           row: r,
           col: c,
           x: startX + c * 26,
-          y: startY + r * 20,
+          y: startY + r * 18,
           alive: true,
         });
       }
@@ -145,14 +220,13 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
 
     this.alienDir = 1;
     this.alienMoveTimer = 0;
-    this.alienStepInterval = Math.max(0.1, 0.55 - (this.wave - 1) * 0.05);
+    this.baseStepInterval = Math.max(0.4, 0.9 - (this.wave - 1) * 0.08);
     this.alienFrame = 0;
   }
 
   public update(input: ArcadeInput, dt: number): ArcadeSound | null {
     let triggeredSound: ArcadeSound | null = null;
 
-    // Menu state
     if (this.isMenu) {
       if (input.a && !this.lastA) {
         this.isMenu = false;
@@ -162,7 +236,6 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       return triggeredSound;
     }
 
-    // Game over state
     if (this.gameOver) {
       if (input.a && !this.lastA) {
         this.init();
@@ -192,7 +265,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       this.playerX = Math.min(ARENA_W - 12 - this.playerW, this.playerX + this.playerSpeed * dt);
     }
 
-    // Player Shooting (A or B button)
+    // Player Shooting (Single laser at a time)
     this.playerShootCooldown = Math.max(0, this.playerShootCooldown - dt);
     const hasPlayerBullet = this.bullets.some((b) => !b.isAlien);
     const triggerShoot = (input.a && !this.lastA) || (input.b && !this.lastB);
@@ -202,7 +275,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
         id: this.nextEntityId++,
         x: this.playerX + this.playerW / 2 - 1,
         y: this.playerY - 4,
-        vy: -280,
+        vy: -260,
         isAlien: false,
       });
       this.playerShootCooldown = 0.35;
@@ -215,12 +288,12 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       const dir = Math.random() > 0.5 ? 1 : -1;
       this.mysteryShip = {
         x: dir > 0 ? -24 : ARENA_W + 5,
-        y: 18,
-        vx: dir * 75,
+        y: 16,
+        vx: dir * 65,
         points: [50, 100, 150, 300][Math.floor(Math.random() * 4)],
         alive: true,
       };
-      this.mysteryTimer = 22 + Math.random() * 12;
+      this.mysteryTimer = 25 + Math.random() * 15;
     }
 
     if (this.mysteryShip && this.mysteryShip.alive) {
@@ -236,7 +309,6 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
     // Aliens Marching Logic
     const livingAliens = this.aliens.filter((a) => a.alive);
     if (livingAliens.length === 0) {
-      // Wave Clear!
       this.wave++;
       this.score += 500;
       if (this.score > this.highScore) this.highScore = this.score;
@@ -247,19 +319,18 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       return 'levelclear';
     }
 
-    // March speed accelerates as aliens die
-    const speedRatio = livingAliens.length / this.aliens.length;
-    const currentStepInterval = Math.max(0.04, this.alienStepInterval * speedRatio);
+    // Balanced march curve: relaxed at start, smoothly speeds up as invaders are destroyed
+    const aliveRatio = livingAliens.length / this.aliens.length; // 1.0 down to 0.03
+    const currentStepInterval = Math.max(0.08, this.baseStepInterval * Math.pow(aliveRatio, 0.75));
 
     this.alienMoveTimer += dt;
     if (this.alienMoveTimer >= currentStepInterval) {
       this.alienMoveTimer = 0;
       this.alienFrame = 1 - this.alienFrame;
 
-      // Check boundary hit
       let hitWall = false;
       for (const alien of livingAliens) {
-        const nextX = alien.x + this.alienDir * 6;
+        const nextX = alien.x + this.alienDir * 5;
         if (nextX < 12 || nextX + 18 > ARENA_W - 12) {
           hitWall = true;
           break;
@@ -269,8 +340,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       if (hitWall) {
         this.alienDir = -this.alienDir;
         for (const alien of livingAliens) {
-          alien.y += 8;
-          // Check if invaders reached player baseline or shields
+          alien.y += 7;
           if (alien.y + 12 >= this.playerY) {
             this.gameOver = true;
             this.createExplosion(this.playerX + 9, this.playerY + 5);
@@ -279,16 +349,15 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
         }
       } else {
         for (const alien of livingAliens) {
-          alien.x += this.alienDir * 6;
+          alien.x += this.alienDir * 5;
         }
       }
     }
 
-    // Alien Shooting
+    // Alien Shooting (Paced so player isn't instantly overwhelmed)
     this.alienShootTimer -= dt;
     if (this.alienShootTimer <= 0 && livingAliens.length > 0) {
-      this.alienShootTimer = Math.max(0.4, 1.2 - (this.wave - 1) * 0.1);
-      // Pick random bottom-most living alien
+      this.alienShootTimer = Math.max(0.6, 2.0 - (this.wave - 1) * 0.15);
       const colsMap = new Map<number, Alien>();
       for (const a of livingAliens) {
         const existing = colsMap.get(a.col);
@@ -303,24 +372,22 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           id: this.nextEntityId++,
           x: shooter.x + 8,
           y: shooter.y + 12,
-          vy: 140 + this.wave * 10,
+          vy: 110 + this.wave * 10,
           isAlien: true,
         });
       }
     }
 
-    // Update Bullets & Collisions
+    // Bullets & Collision Handling
     for (let bi = this.bullets.length - 1; bi >= 0; bi--) {
       const b = this.bullets[bi];
       b.y += b.vy * dt;
 
-      // Offscreen
       if (b.y < 0 || b.y > ARENA_H) {
         this.bullets.splice(bi, 1);
         continue;
       }
 
-      // Check Shield collisions
       let bulletHit = false;
       for (let si = this.shields.length - 1; si >= 0; si--) {
         const s = this.shields[si];
@@ -338,7 +405,6 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
       if (bulletHit) continue;
 
       if (!b.isAlien) {
-        // Player bullet hitting UFO
         if (this.mysteryShip && this.mysteryShip.alive) {
           const ufo = this.mysteryShip;
           if (b.x >= ufo.x && b.x <= ufo.x + 22 && b.y >= ufo.y && b.y <= ufo.y + 10) {
@@ -353,9 +419,8 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           }
         }
 
-        // Player bullet hitting alien
         for (const alien of livingAliens) {
-          if (b.x >= alien.x && b.x <= alien.x + 16 && b.y >= alien.y && b.y <= alien.y + 12) {
+          if (b.x >= alien.x && b.x <= alien.x + 18 && b.y >= alien.y && b.y <= alien.y + 14) {
             alien.alive = false;
             this.bullets.splice(bi, 1);
             const rowPoints = [40, 20, 20, 10];
@@ -369,7 +434,6 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           }
         }
       } else {
-        // Alien bullet hitting player
         if (
           b.x >= this.playerX &&
           b.x <= this.playerX + this.playerW &&
@@ -455,7 +519,6 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
               {
                 left: this.mysteryShip.x,
                 top: this.mysteryShip.y,
-                borderColor: pixelColor,
               },
             ]}
           >
@@ -464,32 +527,48 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
           </View>
         )}
 
-        {/* Aliens */}
+        {/* Pixel Aliens (Rendered with real retro pixel matrix, not square blobs) */}
         {this.aliens.map((alien) => {
           if (!alien.alive) return null;
+
+          const matrix =
+            alien.row === 0
+              ? SPRITE_SQUID[this.alienFrame]
+              : alien.row < 3
+              ? SPRITE_CRAB[this.alienFrame]
+              : SPRITE_OCTOPUS[this.alienFrame];
+
+          const pSize = 1.7; // pixel scale
+
           return (
             <View
               key={alien.id}
               style={[
-                styles.alienBox,
+                styles.pixelAlienContainer,
                 {
                   left: alien.x,
                   top: alien.y,
                 },
               ]}
             >
-              {/* Retro Pixel Alien Shapes (Squid, Crab, Octopus) */}
-              <View
-                style={[
-                  alien.row === 0
-                    ? styles.alienSquid
-                    : alien.row < 3
-                    ? styles.alienCrab
-                    : styles.alienOcto,
-                  { backgroundColor: pixelColor },
-                  this.alienFrame === 1 && styles.alienStepFrame,
-                ]}
-              />
+              {matrix.map((row, r) =>
+                row.map((val, c) => {
+                  if (val === 0) return null;
+                  return (
+                    <View
+                      key={`p-${r}-${c}`}
+                      style={{
+                        position: 'absolute',
+                        left: c * pSize,
+                        top: r * pSize,
+                        width: pSize,
+                        height: pSize,
+                        backgroundColor: pixelColor,
+                      }}
+                    />
+                  );
+                })
+              )}
             </View>
           );
         })}
@@ -521,7 +600,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
                 top: b.y,
                 backgroundColor: pixelColor,
                 height: b.isAlien ? 6 : 8,
-                width: b.isAlien ? 2 : 2,
+                width: 2,
               },
             ]}
           />
@@ -538,9 +617,7 @@ export class SpaceInvadersGame implements ArcadeGameInstance {
               },
             ]}
           >
-            {/* Turret tip */}
             <View style={[styles.cannonTip, { backgroundColor: pixelColor }]} />
-            {/* Cannon Base */}
             <View style={[styles.cannonBase, { backgroundColor: pixelColor }]} />
           </View>
         )}
@@ -603,30 +680,10 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 2,
   },
-  alienBox: {
+  pixelAlienContainer: {
     position: 'absolute',
-    width: 16,
-    height: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  alienSquid: {
-    width: 12,
-    height: 10,
-    borderRadius: 3,
-  },
-  alienCrab: {
-    width: 15,
-    height: 9,
-    borderRadius: 2,
-  },
-  alienOcto: {
-    width: 14,
-    height: 10,
-    borderRadius: 4,
-  },
-  alienStepFrame: {
-    transform: [{ scaleX: 0.9 }],
+    width: 18,
+    height: 14,
   },
   shieldCell: {
     position: 'absolute',
