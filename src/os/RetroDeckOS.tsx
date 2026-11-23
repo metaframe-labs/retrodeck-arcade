@@ -189,13 +189,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Terminal state
   private termIdx = 0;
+  private termShowLogo = true;
   private termOut: string[] = [
-    ' .---------.  root@retrodeck',
-    ' | .-----. |  --------------',
-    ' | |RD-OS| |  OS: RetroDeck v1.1',
-    " | '-----' |  CPU: ARM64 @ 60Hz",
-    ' |  +  B A |  ROMS: 100 + BYOK AI',
-    " '---------'  SELECT CMD BELOW:",
+    'root@retrodeck',
+    '------------------',
+    'OS: RetroDeck v1.1',
+    'CPU: ARM64 @ 60Hz',
+    'ROMS: 100 + BYOK AI',
+    'RAM: 18/64KB (OK)',
   ];
 
   // Setup state
@@ -682,24 +683,27 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const carts = this.cb.getCartridges();
     const meta = getProviderMeta(this.byokConfig.activeProvider);
     if (cmd === 'neofetch') {
+      this.termShowLogo = true;
       this.termOut = [
-        ' .---------.  root@retrodeck',
-        ' | .-----. |  --------------',
-        ' | |RD-OS| |  OS: RetroDeck v1.1',
-        ` | '-----' |  PAL: ${this.cb.getPaletteName().slice(0, 12)}`,
-        ` |  +  B A |  ROMS: ${carts.length} | AI: ${meta.shortName}`,
-        ` '---------'  UP: ${Math.floor(this.uptime)}s | RAM: 18/64K`,
+        'root@retrodeck',
+        '------------------',
+        'OS: RetroDeck v1.1',
+        `PAL: ${this.cb.getPaletteName().slice(0, 13)}`,
+        `ROM: ${carts.length} | AI:${meta.shortName}`,
+        `UP: ${Math.floor(this.uptime)}s | 18/64KB`,
       ];
     } else if (cmd === 'uname -a') {
+      this.termShowLogo = false;
       this.termOut = [
-        '  _  _  ___   RetroDeckOS 1.1.0',
-        ' | || |/ _ \\  ARCH: arm64-v8a',
-        ' | __ | (_) | DISP: 320x240 60Hz',
-        ' |_||_|\\___/  AUDIO: 8-BIT WAV',
-        ` AI ENGINE:   ${meta.name.toUpperCase()}`,
-        ' STATUS:      ALL SYSTEMS NOMINAL',
+        'KERNEL: RetroDeckOS 1.1.0-arm64',
+        'DISPLAY: 320x240 60Hz MONO LCD',
+        'AUDIO: 8-BIT WAV SYNTHESIZER',
+        `AI ENGINE: ${meta.name.toUpperCase()}`,
+        `THEME: ${this.cb.getPaletteName()}`,
+        'STATUS: ALL SYSTEMS NOMINAL',
       ];
     } else if (cmd === 'ls /carts') {
+      this.termShowLogo = false;
       this.termOut = [
         `/carts (${carts.length} ROMS MOUNTED):`,
         `001:${carts[0]?.title.slice(0, 11)} 002:${carts[1]?.title.slice(0, 11)}`,
@@ -709,6 +713,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         '... +92 MORE IN [GAMES] VAULT',
       ];
     } else if (cmd === 'free -k') {
+      this.termShowLogo = false;
       this.termOut = [
         '       TOTAL   USED   FREE   SHARED',
         'MEM:    64KB   18KB   46KB     2KB',
@@ -1131,12 +1136,42 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderTerm(fg: string, bg: string) {
     return (
       <View style={styles.listWrap}>
-        <View style={[styles.termScreen, { borderColor: fg }]}>
-          {this.termOut.map((line, i) => (
-            <Text key={i} style={[styles.termLine, { color: fg }]} numberOfLines={1}>
-              {line}
-            </Text>
-          ))}
+        <View
+          style={[
+            styles.termScreen,
+            {
+              borderColor: fg,
+              flexDirection: 'row',
+              alignItems: 'center',
+            },
+          ]}
+        >
+          {this.termShowLogo && (
+            <View style={[styles.neoConsole, { borderColor: fg }]}>
+              <View style={[styles.neoLcd, { borderColor: fg, backgroundColor: fg }]}>
+                <Text style={[styles.neoLcdTxt, { color: bg }]}>RD-OS</Text>
+              </View>
+              <View style={styles.neoControls}>
+                {/* Pixel D-Pad */}
+                <View style={styles.neoDpad}>
+                  <View style={[styles.neoDpadV, { backgroundColor: fg }]} />
+                  <View style={[styles.neoDpadH, { backgroundColor: fg }]} />
+                </View>
+                {/* Pixel B A buttons */}
+                <View style={styles.neoBtns}>
+                  <View style={[styles.neoBtnDot, { backgroundColor: fg }]} />
+                  <View style={[styles.neoBtnDot, { backgroundColor: fg, marginTop: -4 }]} />
+                </View>
+              </View>
+            </View>
+          )}
+          <View style={{ flex: 1, justifyContent: 'center' }}>
+            {this.termOut.map((line, i) => (
+              <Text key={i} style={[styles.termLine, { color: fg }]} numberOfLines={1}>
+                {line}
+              </Text>
+            ))}
+          </View>
         </View>
         <View style={styles.termCmds}>
           {TERM_CMDS.map((cmd, i) => {
@@ -1447,15 +1482,67 @@ const styles = StyleSheet.create({
   termScreen: {
     flex: 1,
     borderWidth: 1.5,
-    paddingHorizontal: 5,
+    paddingHorizontal: 6,
     paddingVertical: 3,
     marginBottom: 4,
-    justifyContent: 'space-around',
     overflow: 'hidden',
   },
-  termLine: {
+  neoConsole: {
+    width: 48,
+    height: 66,
+    borderWidth: 2,
+    borderRadius: 4,
+    padding: 3,
+    marginRight: 8,
+    justifyContent: 'space-between',
+  },
+  neoLcd: {
+    height: 28,
+    borderWidth: 1.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  neoLcdTxt: {
     fontSize: 8,
-    lineHeight: 11,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  neoControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 2,
+    height: 22,
+  },
+  neoDpad: {
+    width: 14,
+    height: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  neoDpadV: {
+    position: 'absolute',
+    width: 4,
+    height: 12,
+  },
+  neoDpadH: {
+    position: 'absolute',
+    width: 12,
+    height: 4,
+  },
+  neoBtns: {
+    flexDirection: 'row',
+    gap: 3,
+    alignItems: 'center',
+  },
+  neoBtnDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+  },
+  termLine: {
+    fontSize: 8.5,
+    lineHeight: 11.5,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
