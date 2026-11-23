@@ -5,8 +5,33 @@ import { BounceGame } from './games/BounceGame';
 import { SpaceImpactGame } from './games/SpaceImpactGame';
 import { BreakoutGame } from './games/BreakoutGame';
 import { TetrisGame } from './games/TetrisGame';
+import { SpaceInvadersGame } from './games/SpaceInvadersGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'space-invaders',
+    title: 'ALIEN ASSAULT',
+    subtitle: 'Classic Space Invaders, Bunker Shields & Mystery UFO',
+    genre: 'ARCADE SHOOTER',
+    year: '1978',
+    defaultPalette: 'nokia',
+    controlsHint: '◀ / ▶: Move Cannon, [A] / [B]: Fire Blaster, Hide behind Bunkers!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'FIRE',
+      b: 'FIRE',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B (FIRE)',
+    },
+    createGame: (hs = 0) => new SpaceInvadersGame(hs),
+  },
   {
     id: 'tetris-brick',
     title: 'RETRO BRICK 99',
