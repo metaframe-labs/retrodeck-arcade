@@ -89,8 +89,298 @@ import { PlinkoDropGame } from './games/PlinkoDropGame';
 import { ParachuteRescueGame } from './games/ParachuteRescueGame';
 import { LockpickVaultGame } from './games/LockpickVaultGame';
 import { LaserMirrorGame } from './games/LaserMirrorGame';
+import { ElevatorActionGame } from './games/ElevatorActionGame';
+import { IceSliderGame } from './games/IceSliderGame';
+import { CraneClawGame } from './games/CraneClawGame';
+import { JoustKnightsGame } from './games/JoustKnightsGame';
+import { PipeConnectGame } from './games/PipeConnectGame';
+import { TugOfWarGame } from './games/TugOfWarGame';
+import { LaserDodgeGame } from './games/LaserDodgeGame';
+import { SumoRingGame } from './games/SumoRingGame';
+import { BubbleShooterGame } from './games/BubbleShooterGame';
+import { BossRushGame } from './games/BossRushGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'boss-rush-100',
+    title: 'BOSS RUSH 100',
+    subtitle: '100th Game Special! Battle 5 Multi-Phase Mega Bosses',
+    genre: 'BOSS ARENA',
+    year: '1999',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Dodge • HOLD [A]: Rapid Fire • [B]: Invuln Shield',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'FIRE',
+      b: 'SHLD',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B (SHIELD)',
+    },
+    createGame: (hs = 0) => {
+      const g = new BossRushGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'bubble-shooter-dx',
+    title: 'BUBBLE SHOOTER',
+    subtitle: 'Aim & Match 3+ Identical Orbs Before Ceiling Drops',
+    genre: 'PUZZLE',
+    year: '1994',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Aim Launcher • [A]: Shoot Orb',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'SHOOT',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (SHOOT)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new BubbleShooterGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'sumo-ring-dx',
+    title: 'SUMO RING DX',
+    subtitle: 'Push Rival Rikishi Out of the Circular Dohyo Ring',
+    genre: 'FIGHTING',
+    year: '1986',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move • [A]: Sumo Shove Charge!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'SHOVE',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (SHOVE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new SumoRingGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'laser-dodge-dx',
+    title: 'HEIST LASERS DX',
+    subtitle: 'Steal All 5 Vault Gems Through Sweeping Laser Grids',
+    genre: 'STEALTH',
+    year: '1987',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Move • HOLD [A]: Dash • Grab Gems & Escape!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'DASH',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (DASH)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new LaserDodgeGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'tug-of-war-dx',
+    title: 'TUG OF WAR DX',
+    subtitle: 'Mash & Manage Stamina to Pull Champions Over the Line',
+    genre: 'SPORTS',
+    year: '1984',
+    defaultPalette: 'nokia',
+    controlsHint: 'MASH [A] or [◀]: Pull Rope! Watch Your Stamina Bar!',
+    gamepadLabels: {
+      left: 'PULL',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'PULL',
+      b: 'B',
+      leftLabel: '◀ (PULL)',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (PULL)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new TugOfWarGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'pipe-connect-dx',
+    title: 'PIPE CONNECT DX',
+    subtitle: 'Rotate Pipes to Route Water from IN to OUT',
+    genre: 'PUZZLE',
+    year: '1989',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Select Tile • [A]: Rotate Pipe 90°',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'ROT',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (ROTATE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new PipeConnectGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'joust-knights-dx',
+    title: 'JOUST KNIGHTS',
+    subtitle: 'Flap Wings & Strike Rival Knights from Above',
+    genre: 'ARCADE',
+    year: '1982',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Fly • TAP [A]/[▲]: Flap Wings • Hit From Above!',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: 'FLAP',
+      down: '▼',
+      a: 'FLAP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲ (FLAP)',
+      downLabel: '▼',
+      aLabel: 'A (FLAP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new JoustKnightsGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'crane-claw-dx',
+    title: 'CRANE CLAW DX',
+    subtitle: 'Arcade Claw Machine — Grab High-Value Gems & Stars',
+    genre: 'ARCADE',
+    year: '1985',
+    defaultPalette: 'nokia',
+    controlsHint: '[◀]/[▶]: Move Crane • [A]: Drop Claw (Avoid X Junk!)',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'DROP',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A (DROP)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new CraneClawGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'ice-slider-dx',
+    title: 'ICE SLIDER DX',
+    subtitle: 'Slide Across Frictionless Ice to Reach the Goal',
+    genre: 'PUZZLE',
+    year: '1991',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Slide Until Rock • [B]: Restart Level',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: '▲',
+      down: '▼',
+      a: 'A',
+      b: 'RST',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲',
+      downLabel: '▼',
+      aLabel: 'A',
+      bLabel: 'B (RESET)',
+    },
+    createGame: (hs = 0) => {
+      const g = new IceSliderGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
+  {
+    id: 'elevator-action-dx',
+    title: 'ELEVATOR SPY DX',
+    subtitle: 'Ride the Shaft, Grab Secret Files & Escape Guards',
+    genre: 'ACTION',
+    year: '1983',
+    defaultPalette: 'nokia',
+    controlsHint: '[▲]/[▼]: Ride Elevator • [◀]/[▶]: Walk • [A]: Shoot',
+    gamepadLabels: {
+      left: '◀',
+      right: '▶',
+      up: 'UP',
+      down: 'DN',
+      a: 'FIRE',
+      b: 'B',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      upLabel: '▲ (ELEV)',
+      downLabel: '▼ (ELEV)',
+      aLabel: 'A (FIRE)',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => {
+      const g = new ElevatorActionGame();
+      g.setHighScore(hs);
+      return g;
+    },
+  },
   {
     id: 'battleship-dx',
     title: 'BATTLESHIP DX',
