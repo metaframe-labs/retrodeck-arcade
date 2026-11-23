@@ -341,12 +341,21 @@ const CURRENCY_MODES = [
   { label: 'TRY -> USD', rate: 1 / 34.5, unit: 'USD' },
 ];
 
-const TERM_CMDS = [
+const TERM_PRESETS = [
+  'help',
   'neofetch',
-  'uname -a',
+  'ls',
   'ls /carts',
+  'cat scores.log',
+  'cat /etc/os',
   'free -k',
+  'top',
+  'uname -a',
+  'play nokia',
+  'open snake',
   'randgame',
+  'ai hello 3310',
+  'clear',
   'reboot',
 ];
 
@@ -463,16 +472,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private paintR = 4;
   private paintC = 7;
 
-  // Terminal state
-  private termIdx = 0;
+  // Real Interactive Shell (rdsh) state
+  private termIdx = -1;
+  private termCwd = '/home';
+  private termInput = '';
+  private termScroll = 0;
   private termShowLogo = true;
   private termOut: string[] = [
     'root@retrodeck',
     '------------------',
-    'OS: RetroDeck v1.1',
+    'OS: RetroDeck v1.2',
     'CPU: ARM64 @ 60Hz',
     'ROMS: 100 + BYOK AI',
-    'RAM: 18/64KB (OK)',
+    'TYPE "help" OR [KBD]',
   ];
 
   // Setup state
@@ -595,7 +607,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       case 'stats':
         return 'Viewing Arcade High Scores & Rank • [B]: Desktop';
       case 'term':
-        return 'D-PAD: Command • [A]: Execute • [B]: Desktop';
+        return '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit';
       case 'setup':
         return '[▲]/[▼]: Setting • [A]: Toggle/Run • [B]: Desktop';
       default:
@@ -609,6 +621,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
     placeholder: string;
     secure: boolean;
   } {
+    if (this.app === 'term') {
+      return {
+        targetLabel: `RDSH ${this.termCwd}$`,
+        value: this.termInput,
+        placeholder: 'help, ls, neofetch, open snake, ai ...',
+        secure: false,
+      };
+    }
     const pid = this.byokConfig.activeProvider;
     const meta = getProviderMeta(pid);
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
@@ -637,6 +657,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public setKeyboardText(next: string) {
     this.idleTimer = 0;
+    if (this.app === 'term') {
+      this.termInput = next;
+      return;
+    }
     const pid = this.byokConfig.activeProvider;
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
       this.byokConfig = {
@@ -663,6 +687,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public submitKeyboard() {
     this.idleTimer = 0;
+    if (this.app === 'term') {
+      const cmd = this.termInput.trim() || 'help';
+      this.termInput = '';
+      const s = this.execTermCmd(cmd);
+      this.cb.onPlaySound?.(s);
+      return;
+    }
     if (this.app === 'ai' && this.aiTab === 'byok') {
       saveBYOKConfig(this.byokConfig);
       this.aiStatus = 'SAVED!';
@@ -1235,18 +1266,34 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'term') {
-      if (dir === 'up' || dir === 'down') {
-        this.termIdx = (this.termIdx + 3) % TERM_CMDS.length;
+      if (dir === 'up') {
+        this.termScroll = Math.max(0, this.termScroll - 1);
+        return 'hit';
+      }
+      if (dir === 'down') {
+        this.termScroll = Math.min(Math.max(0, this.termOut.length - 6), this.termScroll + 1);
+        return 'hit';
       }
       if (dir === 'left') {
-        this.termIdx = (this.termIdx + TERM_CMDS.length - 1) % TERM_CMDS.length;
+        this.termIdx =
+          this.termIdx <= 0 ? TERM_PRESETS.length - 1 : this.termIdx - 1;
+        this.termInput = TERM_PRESETS[this.termIdx];
+        return 'hit';
       }
       if (dir === 'right') {
-        this.termIdx = (this.termIdx + 1) % TERM_CMDS.length;
+        this.termIdx = (this.termIdx + 1) % TERM_PRESETS.length;
+        this.termInput = TERM_PRESETS[this.termIdx];
+        return 'hit';
       }
-      if (dir) return 'hit';
       if (pressA) {
-        return this.execTermCmd(TERM_CMDS[this.termIdx]);
+        if (this.termInput.trim().length > 0) {
+          const cmd = this.termInput.trim();
+          this.termInput = '';
+          return this.execTermCmd(cmd);
+        } else {
+          this.cb.onRequestKeyboard?.(true);
+          return 'score';
+        }
       }
       return null;
     }
@@ -1317,59 +1364,288 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.calcFresh = true;
   }
 
-  private execTermCmd(cmd: string): ArcadeSound {
+  private pushTermLines(lines: string[], showLogo = false) {
+    this.termShowLogo = showLogo;
+    if (showLogo) {
+      this.termOut = lines.slice(0, 6);
+      this.termScroll = 0;
+      return;
+    }
+    this.termOut.push(...lines);
+    if (this.termOut.length > 80) {
+      this.termOut = this.termOut.slice(this.termOut.length - 80);
+    }
+    this.termScroll = Math.max(0, this.termOut.length - 6);
+  }
+
+  private execTermCmd(rawCmd: string): ArcadeSound {
+    const clean = rawCmd.trim();
+    if (!clean) return 'hit';
+
     const carts = this.cb.getCartridges();
+    const scores = this.cb.getHighScores();
     const meta = getProviderMeta(this.byokConfig.activeProvider);
-    if (cmd === 'neofetch') {
-      this.termShowLogo = true;
-      this.termOut = [
-        'root@retrodeck',
-        '------------------',
-        'OS: RetroDeck v1.1',
-        `PAL: ${this.cb.getPaletteName().slice(0, 13)}`,
-        `ROM: ${carts.length} | AI:${meta.shortName}`,
-        `UP: ${Math.floor(this.uptime)}s | 18/64KB`,
-      ];
-    } else if (cmd === 'uname -a') {
+    const parts = clean.split(/\s+/);
+    const bin = parts[0].toLowerCase();
+    const arg = parts.slice(1).join(' ');
+
+    if (bin === 'clear' || bin === 'cls') {
       this.termShowLogo = false;
-      this.termOut = [
-        'KERNEL: RetroDeckOS 1.1.0-arm64',
-        'DISPLAY: 320x240 60Hz MONO LCD',
-        'AUDIO: 8-BIT WAV SYNTHESIZER',
-        `AI ENGINE: ${meta.name.toUpperCase()}`,
-        `THEME: ${this.cb.getPaletteName()}`,
-        'STATUS: ALL SYSTEMS NOMINAL',
-      ];
-    } else if (cmd === 'ls /carts') {
+      this.termOut = [];
+      this.termScroll = 0;
+      return 'hit';
+    }
+
+    if (bin === 'neofetch') {
+      this.pushTermLines(
+        [
+          'root@retrodeck',
+          '------------------',
+          'OS: RetroDeck v1.2',
+          `PAL: ${this.cb.getPaletteName().slice(0, 13)}`,
+          `ROM: ${carts.length} | AI:${meta.shortName}`,
+          `UP: ${Math.floor(this.uptime)}s | 18/64KB`,
+        ],
+        true
+      );
+      return 'score';
+    }
+
+    // Echo command line into scrollback
+    if (this.termShowLogo) {
+      this.termOut = [];
       this.termShowLogo = false;
-      this.termOut = [
-        `/carts (${carts.length} ROMS MOUNTED):`,
-        `001:${carts[0]?.title.slice(0, 11)} 002:${carts[1]?.title.slice(0, 11)}`,
-        `003:${carts[2]?.title.slice(0, 11)} 004:${carts[3]?.title.slice(0, 11)}`,
-        `005:${carts[4]?.title.slice(0, 11)} 006:${carts[5]?.title.slice(0, 11)}`,
-        `007:${carts[6]?.title.slice(0, 11)} 008:${carts[7]?.title.slice(0, 11)}`,
-        '... +92 MORE IN [GAMES] VAULT',
-      ];
-    } else if (cmd === 'free -k') {
-      this.termShowLogo = false;
-      this.termOut = [
-        '       TOTAL   USED   FREE   SHARED',
-        'MEM:    64KB   18KB   46KB     2KB',
-        'VRAM:   16KB    9KB    7KB     0KB',
-        'ROM:  4096KB 3840KB  256KB     0KB',
-        'RAM  [#####-------------] 28% USED',
-        'VRAM [##########--------] 56% USED',
-      ];
-    } else if (cmd === 'randgame') {
+    }
+    this.pushTermLines([`${this.termCwd}$ ${clean}`]);
+
+    if (bin === 'help' || bin === '?') {
+      this.pushTermLines([
+        'CMDS: ls, cd, pwd, cat, clear, top,',
+        'neofetch, uname, free, date, whoami,',
+        'open <game>, randgame, play <song>,',
+        'stop, ai <msg>, theme, lock, reboot',
+      ]);
+      return 'score';
+    }
+
+    if (bin === 'pwd') {
+      this.pushTermLines([this.termCwd]);
+      return 'score';
+    }
+
+    if (bin === 'whoami') {
+      this.pushTermLines(['root (uid=0, gid=0, groups=nokia3310)']);
+      return 'score';
+    }
+
+    if (bin === 'date') {
+      this.pushTermLines([new Date().toUTCString().toUpperCase()]);
+      return 'score';
+    }
+
+    if (bin === 'uptime') {
+      this.pushTermLines([`UP ${Math.floor(this.uptime)}s, LOAD AVG: 0.02, 0.01`]);
+      return 'score';
+    }
+
+    if (bin === 'echo') {
+      this.pushTermLines([arg || '']);
+      return 'score';
+    }
+
+    if (bin === 'uname') {
+      this.pushTermLines([
+        'RetroDeckOS 1.2.0-arm64 #1 SMP PREEMPT',
+        `LCD 320x240 60Hz | AI: ${meta.name.toUpperCase()}`,
+      ]);
+      return 'score';
+    }
+
+    if (bin === 'free') {
+      this.pushTermLines([
+        '      TOTAL  USED  FREE',
+        'RAM:   64KB  18KB  46KB [#####---------]',
+        'VRAM:  16KB   9KB   7KB [########------]',
+      ]);
+      return 'score';
+    }
+
+    if (bin === 'top' || bin === 'ps') {
+      this.pushTermLines([
+        'PID USER  CPU% MEM  COMMAND',
+        '  1 root   4.2 6KB  /sbin/rd-kernel',
+        ' 12 root   8.5 8KB  /bin/arcade-60fps',
+        ` 24 root   1.1 4KB  /bin/byok-${meta.id}`,
+      ]);
+      return 'score';
+    }
+
+    if (bin === 'cd') {
+      const target = (arg || '/home').trim();
+      if (target === '..') {
+        this.termCwd = '/';
+      } else if (['/home', '/carts', '/etc', '/bin', '/'].includes(target)) {
+        this.termCwd = target;
+      } else if (['home', 'carts', 'etc', 'bin'].includes(target)) {
+        this.termCwd = `/${target}`;
+      } else {
+        this.pushTermLines([`cd: ${target}: No such directory`]);
+        return 'die';
+      }
+      return 'score';
+    }
+
+    if (bin === 'ls' || bin === 'dir') {
+      const target = arg.trim() || this.termCwd;
+      if (target === '/' || target === '.') {
+        this.pushTermLines(['bin/  carts/  etc/  home/  boot.rom']);
+      } else if (target.includes('cart')) {
+        this.pushTermLines([
+          `TOTAL ${carts.length} CARTRIDGES (USE "open <name>"):`,
+          `01:${carts[0]?.id}  02:${carts[1]?.id}`,
+          `03:${carts[2]?.id}  04:${carts[3]?.id}`,
+          `05:${carts[4]?.id}  06:${carts[5]?.id}`,
+        ]);
+      } else if (target.includes('etc')) {
+        this.pushTermLines(['os-release  byok.conf  palettes.conf']);
+      } else if (target.includes('bin')) {
+        this.pushTermLines(['rdsh  neofetch  open  play  ai  top']);
+      } else {
+        this.pushTermLines(['readme.txt  scores.log  nokia3310.rom']);
+      }
+      return 'score';
+    }
+
+    if (bin === 'cat') {
+      const f = arg.toLowerCase();
+      if (!f) {
+        this.pushTermLines(['usage: cat <readme.txt|scores.log|/etc/os>']);
+        return 'hit';
+      }
+      if (f.includes('score')) {
+        const entries = Object.entries(scores)
+          .filter(([, v]) => v > 0)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 4);
+        if (entries.length === 0) {
+          this.pushTermLines(['scores.log: (empty - play a game!)']);
+        } else {
+          this.pushTermLines(
+            entries.map(([id, val], i) => `#${i + 1} ${id}: ${val} PTS`)
+          );
+        }
+      } else if (f.includes('os') || f.includes('etc')) {
+        this.pushTermLines([
+          'NAME="RetroDeck OS"',
+          'VERSION="1.2 (Nokia 3310 Edition)"',
+          `PALETTE="${this.cb.getPaletteName()}"`,
+        ]);
+      } else {
+        this.pushTermLines([
+          'RETRODECK OS // 100-IN-1 POCKET CONSOLE',
+          'TYPE "open snake" OR "play nokia"!',
+        ]);
+      }
+      return 'score';
+    }
+
+    if (bin === 'open' || bin === 'run') {
+      if (!arg) {
+        this.pushTermLines(['usage: open <game name or 1..100>']);
+        return 'hit';
+      }
+      const num = parseInt(arg, 10);
+      const q = arg.toLowerCase();
+      const found =
+        !isNaN(num) && num >= 1 && num <= carts.length
+          ? carts[num - 1]
+          : carts.find(
+              (c) =>
+                c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
+            );
+      if (found) {
+        this.pushTermLines([`BOOTING ${found.title}...`]);
+        this.cb.onLaunchGame(found);
+        return 'powerup';
+      }
+      this.pushTermLines([`open: "${arg}" not found in /carts`]);
+      return 'die';
+    }
+
+    if (bin === 'randgame') {
       const pick = carts[Math.floor(Math.random() * carts.length)];
       if (pick) this.cb.onLaunchGame(pick);
       return 'powerup';
-    } else if (cmd === 'reboot') {
-      this.app = 'boot';
-      this.bootTimer = 0;
+    }
+
+    if (bin === 'play') {
+      const q = (arg || 'nokia').toLowerCase();
+      if (q === 'sms') {
+        RetroAudioEngine.playNokiaSmsTone();
+        this.pushTermLines(['PLAYING NOKIA 3310 MORSE SMS TONE...']);
+        return 'score';
+      }
+      const song =
+        this.songs.find((s) => s.title.toLowerCase().includes(q)) || this.songs[0];
+      RetroAudioEngine.playNokiaMelody(song.notes, song.bpm);
+      this.pushTermLines([`PLAYING: ${song.title} (${song.bpm} BPM)`]);
+      return 'score';
+    }
+
+    if (bin === 'stop') {
+      RetroAudioEngine.stopNokiaMelody();
+      this.pushTermLines(['AUDIO STOPPED.']);
+      return 'hit';
+    }
+
+    if (bin === 'theme' || bin === 'palette') {
+      this.cb.onCyclePalette();
+      this.pushTermLines([`THEME SWITCHED.`]);
       return 'powerup';
     }
-    return 'score';
+
+    if (bin === 'lock') {
+      this.keyLocked = true;
+      this.unlockStage = false;
+      return 'score';
+    }
+
+    if (bin === 'exit') {
+      this.app = 'desktop';
+      this.cb.onRequestKeyboard?.(false);
+      return 'hit';
+    }
+
+    if (bin === 'reboot') {
+      this.app = 'boot';
+      this.bootTimer = 0;
+      this.cb.onRequestKeyboard?.(false);
+      return 'powerup';
+    }
+
+    if (bin === 'ai' || bin === 'ask') {
+      if (!arg) {
+        this.pushTermLines(['usage: ai <your question>']);
+        return 'hit';
+      }
+      this.pushTermLines([`[${meta.shortName} THINKING...]`]);
+      callBYOKAIChat([{ role: 'user', content: arg }], this.byokConfig)
+        .then((reply) => {
+          const lines = wrapTextLines(`AI> ${reply}`, 34);
+          this.pushTermLines(lines);
+          this.cb.onPlaySound?.('powerup');
+        })
+        .catch((err: any) => {
+          this.pushTermLines([
+            `ERR> ${(err?.message || 'API ERROR').toUpperCase().slice(0, 32)}`,
+          ]);
+          this.cb.onPlaySound?.('die');
+        });
+      return 'shoot';
+    }
+
+    this.pushTermLines([`rdsh: ${bin}: command not found (try "help")`]);
+    return 'die';
   }
 
   public getStats(): ArcadeStats {
@@ -2055,8 +2331,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderTerm(fg: string, bg: string) {
+    const visibleLines = this.termShowLogo
+      ? this.termOut.slice(0, 6)
+      : this.termOut.slice(this.termScroll, this.termScroll + 6);
+
     return (
       <View style={styles.listWrap}>
+        {/* Full-Screen Scrollable Unix Terminal Output */}
         <View
           style={[
             styles.termScreen,
@@ -2084,32 +2365,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
               </View>
             </View>
           )}
-          <View style={{ flex: 1, justifyContent: 'center' }}>
-            {this.termOut.map((line, i) => (
+          <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+            {visibleLines.map((line, i) => (
               <Text key={i} style={[styles.termLine, { color: fg }]} numberOfLines={1}>
                 {line}
               </Text>
             ))}
           </View>
         </View>
-        <View style={styles.termCmds}>
-          {TERM_CMDS.map((cmd, i) => {
-            const sel = i === this.termIdx;
-            return (
-              <View
-                key={cmd}
-                style={[
-                  styles.termRow,
-                  { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                ]}
-              >
-                <Text style={[styles.termCmdTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                  {sel ? '>' : ''}
-                  {cmd}
-                </Text>
-              </View>
-            );
-          })}
+
+        {/* Live Interactive Shell Prompt Bar */}
+        <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
+          <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
+            {`root@rd:${this.termCwd}$ ${this.termInput || '(PRESS [A]/[KBD] OR ◀/▶)_'}`}
+          </Text>
         </View>
       </View>
     );
