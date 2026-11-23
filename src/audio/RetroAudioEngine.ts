@@ -227,8 +227,20 @@ export class RetroAudioEngine {
   private static poolIndex: Partial<Record<ArcadeSound, number>> = {};
   private static soundUris: Partial<Record<ArcadeSound, string>> = {};
   private static isInitialized = false;
+  private static isMuted = false;
   private static melodyPlayer: any = null;
   private static notePlayer: any = null;
+
+  public static setMuted(muted: boolean): void {
+    this.isMuted = muted;
+    if (muted) {
+      this.stopNokiaMelody();
+    }
+  }
+
+  public static getMuted(): boolean {
+    return this.isMuted;
+  }
 
   public static stopNokiaMelody(): void {
     try {
@@ -248,6 +260,9 @@ export class RetroAudioEngine {
   } {
     this.stopNokiaMelody();
     const { uri, events, totalSec } = synthesizeNokiaMelodyUri(notation, bpm);
+    if (this.isMuted) {
+      return { events, totalSec };
+    }
 
     if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
       try {
@@ -275,6 +290,7 @@ export class RetroAudioEngine {
   }
 
   public static playNokiaNote(token: string, bpm: number = 160): void {
+    if (this.isMuted) return;
     const { uri } = synthesizeNokiaMelodyUri(token, bpm);
     if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
       try {
@@ -415,6 +431,7 @@ export class RetroAudioEngine {
   }
 
   public static play(sound: ArcadeSound): void {
+    if (this.isMuted) return;
     // 1. Native Mobile (expo-audio)
     if (Platform.OS !== 'web') {
       try {
