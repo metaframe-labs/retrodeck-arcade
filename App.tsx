@@ -11,6 +11,7 @@ const SCANLINES_STORAGE_KEY = '@retrodeck8_scanlines_v1';
 
 import { ArcadeButton, RetroKeypad } from './src/components/RetroKeypad';
 import { RetroKeyboardDeck } from './src/components/RetroKeyboardDeck';
+import { RetroNumericDeck } from './src/components/RetroNumericDeck';
 import { ArcadeScreen } from './src/arcade/ArcadeScreen';
 import { CartridgeBayPage } from './src/components/CartridgeBayPage';
 import { DevCartModal } from './src/components/DevCartModal';
@@ -68,7 +69,7 @@ function RetroDeckConsole() {
   const [scanlines, setScanlines] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isBeeping, setIsBeeping] = useState(false);
-  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [deckMode, setDeckMode] = useState<'pad' | 'num' | 'kbd'>('pad');
   const [, setKbdTick] = useState(0);
   const [bayVisible, setBayVisible] = useState(false);
   const [devCartVisible, setDevCartVisible] = useState(false);
@@ -276,7 +277,7 @@ function RetroDeckConsole() {
     setGameOverMenuSelection(0);
     setIsPaused(false);
     setOsMode(false);
-    setKeyboardMode(false);
+    setDeckMode('pad');
     // Clear button inputs so the [A] press that launched the game from OS/Bay doesn't bleed through
     inputRef.current = {
       up: false,
@@ -310,7 +311,7 @@ function RetroDeckConsole() {
     setGameOverMenuSelection(0);
     setIsPaused(false);
     setOsMode(false);
-    setKeyboardMode(false);
+    setDeckMode('pad');
     inputRef.current = {
       up: false,
       down: false,
@@ -363,7 +364,7 @@ function RetroDeckConsole() {
       onToggleScanlines: () => handleToggleScanlines(),
       getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
-      onRequestKeyboard: (open) => setKeyboardMode(open),
+      onRequestKeyboard: (open) => setDeckMode(open ? 'kbd' : 'pad'),
       onPlaySound: (s) => handleSoundEvent(s),
     })
   );
@@ -563,7 +564,7 @@ function RetroDeckConsole() {
           {osMode ? (
             <Pressable
               onPress={() => {
-                setKeyboardMode((k) => !k);
+                setDeckMode((m) => (m === 'pad' ? 'num' : m === 'num' ? 'kbd' : 'pad'));
                 handleSoundEvent('hit');
               }}
               style={[
@@ -572,19 +573,25 @@ function RetroDeckConsole() {
                   backgroundColor: palette.surfaceBg,
                   borderColor: palette.surfaceBorder,
                 },
-                keyboardMode && {
+                deckMode !== 'pad' && {
                   borderColor: palette.bezelAccent,
                   backgroundColor: `${palette.bezelAccent}22`,
                 },
               ]}
             >
               <Ionicons
-                name={keyboardMode ? 'game-controller-outline' : 'keypad-outline'}
+                name={
+                  deckMode === 'pad'
+                    ? 'apps-outline'
+                    : deckMode === 'num'
+                    ? 'keypad-outline'
+                    : 'game-controller-outline'
+                }
                 size={14}
-                color={keyboardMode ? palette.bezelAccent : '#CBD5E1'}
+                color={deckMode !== 'pad' ? palette.bezelAccent : '#CBD5E1'}
               />
-              <Text style={[styles.toolText, keyboardMode && { color: palette.bezelAccent }]}>
-                {keyboardMode ? 'PAD' : 'KBD'}
+              <Text style={[styles.toolText, deckMode !== 'pad' && { color: palette.bezelAccent }]}>
+                {deckMode === 'pad' ? 'NUM' : deckMode === 'num' ? 'KBD' : 'PAD'}
               </Text>
             </Pressable>
           ) : (
@@ -683,7 +690,7 @@ function RetroDeckConsole() {
             <Pressable
               onPress={() => {
                 if (!osMode) setOsMode(true);
-                setKeyboardMode((k) => !k);
+                setDeckMode((m) => (m === 'pad' ? 'num' : m === 'num' ? 'kbd' : 'pad'));
                 handleSoundEvent('hit');
               }}
               style={styles.chassisBadgeContainer}
@@ -695,7 +702,11 @@ function RetroDeckConsole() {
                 ]}
               />
               <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
-                {keyboardMode ? 'QWERTY COMMUNICATOR DECK [TAP FOR PAD]' : 'ARCADE CONTROLLER DECK [TAP FOR KBD]'}
+                {deckMode === 'kbd'
+                  ? 'QWERTY COMMUNICATOR DECK [TAP FOR PAD]'
+                  : deckMode === 'num'
+                  ? '3310 NUMERIC KEYPAD [TAP FOR KBD]'
+                  : 'ARCADE CONTROLLER DECK [TAP FOR NUM]'}
               </Text>
             </Pressable>
             <View style={styles.speakerGrille}>
@@ -706,9 +717,9 @@ function RetroDeckConsole() {
             </View>
           </View>
 
-          {/* Keypad or QWERTY Keyboard Controls Area */}
+          {/* Keypad, Numeric 3310 Pad, or QWERTY Keyboard Controls Area */}
           <View style={styles.keypadContainer}>
-            {keyboardMode ? (
+            {deckMode === 'kbd' ? (
               <RetroKeyboardDeck
                 accentColor={palette.bezelAccent}
                 value={kbdBinding.value}
@@ -723,7 +734,25 @@ function RetroDeckConsole() {
                   osRef.current.submitKeyboard();
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
-                onSwitchToGamepad={() => setKeyboardMode(false)}
+                onSwitchToGamepad={() => setDeckMode('pad')}
+              />
+            ) : deckMode === 'num' ? (
+              <RetroNumericDeck
+                accentColor={palette.keypadAccent || palette.bezelAccent}
+                buttonBg={palette.buttonBg}
+                buttonBorder={palette.buttonBorder}
+                value={kbdBinding.value}
+                targetLabel={kbdBinding.targetLabel}
+                onChangeText={(next) => {
+                  osRef.current.setKeyboardText(next);
+                  setKbdTick((t) => (t + 1) % 100000);
+                }}
+                onSubmit={() => {
+                  osRef.current.submitKeyboard();
+                  setKbdTick((t) => (t + 1) % 100000);
+                }}
+                onSwitchMode={() => setDeckMode('kbd')}
+                onKeySound={() => handleSoundEvent('hit')}
               />
             ) : (
               <RetroKeypad
