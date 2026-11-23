@@ -718,7 +718,7 @@ function RetroDeckConsole() {
             ) : (
               <RetroKeypad
                 labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
-                accentColor={palette.bezelAccent}
+                accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 centerBg={palette.bezelBg}

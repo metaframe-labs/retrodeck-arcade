@@ -46,6 +46,7 @@ export interface RetroPalette {
   scanlineColor: string;
   bezelAccent: string;
   ledColor?: string;
+  keypadAccent?: string;
   textMuted: string;
   isLightLcd?: boolean;
   // Hardware chassis & tactile controls shell colors
@@ -102,22 +103,23 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
   playdate: {
     id: 'playdate',
     name: 'PLAYDATE CRANK',
-    tagline: 'Matte Graphite + Crank Yellow',
+    tagline: 'Crank Yellow + Slate Silver Keys',
     category: 'HANDHELD',
     screenBg: '#D6D9CE',
     pixelOn: '#1D1E1B',
     pixelGlow: 'rgba(29, 30, 27, 0.22)',
     scanlineColor: 'rgba(29, 30, 27, 0.07)',
     bezelAccent: '#FFC500',
+    keypadAccent: '#E2E5DC',
     textMuted: '#6A6E63',
     isLightLcd: true,
-    chassisBg: '#0E0E10',
-    deckBg: '#161618',
-    bezelBg: '#121214',
-    surfaceBg: '#202024',
-    surfaceBorder: '#383840',
-    buttonBg: '#1B1B1F',
-    buttonBorder: '#34343C',
+    chassisBg: '#111114',
+    deckBg: '#19191E',
+    bezelBg: '#151519',
+    surfaceBg: '#23232A',
+    surfaceBorder: '#3F3E4A',
+    buttonBg: '#26252D',
+    buttonBorder: '#4B4957',
   },
   famicom: {
     id: 'famicom',
