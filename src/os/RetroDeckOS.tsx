@@ -284,7 +284,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'model') {
       return {
         targetLabel: `${meta.shortName} MDL`,
-        value: getProviderModel(pid, this.byokConfig),
+        value: this.byokConfig.models[pid] ?? meta.defaultModel,
         placeholder: meta.defaultModel,
         secure: false,
       };
