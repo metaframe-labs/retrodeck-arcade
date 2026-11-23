@@ -743,7 +743,7 @@ function RetroDeckConsole() {
                 buttonBorder={palette.buttonBorder}
                 targetLabel={kbdBinding.targetLabel}
                 onPressKey={(k) => {
-                  osRef.current.pressNumericKey(k);
+                  osRef.current.pressNumericKey?.(k);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
                 onSwitchMode={() => setDeckMode('kbd')}
