@@ -1,6 +1,26 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeSound } from '../arcade/types';
 import { bytesToBase64 } from '../core/base64';
+
+const KEY_SOUND_STORAGE_KEY = '@retrodeck8_key_sound_v1';
+
+export type KeypadSoundStyle =
+  | 'classic'
+  | 'thock'
+  | 'gameboy'
+  | 'nokia'
+  | 'bubble'
+  | 'silent';
+
+export const KEYPAD_SOUND_STYLES: { id: KeypadSoundStyle; name: string }[] = [
+  { id: 'classic', name: 'RETRO DEFAULT' },
+  { id: 'thock', name: 'MECH THOCK' },
+  { id: 'gameboy', name: 'GB BLIP' },
+  { id: 'nokia', name: '3310 SOFT' },
+  { id: 'bubble', name: 'SOFT POP' },
+  { id: 'silent', name: 'MUTE KEYS' },
+];
 
 // Dynamic safe load of expo-audio
 let SafeExpoAudio: any = null;
@@ -43,9 +63,19 @@ function createWavBuffer(numSamples: number): Uint8Array {
 }
 
 /** Synthesizes authentic 8-bit sound waveforms directly into Base64 WAV data URI */
-export function synthesizeRetroSoundUri(sound: ArcadeSound): string {
+export function synthesizeRetroSoundUri(
+  sound: ArcadeSound,
+  keyStyle: KeypadSoundStyle = 'classic'
+): string {
   let duration = 0.10;
-  if (sound === 'shoot') duration = 0.12;
+  if (sound === 'hit') {
+    if (keyStyle === 'thock') duration = 0.045;
+    else if (keyStyle === 'gameboy') duration = 0.055;
+    else if (keyStyle === 'nokia') duration = 0.038;
+    else if (keyStyle === 'bubble') duration = 0.05;
+    else if (keyStyle === 'silent') duration = 0.02;
+    else duration = 0.10; // classic default
+  } else if (sound === 'shoot') duration = 0.12;
   else if (sound === 'score') duration = 0.16;
   else if (sound === 'powerup') duration = 0.24;
   else if (sound === 'explode') duration = 0.25;
@@ -63,10 +93,42 @@ export function synthesizeRetroSoundUri(sound: ArcadeSound): string {
 
     switch (sound) {
       case 'hit': {
-        const freq = 520 - progress * 280;
-        const env = Math.max(0, 1 - progress * 1.4);
-        const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
-        sample = Math.floor(128 + wave * 105 * env);
+        if (keyStyle === 'silent') {
+          sample = 128;
+        } else if (keyStyle === 'thock') {
+          // Deep tactile mechanical keyboard thock (low warm sine drop + clean 4ms transient)
+          const freq = 210 - progress * 135;
+          const env = Math.pow(1 - progress, 1.8);
+          const body = Math.sin(2 * Math.PI * freq * t);
+          const snap = progress < 0.08 ? Math.sin(2 * Math.PI * 620 * t) * (1 - progress / 0.08) * 0.45 : 0;
+          sample = Math.floor(128 + (body * 0.85 + snap) * 112 * env);
+        } else if (keyStyle === 'gameboy') {
+          // Crisp warm Game Boy two-step menu blip (660 Hz -> 880 Hz, 25% pulse duty)
+          const freq = progress < 0.42 ? 660 : 880;
+          const phase = (freq * t) % 1;
+          const wave = phase < 0.25 ? 1 : -0.5;
+          const env = Math.max(0, 1 - progress * 1.15);
+          sample = Math.floor(128 + wave * 92 * env);
+        } else if (keyStyle === 'nokia') {
+          // Smooth Nokia keypad pip (warm 960Hz rounded square, zero harshness)
+          const freq = 960;
+          const env = Math.sin(progress * Math.PI);
+          const sine = Math.sin(2 * Math.PI * freq * t);
+          const softSq = Math.tanh(sine * 2.2);
+          sample = Math.floor(128 + softSq * 90 * env);
+        } else if (keyStyle === 'bubble') {
+          // Smooth rising retro pop/bloop
+          const freq = 340 + progress * 460;
+          const env = Math.sin(progress * Math.PI);
+          const wave = Math.sin(2 * Math.PI * freq * t);
+          sample = Math.floor(128 + wave * 105 * env);
+        } else {
+          // 'classic' (Original default sound preserved)
+          const freq = 520 - progress * 280;
+          const env = Math.max(0, 1 - progress * 1.4);
+          const wave = Math.sin(2 * Math.PI * freq * t) > 0 ? 1 : -1;
+          sample = Math.floor(128 + wave * 105 * env);
+        }
         break;
       }
       case 'shoot': {
@@ -228,8 +290,59 @@ export class RetroAudioEngine {
   private static soundUris: Partial<Record<ArcadeSound, string>> = {};
   private static isInitialized = false;
   private static isMuted = false;
+  private static keySoundStyle: KeypadSoundStyle = 'classic';
   private static melodyPlayer: any = null;
   private static notePlayer: any = null;
+
+  public static getKeySoundStyle(): KeypadSoundStyle {
+    return this.keySoundStyle;
+  }
+
+  public static setKeySoundStyle(style: KeypadSoundStyle, persist = true): void {
+    this.keySoundStyle = style;
+    if (persist) {
+      AsyncStorage.setItem(KEY_SOUND_STORAGE_KEY, style).catch(() => {});
+    }
+
+    const newUri = synthesizeRetroSoundUri('hit', style);
+    this.soundUris.hit = newUri;
+
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        const oldPool = this.pools.hit;
+        if (oldPool) {
+          oldPool.forEach((p) => {
+            try {
+              if (typeof p?.remove === 'function') p.remove();
+            } catch {}
+          });
+        }
+        const voiceList: any[] = [];
+        for (let v = 0; v < 3; v++) {
+          const player = SafeExpoAudio.createAudioPlayer(newUri, { keepAudioSessionActive: true });
+          if (player) {
+            player.volume = 1.0;
+            voiceList.push(player);
+          }
+        }
+        this.pools.hit = voiceList;
+        this.poolIndex.hit = 0;
+      } catch (err) {
+        console.warn('[RetroAudioEngine] Failed to refresh hit voices:', err);
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a1 = new Audio(newUri);
+        const a2 = new Audio(newUri);
+        a1.volume = 0.9;
+        a2.volume = 0.9;
+        this.pools.hit = [a1, a2];
+        this.poolIndex.hit = 0;
+      } catch {
+        // ignore
+      }
+    }
+  }
 
   public static setMuted(muted: boolean): void {
     this.isMuted = muted;
@@ -348,6 +461,15 @@ export class RetroAudioEngine {
     if (this.isInitialized) return;
     this.isInitialized = true;
 
+    try {
+      const savedStyle = await AsyncStorage.getItem(KEY_SOUND_STORAGE_KEY);
+      if (savedStyle && KEYPAD_SOUND_STYLES.some((s) => s.id === savedStyle)) {
+        this.keySoundStyle = savedStyle as KeypadSoundStyle;
+      }
+    } catch {
+      // ignore storage read failure
+    }
+
     const sounds: ArcadeSound[] = [
       'hit',
       'shoot',
@@ -361,7 +483,7 @@ export class RetroAudioEngine {
 
     // Pre-synthesize all sound URIs
     for (const s of sounds) {
-      this.soundUris[s] = synthesizeRetroSoundUri(s);
+      this.soundUris[s] = synthesizeRetroSoundUri(s, this.keySoundStyle);
     }
 
     // 1. Native Mobile Audio (expo-audio on Android / iOS local build)
