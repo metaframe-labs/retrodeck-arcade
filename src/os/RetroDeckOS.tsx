@@ -677,7 +677,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private dialR = 0;
   private dialC = 0;
   private dialBuffer = '';
-  private callState: 'idle' | 'ringing' | 'connected' | 'info' = 'idle';
+  private callState: 'idle' | 'ringing' | 'connected' | 'info' | 'warranty' = 'idle';
+  private warrantyPage = 0;
   private callTitle = '';
   private callSub = '';
   private callTimer = 0;
@@ -1136,6 +1137,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'phone') {
+      if (this.callState === 'warranty') {
+        if (dir === 'up' || dir === 'left') {
+          this.warrantyPage = (this.warrantyPage + 4) % 5;
+          return 'hit';
+        }
+        if (dir === 'down' || dir === 'right' || pressA) {
+          this.warrantyPage = (this.warrantyPage + 1) % 5;
+          return 'score';
+        }
+        return null;
+      }
+
       if (this.callState !== 'idle') {
         if (pressA) {
           if (this.callState === 'ringing') {
@@ -1184,7 +1197,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.callTimer = 0;
           return 'powerup';
         }
-        if (this.dialBuffer.length < 14) {
+        if (this.dialBuffer.length < 16) {
           this.dialBuffer += k;
         }
         RetroAudioEngine.playDialKey(k);
@@ -1197,6 +1210,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.callState = 'info';
           this.callTitle = 'IMEI SERIAL NO:';
           this.callSub = '350993-10-331000-8';
+          this.dialBuffer = '';
+        } else if (this.dialBuffer === '*#92702689#') {
+          this.callState = 'warranty';
+          this.warrantyPage = 0;
+          this.dialBuffer = '';
+          return 'powerup';
+        } else if (this.dialBuffer === '*#7780#') {
+          this.callState = 'info';
+          this.callTitle = 'FACTORY RESTORE';
+          this.callSub = '3310 ROM SETTINGS OK';
+          this.dialBuffer = '';
+        } else if (this.dialBuffer === '*#7370#') {
+          this.callState = 'info';
+          this.callTitle = 'DEEP FORMAT 3310';
+          this.callSub = '100 CARTS VERIFIED';
           this.dialBuffer = '';
         }
         return null;
@@ -2326,6 +2354,37 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderPhone(fg: string, bg: string) {
+    if (this.callState === 'warranty') {
+      const lifeMins = String(Math.floor(this.uptime / 60)).padStart(2, '0');
+      const lifeSecs = String(Math.floor(this.uptime % 60)).padStart(2, '0');
+      const pages = [
+        { hdr: '1/5 SERIAL NO:', val: '350993103310008', sub: 'NHM-5NX FINLAND' },
+        { hdr: '2/5 MADE DATE:', val: '092000', sub: 'SALO FACTORY FI' },
+        { hdr: '3/5 PURCHASING:', val: '112026', sub: 'ORIGINAL OWNER' },
+        { hdr: '4/5 REPAIRED:', val: '0000', sub: 'INDESTRUCTIBLE 3310' },
+        { hdr: '5/5 LIFE TIMER:', val: `0000:${lifeMins}:${lifeSecs}`, sub: 'TOTAL ACTIVE TIME' },
+      ];
+      const p = pages[this.warrantyPage];
+      return (
+        <View style={styles.centerBox}>
+          <View style={[styles.swBox, { borderColor: fg, width: '92%' }]}>
+            <Text style={[styles.swLbl, { color: fg, marginBottom: 4 }]}>
+              *#WAR0ANTY# ({p.hdr})
+            </Text>
+            <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
+              {p.val}
+            </Text>
+            <Text style={[styles.clockDate, { color: fg, marginTop: 4, marginBottom: 2 }]}>
+              {p.sub}
+            </Text>
+          </View>
+          <Text style={[styles.miniHint, { color: fg }]}>
+            [A] / [▼]: NEXT WARRANTY PAGE • [B]: EXIT
+          </Text>
+        </View>
+      );
+    }
+
     if (this.callState !== 'idle') {
       return (
         <View style={styles.centerBox}>
