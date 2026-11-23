@@ -135,7 +135,7 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelOn: '#2AA198',
     pixelGlow: 'rgba(42, 161, 152, 0.45)',
     scanlineColor: 'rgba(0, 0, 0, 0.25)',
-    bezelAccent: '#B58900',
+    bezelAccent: '#2AA198',
     textMuted: '#586E75',
   },
   oled: {
