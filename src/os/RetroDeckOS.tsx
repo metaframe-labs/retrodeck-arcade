@@ -15,6 +15,11 @@ import {
   KEYPAD_SOUND_STYLES,
 } from '../audio/RetroAudioEngine';
 import {
+  somaRadioService,
+  SOMA_CHANNELS,
+  SomaChannel,
+} from '../services/somaRadioService';
+import {
   BYOK_PROVIDERS,
   BYOKChatMessage,
   BYOKConfig,
@@ -43,6 +48,7 @@ type OsAppId =
   | 'boot'
   | 'desktop'
   | 'arcade'
+  | 'radio'
   | 'ai'
   | 'wap'
   | 'synth'
@@ -128,6 +134,7 @@ interface DesktopIcon {
 
 const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
+  { id: 'radio', label: 'RADIO', icon: 'radio' },
   { id: 'ai', label: 'CHAT', icon: 'chatbubble-ellipses' },
   { id: 'wap', label: 'WAP', icon: 'globe' },
   { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
@@ -137,7 +144,6 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'calc', label: 'CALC', icon: 'calculator' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
   { id: 'paint', label: 'PAINT', icon: 'brush' },
-  { id: 'term', label: 'SHELL', icon: 'terminal' },
   { id: 'setup', label: 'SETUP', icon: 'settings' },
 ];
 
@@ -903,6 +909,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.keyLocked) return '3310 KEYGUARD';
     if (this.app === 'boot') return 'BIOS BOOT';
     if (this.app === 'desktop') return 'RETRODECK OS';
+    if (this.app === 'radio') {
+      const ch = somaRadioService.getChannel();
+      return `FM ${ch.freq} // ${ch.name}`;
+    }
     if (this.app === 'synth') return '3310 COMPOSER';
     if (this.app === 'sms') return '3310 PIC-SMS';
     if (this.app === 'wap') return 'NOKIA WAP 1.1';
@@ -926,6 +936,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return 'D-PAD: Select Icon • [A]: Open • KBD: Keyboard';
       case 'arcade':
         return '[▲]/[▼]: Browse 100 Games • [A]: Launch • [B]: Desktop';
+      case 'radio':
+        return '[◀]/[▶]: Tune Station • [A]: Play/Stop • [▲]/[▼]: Vol • [B]: Desktop';
       case 'ai':
         return this.aiTab === 'chat'
           ? '[▲]/[▼]: Scroll • [A]: Type/Send • [▶]: BYOK Setup • [B]: Exit'
@@ -1360,7 +1372,36 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.wapFetchedOnce = true;
           this.fetchWapPage(this.wapUrl);
         }
+        if (this.app === 'radio') {
+          somaRadioService.fetchNowPlaying();
+        }
         return 'score';
+      }
+      return null;
+    }
+
+    if (this.app === 'radio') {
+      if (dir === 'left') {
+        somaRadioService.prevChannel();
+        return 'hit';
+      }
+      if (dir === 'right') {
+        somaRadioService.nextChannel();
+        return 'hit';
+      }
+      if (dir === 'up') {
+        const curVol = somaRadioService.getVolume();
+        somaRadioService.setVolume(Math.min(1, curVol + 0.1));
+        return 'score';
+      }
+      if (dir === 'down') {
+        const curVol = somaRadioService.getVolume();
+        somaRadioService.setVolume(Math.max(0, curVol - 0.1));
+        return 'score';
+      }
+      if (pressA) {
+        somaRadioService.togglePlay();
+        return somaRadioService.getIsPlaying() ? 'hit' : 'powerup';
       }
       return null;
     }
@@ -2309,6 +2350,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <View style={styles.osBody}>
           {this.app === 'desktop' && this.renderDesktop(fg, bg)}
           {this.app === 'arcade' && this.renderArcadeBrowser(fg, bg)}
+          {this.app === 'radio' && this.renderRadio(fg, bg)}
           {this.app === 'ai' && this.renderAiApp(fg, bg)}
           {this.app === 'wap' && this.renderWap(fg, bg)}
           {this.app === 'synth' && this.renderSynth(fg, bg)}
@@ -2328,6 +2370,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <Text style={[styles.footerTxt, { color: fg }]} numberOfLines={1}>
             {this.app === 'desktop'
               ? '[A] OPEN   [D-PAD] MOVE   [KBD] KEYBOARD'
+              : this.app === 'radio'
+              ? '[A] PLAY/STOP   [◀/▶] STATION   [▲/▼] VOL   [B] DESKTOP'
               : this.app === 'ai'
               ? '[A] KBD/SEND   [◀/▶] TAB   [B] DESKTOP'
               : this.app === 'sms'
@@ -2361,6 +2405,172 @@ export class RetroDeckOS implements ArcadeGameInstance {
             </View>
           );
         })}
+      </View>
+    );
+  }
+
+  private renderRadio(fg: string, bg: string) {
+    const channel = somaRadioService.getChannel();
+    const isPlaying = somaRadioService.getIsPlaying();
+    const isLoading = somaRadioService.getIsLoading();
+    const song = somaRadioService.getCurrentSong();
+    const volPercent = Math.round(somaRadioService.getVolume() * 100);
+    const channelIdx = somaRadioService.getChannelIndex();
+    const totalChannels = SOMA_CHANNELS.length;
+
+    // Animated visualizer bars simulation
+    const bars = [4, 7, 12, 16, 9, 14, 8, 15, 11, 6, 13, 10, 5, 8];
+
+    return (
+      <View style={styles.listWrap}>
+        {/* Radio Header / Frequency & Status */}
+        <View
+          style={[
+            styles.aiPromptBar,
+            {
+              borderColor: fg,
+              backgroundColor: isPlaying ? fg : 'transparent',
+              marginBottom: 4,
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.aiPromptTxt,
+              { color: isPlaying ? bg : fg, fontWeight: '900' },
+            ]}
+          >
+            {isPlaying ? '● ON AIR' : isLoading ? '◌ TUNING...' : '○ STANDBY'} [{channel.freq}]
+          </Text>
+          <Text
+            style={[
+              styles.aiPromptTxt,
+              { color: isPlaying ? bg : fg, fontWeight: '800' },
+            ]}
+          >
+            VOL {volPercent}%
+          </Text>
+        </View>
+
+        {/* Big Station Display Card */}
+        <View
+          style={[
+            styles.calcScreen,
+            {
+              borderColor: fg,
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingVertical: 4,
+              height: 52,
+              marginBottom: 4,
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.clockDate,
+              { color: fg, marginBottom: 1, letterSpacing: 1 },
+            ]}
+          >
+            SomaFM CH {channelIdx + 1}/{totalChannels} • {channel.genre}
+          </Text>
+          <Text
+            style={[
+              styles.calcNum,
+              { color: fg, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
+            ]}
+            numberOfLines={1}
+          >
+            {channel.name}
+          </Text>
+          <Text
+            style={[
+              styles.miniHint,
+              { color: fg, fontSize: 7.5, opacity: 0.85, marginTop: 1 },
+            ]}
+            numberOfLines={1}
+          >
+            {channel.description}
+          </Text>
+        </View>
+
+        {/* Live Now Playing Info & Visualizer */}
+        <View
+          style={[
+            styles.aiChatBox,
+            {
+              borderColor: fg,
+              paddingVertical: 3,
+              paddingHorizontal: 6,
+              marginBottom: 4,
+              justifyContent: 'space-between',
+            },
+          ]}
+        >
+          <View>
+            <Text
+              style={[
+                styles.miniHint,
+                { color: fg, fontSize: 7.5, fontWeight: '900' },
+              ]}
+            >
+              NOW PLAYING:
+            </Text>
+            <Text
+              style={[
+                styles.aiChatLine,
+                { color: fg, fontSize: 9.5, lineHeight: 13 },
+              ]}
+              numberOfLines={1}
+            >
+              {song?.title || (isPlaying ? 'LIVE STREAMING...' : 'PRESS [A] TO TUNE IN')}
+            </Text>
+            {song?.artist ? (
+              <Text
+                style={[
+                  styles.miniHint,
+                  { color: fg, fontSize: 8, opacity: 0.9 },
+                ]}
+                numberOfLines={1}
+              >
+                BY: {song.artist}
+              </Text>
+            ) : null}
+          </View>
+
+          {/* Retro Spectrum Bars */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              height: 18,
+              marginTop: 2,
+              paddingHorizontal: 4,
+            }}
+          >
+            {bars.map((maxH, i) => {
+              const activeH = isPlaying
+                ? Math.max(3, Math.min(18, Math.round(((Math.sin((this.uptime * 10) + i) + 1) / 2) * maxH + 3)))
+                : 2;
+              return (
+                <View
+                  key={i}
+                  style={{
+                    width: 7,
+                    height: activeH,
+                    backgroundColor: fg,
+                    borderRadius: 1,
+                  }}
+                />
+              );
+            })}
+          </View>
+        </View>
       </View>
     );
   }
