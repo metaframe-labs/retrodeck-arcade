@@ -45,6 +45,7 @@ export interface RetroPalette {
   pixelGlow: string;
   scanlineColor: string;
   bezelAccent: string;
+  actionAccent?: string;
   textMuted: string;
   isLightLcd?: boolean;
   // Hardware chassis & tactile controls shell colors
@@ -264,7 +265,8 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     pixelOn: '#E6ECEF',
     pixelGlow: 'rgba(230, 236, 239, 0.35)',
     scanlineColor: 'rgba(0, 0, 0, 0.24)',
-    bezelAccent: '#FF3B47',
+    bezelAccent: '#D1D5DB',
+    actionAccent: '#EE1D23',
     textMuted: '#737D84',
     chassisBg: '#050506',
     deckBg: '#0B0B0D',

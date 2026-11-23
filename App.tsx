@@ -678,7 +678,12 @@ function RetroDeckConsole() {
               }}
               style={styles.chassisBadgeContainer}
             >
-              <View style={[styles.statusLed, { backgroundColor: palette.bezelAccent }]} />
+              <View
+                style={[
+                  styles.statusLed,
+                  { backgroundColor: palette.actionAccent || palette.bezelAccent },
+                ]}
+              />
               <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
                 {keyboardMode ? 'QWERTY COMMUNICATOR DECK [TAP FOR PAD]' : 'ARCADE CONTROLLER DECK [TAP FOR KBD]'}
               </Text>
@@ -713,7 +718,7 @@ function RetroDeckConsole() {
             ) : (
               <RetroKeypad
                 labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
-                accentColor={palette.bezelAccent}
+                accentColor={palette.actionAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 centerBg={palette.bezelBg}

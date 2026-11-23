@@ -175,7 +175,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                     <View
                       style={[
                         styles.miniLed,
-                        { backgroundColor: theme.bezelAccent },
+                        { backgroundColor: theme.actionAccent || theme.bezelAccent },
                       ]}
                     />
                     <Text style={styles.catBadge}>{theme.category}</Text>
@@ -228,7 +228,12 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                   </Text>
                   <View style={styles.swatchBar}>
                     <View style={[styles.swatchChip, { backgroundColor: theme.chassisBg }]} />
-                    <View style={[styles.swatchChip, { backgroundColor: theme.bezelAccent }]} />
+                    <View
+                      style={[
+                        styles.swatchChip,
+                        { backgroundColor: theme.actionAccent || theme.bezelAccent },
+                      ]}
+                    />
                     <View style={[styles.swatchChip, { backgroundColor: theme.pixelOn }]} />
                   </View>
                 </View>
