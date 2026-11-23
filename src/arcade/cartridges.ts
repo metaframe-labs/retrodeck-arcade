@@ -10,8 +10,33 @@ import { HeliRescueGame } from './games/HeliRescueGame';
 import { SokobanGame } from './games/SokobanGame';
 import { TowerClimberGame } from './games/TowerClimberGame';
 import { PacBoyGame } from './games/PacBoyGame';
+import { FroggerGame } from './games/FroggerGame';
 
 export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  {
+    id: 'frogger-retro',
+    title: 'FROGGER DX',
+    subtitle: 'Classic Highway Traffic & River Crossing',
+    genre: 'ARCADE ACTION',
+    year: '1981',
+    defaultPalette: 'nokia',
+    controlsHint: 'D-PAD: Hop across traffic & ride floating logs to 5 home lilypads!',
+    gamepadLabels: {
+      up: 'HOP ▲',
+      down: '▼',
+      left: '◀',
+      right: '▶',
+      a: 'START',
+      b: 'PAUSE',
+      upLabel: '▲',
+      downLabel: '▼',
+      leftLabel: '◀',
+      rightLabel: '▶',
+      aLabel: 'A',
+      bLabel: 'B',
+    },
+    createGame: (hs = 0) => new FroggerGame(hs),
+  },
   {
     id: 'pac-boy',
     title: 'PAC-BOY DX',
