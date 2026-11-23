@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ArcadeGameInstance, ArcadeStats } from './types';
 import { RetroPalette } from '../theme/palettes';
@@ -14,6 +14,9 @@ interface ArcadeScreenProps {
   cartridgeTitle: string;
   isOsMode?: boolean;
   cartCount?: number;
+  onRestartGame?: () => void;
+  onReturnToOS?: () => void;
+  gameOverMenuSelection?: number; // 0: RESTART, 1: OS DESKTOP
 }
 
 export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
@@ -26,6 +29,9 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   cartridgeTitle,
   isOsMode = false,
   cartCount = 100,
+  onRestartGame,
+  onReturnToOS,
+  gameOverMenuSelection = 0,
 }) => {
   const [size, setSize] = useState({ w: 320, h: 240 });
 
@@ -360,6 +366,75 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                   </Text>
                 )}
               </View>
+
+              {/* Game Over Navigation Menu: [A] RESTART or [B] OS MENU */}
+              {!isOsMode && (
+                <View style={styles.gameOverActionRow}>
+                  <Pressable
+                    onPress={onRestartGame}
+                    style={[
+                      styles.gameOverActionBtn,
+                      gameOverMenuSelection === 0
+                        ? {
+                            backgroundColor: palette.pixelOn,
+                            borderColor: palette.pixelOn,
+                          }
+                        : {
+                            backgroundColor: 'transparent',
+                            borderColor: `${palette.pixelOn}55`,
+                          },
+                    ]}
+                  >
+                    <Ionicons
+                      name="refresh"
+                      size={12}
+                      color={gameOverMenuSelection === 0 ? palette.screenBg : palette.pixelOn}
+                    />
+                    <Text
+                      style={[
+                        styles.gameOverActionText,
+                        {
+                          color: gameOverMenuSelection === 0 ? palette.screenBg : palette.pixelOn,
+                        },
+                      ]}
+                    >
+                      [A] RESTART
+                    </Text>
+                  </Pressable>
+
+                  <Pressable
+                    onPress={onReturnToOS}
+                    style={[
+                      styles.gameOverActionBtn,
+                      gameOverMenuSelection === 1
+                        ? {
+                            backgroundColor: palette.pixelOn,
+                            borderColor: palette.pixelOn,
+                          }
+                        : {
+                            backgroundColor: 'transparent',
+                            borderColor: `${palette.pixelOn}55`,
+                          },
+                    ]}
+                  >
+                    <Ionicons
+                      name="desktop-outline"
+                      size={12}
+                      color={gameOverMenuSelection === 1 ? palette.screenBg : palette.pixelOn}
+                    />
+                    <Text
+                      style={[
+                        styles.gameOverActionText,
+                        {
+                          color: gameOverMenuSelection === 1 ? palette.screenBg : palette.pixelOn,
+                        },
+                      ]}
+                    >
+                      [B] EXIT OS
+                    </Text>
+                  </Pressable>
+                </View>
+              )}
             </View>
           </View>
         )}
@@ -662,5 +737,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 3,
+  },
+  gameOverActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  gameOverActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1.5,
+  },
+  gameOverActionText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    fontFamily: 'monospace',
+    letterSpacing: 0.5,
   },
 });

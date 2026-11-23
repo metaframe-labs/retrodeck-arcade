@@ -71,10 +71,19 @@ function RetroDeckConsole() {
   const [bayVisible, setBayVisible] = useState(false);
   const [devCartVisible, setDevCartVisible] = useState(false);
   const [highScores, setHighScores] = useState<Record<string, number>>({});
+  const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
   const beepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const paletteIdRef = useRef<RetroPaletteId>(paletteId);
   const scanlinesRef = useRef<boolean>(scanlines);
   const highScoresRef = useRef<Record<string, number>>(highScores);
+  const prevInputRef = useRef<ArcadeInput>({
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    a: false,
+    b: false,
+  });
   paletteIdRef.current = paletteId;
   scanlinesRef.current = scanlines;
   highScoresRef.current = highScores;
@@ -188,6 +197,33 @@ function RetroDeckConsole() {
         if (currentStats.score > 0) {
           HighScoreService.recordScore(activeCart.id, currentStats.score);
         }
+
+        // Game Over Global Controls: Navigate [A] RESTART or [B] EXIT OS
+        if (currentStats.gameOver && !isPaused) {
+          const input = inputRef.current;
+          const prev = prevInputRef.current;
+
+          // Toggle selection with Left/Right/Up/Down
+          if ((input.left && !prev.left) || (input.up && !prev.up)) {
+            setGameOverMenuSelection(0);
+            handleSoundEvent('hit');
+          } else if ((input.right && !prev.right) || (input.down && !prev.down)) {
+            setGameOverMenuSelection(1);
+            handleSoundEvent('hit');
+          }
+
+          // [A] Button confirms Restart (or active selection)
+          if (input.a && !prev.a) {
+            handleReset();
+            handleSoundEvent('powerup');
+          }
+          // [B] Button confirms Exit to OS Desktop
+          else if (input.b && !prev.b) {
+            handleGoHomeOS();
+          }
+        }
+
+        prevInputRef.current = { ...inputRef.current };
       } else {
         accumulator = 0;
       }
@@ -285,6 +321,7 @@ function RetroDeckConsole() {
     }
     gameRef.current.reset();
     setStats(gameRef.current.getStats());
+    setGameOverMenuSelection(0);
     setIsPaused(false);
   };
 
@@ -376,6 +413,9 @@ function RetroDeckConsole() {
           cartridgeTitle={osMode ? osRef.current.getCurrentTitle() : activeCart.title}
           isOsMode={osMode}
           cartCount={ARCADE_CARTRIDGES.length}
+          onRestartGame={handleReset}
+          onReturnToOS={handleGoHomeOS}
+          gameOverMenuSelection={gameOverMenuSelection}
         />
 
         {/* Controls Hint Strip */}
