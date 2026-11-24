@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Purchases, {
   CustomerInfo,
   PurchasesOffering,
@@ -9,6 +10,7 @@ import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
 export const REVENUECAT_API_KEY = 'test_sIXFfTgPfDmQXGqlTkwVLEBbVWJ';
 export const ENTITLEMENT_ID = 'retrodeck_os_pro';
+const DEBUG_REVOKED_STORAGE_KEY = '@retrodeck8_debug_pro_revoked_v1';
 
 export interface SubscriptionStatus {
   isPro: boolean;
@@ -73,6 +75,12 @@ class RevenueCatService {
     if (this.isConfigured) return;
 
     try {
+      // Load persisted debug revoke flag
+      const savedRevoked = await AsyncStorage.getItem(DEBUG_REVOKED_STORAGE_KEY);
+      if (savedRevoked === '1') {
+        this.debugRevoked = true;
+      }
+
       // Don't crash on web or unsupported simulators without billing
       if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
         console.log('[RevenueCat] Platform is not iOS or Android, running in mock mode.');
@@ -143,6 +151,7 @@ class RevenueCatService {
    */
   public async resetProDebug(): Promise<SubscriptionStatus> {
     this.debugRevoked = true;
+    AsyncStorage.setItem(DEBUG_REVOKED_STORAGE_KEY, '1').catch(() => {});
     try {
       if (this.isConfigured && Purchases.isAnonymous && Purchases.logOut) {
         const isAnon = await Purchases.isAnonymous();
@@ -268,6 +277,7 @@ class RevenueCatService {
    */
   public async purchasePackage(pkg: PurchasesPackage): Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }> {
     this.debugRevoked = false;
+    AsyncStorage.removeItem(DEBUG_REVOKED_STORAGE_KEY).catch(() => {});
     if (!this.isConfigured) return { success: false, isPro: false };
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg);
@@ -288,6 +298,7 @@ class RevenueCatService {
    */
   public async restorePurchases(): Promise<SubscriptionStatus> {
     this.debugRevoked = false;
+    AsyncStorage.removeItem(DEBUG_REVOKED_STORAGE_KEY).catch(() => {});
     if (!this.isConfigured) return this.currentStatus;
     try {
       const customerInfo = await Purchases.restorePurchases();
