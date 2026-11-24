@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -402,36 +402,6 @@ function RetroDeckConsole() {
     setIsPaused(false);
   };
 
-  // Full-Page Cartridge Vault Screen
-  if (bayVisible) {
-    return (
-      <View style={[styles.root, { backgroundColor: palette.chassisBg }]}>
-        <StatusBar style="light" />
-        <CartridgeBayPage
-          cartridges={ARCADE_CARTRIDGES}
-          activeCartridgeId={activeCart.id}
-          accentColor={palette.bezelAccent}
-          highScores={highScores}
-          onSelectCartridge={(cart) => {
-            handleSelectCartridge(cart);
-            setBayVisible(false);
-          }}
-          onOpenDevCart={() => {
-            setBayVisible(false);
-            setDevCartVisible(true);
-          }}
-          onBack={() => setBayVisible(false)}
-        />
-        <DevCartModal
-          visible={devCartVisible}
-          accentColor={palette.bezelAccent}
-          onClose={() => setDevCartVisible(false)}
-          onLoadCustomCartridge={handleBurnCustomCartridge}
-        />
-      </View>
-    );
-  }
-
   return (
     <View
       style={[
@@ -772,6 +742,32 @@ function RetroDeckConsole() {
           </View>
         </View>
       </View>
+
+      {/* Full-Page Cartridge Vault Modal (smooth slide transition, keeps console mounted) */}
+      <Modal
+        visible={bayVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setBayVisible(false)}
+      >
+        <View style={[styles.root, { backgroundColor: palette.chassisBg }]}>
+          <CartridgeBayPage
+            cartridges={ARCADE_CARTRIDGES}
+            activeCartridgeId={activeCart.id}
+            accentColor={palette.bezelAccent}
+            highScores={highScores}
+            onSelectCartridge={(cart) => {
+              handleSelectCartridge(cart);
+              setBayVisible(false);
+            }}
+            onOpenDevCart={() => {
+              setBayVisible(false);
+              setDevCartVisible(true);
+            }}
+            onBack={() => setBayVisible(false)}
+          />
+        </View>
+      </Modal>
 
       {/* In-App Dev Cart Compiler Modal */}
       <DevCartModal
