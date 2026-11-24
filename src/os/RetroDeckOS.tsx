@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +51,10 @@ export interface RetroDeckOSCallbacks {
   getIsPro?: () => boolean;
   onOpenPaywall?: () => void;
   onOpenCustomerCenter?: () => void;
+  onPurchasePackage?: (type: 'monthly' | 'yearly' | 'lifetime') => Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }>;
+  onRestorePurchases?: () => Promise<boolean>;
+  getProPackages?: () => { type: 'monthly' | 'yearly' | 'lifetime'; title: string; priceString: string; badge?: string }[];
+  getProExpirationDate?: () => string | null;
 }
 
 type OsAppId =
@@ -71,7 +75,8 @@ type OsAppId =
   | 'notes'
   | 'stats'
   | 'term'
-  | 'setup';
+  | 'setup'
+  | 'pro';
 
 interface PixelSpan {
   key: string;
@@ -990,6 +995,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Setup state
   private setupIdx = 0;
 
+  // RetroDeck Pro In-LCD App state
+  private proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
+  private proStatusMsg = '';
+  private proBusy = false;
+
   // Nokia 3310 Phone / SMS / Profiles state
   private dialR = 0;
   private dialC = 0;
@@ -1203,6 +1213,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit';
       case 'setup':
         return '[▲]/[▼]: Setting • [A]: Toggle/Run • [B]: Desktop';
+      case 'pro':
+        return '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back';
       default:
         return 'D-PAD: Navigate • [A]: Select • [B]: Back';
     }
@@ -2595,11 +2607,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
         else if (this.setupIdx === 2) this.toggleClockFace();
         else if (this.setupIdx === 3) this.cb.onOpenCartVault();
         else if (this.setupIdx === 4) {
-          if (isPro) {
-            this.cb.onOpenCustomerCenter?.();
-          } else {
-            this.cb.onOpenPaywall?.();
-          }
+          this.app = 'pro';
+          this.proIdx = 0;
+          this.proStatusMsg = '';
           return 'powerup';
         }
         else if (this.setupIdx === 5) {
@@ -2607,6 +2617,58 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.bootTimer = 0;
         }
         return 'powerup';
+      }
+      return null;
+    }
+
+    if (this.app === 'pro') {
+      const isPro = this.cb.getIsPro?.() ?? false;
+      const totalProItems = 4; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore
+      if (dir === 'up') this.proIdx = (this.proIdx + totalProItems - 1) % totalProItems;
+      if (dir === 'down') this.proIdx = (this.proIdx + 1) % totalProItems;
+      if (dir) return 'hit';
+
+      if (pressA) {
+        if (this.proBusy) return null;
+
+        if (this.proIdx === 3) {
+          // Restore purchases
+          this.proBusy = true;
+          this.proStatusMsg = 'RESTORING PURCHASES...';
+          this.cb.onRestorePurchases?.().then((restored) => {
+            this.proBusy = false;
+            this.proStatusMsg = restored ? 'PURCHASES RESTORED!' : 'NO PURCHASES FOUND.';
+          }).catch(() => {
+            this.proBusy = false;
+            this.proStatusMsg = 'RESTORE ERROR. TRY AGAIN.';
+          });
+          return 'powerup';
+        }
+
+        const packageTypes: ('monthly' | 'yearly' | 'lifetime')[] = ['monthly', 'yearly', 'lifetime'];
+        const targetType = packageTypes[this.proIdx];
+        if (targetType) {
+          if (isPro) {
+            this.proStatusMsg = 'PRO IS ALREADY ACTIVE!';
+            return 'score';
+          }
+          this.proBusy = true;
+          this.proStatusMsg = 'CONNECTING TO STORE...';
+          this.cb.onPurchasePackage?.(targetType).then((res) => {
+            this.proBusy = false;
+            if (res.success || res.isPro) {
+              this.proStatusMsg = 'WELCOME TO PRO!';
+            } else if (res.userCancelled) {
+              this.proStatusMsg = 'TRANSACTION CANCELLED.';
+            } else {
+              this.proStatusMsg = 'TRANSACTION FAILED.';
+            }
+          }).catch((err) => {
+            this.proBusy = false;
+            this.proStatusMsg = 'PURCHASE ERROR.';
+          });
+          return 'powerup';
+        }
       }
       return null;
     }
@@ -3313,6 +3375,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'stats' && this.renderStats(fg, bg)}
           {this.app === 'term' && this.renderTerm(fg, bg)}
           {this.app === 'setup' && this.renderSetup(fg, bg)}
+          {this.app === 'pro' && this.renderPro(fg, bg)}
         </View>
 
         {/* OS Footer Taskbar */}
@@ -4637,6 +4700,165 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </Text>
           <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx < maxStart ? 0.9 : 0.2 }]}>
             ▼ MORE
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  private renderPro(fg: string, bg: string) {
+    const isPro = this.cb.getIsPro?.() ?? false;
+    const expiration = this.cb.getProExpirationDate?.();
+    const pkgs = this.cb.getProPackages?.() ?? [
+      { type: 'monthly', title: 'MONTHLY ACCESS', priceString: '$2.99 / MO', badge: 'FLEXIBLE' },
+      { type: 'yearly', title: 'YEARLY PASS', priceString: '$19.99 / YR', badge: 'SAVE 45%' },
+      { type: 'lifetime', title: 'LIFETIME VIP', priceString: '$49.99', badge: 'BEST VALUE' },
+    ];
+
+    const menuItems = [
+      ...pkgs.map((p) => ({
+        id: p.type,
+        label: p.title,
+        price: p.priceString,
+        badge: p.badge,
+      })),
+      {
+        id: 'restore',
+        label: 'RESTORE PURCHASES',
+        price: 'SYNC ACCOUNT',
+        badge: 'ICLOUD/STORE',
+      },
+    ];
+
+    return (
+      <View style={[styles.listWrap, { paddingVertical: 2, paddingHorizontal: 4 }]}>
+        {/* Header Bar */}
+        <View style={[styles.compHeader, { marginBottom: 2, paddingBottom: 2, borderBottomWidth: 1, borderBottomColor: fg }]}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0, fontSize: 10, letterSpacing: 1 }]}>
+            {isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE TO PRO'}
+          </Text>
+          <Text style={[styles.listMeta, { color: fg, fontSize: 8 }]}>
+            {this.proIdx + 1}/{menuItems.length}
+          </Text>
+        </View>
+
+        {/* Status / Perks Banner */}
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: fg,
+            paddingVertical: 2,
+            paddingHorizontal: 4,
+            marginBottom: 3,
+            backgroundColor: isPro ? fg : 'transparent',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              fontSize: 8,
+              fontWeight: 'bold',
+              color: isPro ? bg : fg,
+              textAlign: 'center',
+            }}
+            numberOfLines={1}
+          >
+            {isPro
+              ? (expiration ? `PRO VALID UNTIL: ${new Date(expiration).toLocaleDateString()}` : 'LIFETIME ALL-ACCESS UNLOCKED')
+              : 'ALL 100 CARTS • UNLIMITED AI • DEV VAULT'}
+          </Text>
+        </View>
+
+        {/* Package Rows */}
+        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+          {menuItems.map((item, idx) => {
+            const sel = idx === this.proIdx;
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.setupRow,
+                  {
+                    borderColor: fg,
+                    backgroundColor: sel ? fg : 'transparent',
+                    marginBottom: 2,
+                    paddingVertical: 2.5,
+                    paddingHorizontal: 4,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 4 }}>
+                  <Text
+                    style={{
+                      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                      fontSize: 9,
+                      fontWeight: 'bold',
+                      color: sel ? bg : fg,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {sel ? '▶ ' : '  '}
+                    {item.label}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  {item.badge ? (
+                    <Text
+                      style={{
+                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                        fontSize: 7,
+                        color: sel ? bg : fg,
+                        opacity: 0.85,
+                        marginRight: 4,
+                        borderWidth: 0.5,
+                        borderColor: sel ? bg : fg,
+                        paddingHorizontal: 2,
+                      }}
+                    >
+                      {item.badge}
+                    </Text>
+                  ) : null}
+                  <Text
+                    style={{
+                      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                      fontSize: 8.5,
+                      fontWeight: '900',
+                      color: sel ? bg : fg,
+                    }}
+                  >
+                    {item.price}
+                  </Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Action Prompt / Status Message */}
+        <View style={{ borderTopWidth: 1, borderTopColor: fg, paddingTop: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text
+            style={{
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              fontSize: 7.5,
+              fontWeight: 'bold',
+              color: fg,
+            }}
+            numberOfLines={1}
+          >
+            {this.proStatusMsg ? this.proStatusMsg : (this.proIdx === 3 ? '[A] RESTORE PURCHASES' : (isPro ? '[A] PLAN DETAILS' : '[A] BUY SELECTED PLAN'))}
+          </Text>
+          <Text
+            style={{
+              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+              fontSize: 7.5,
+              color: fg,
+              opacity: 0.8,
+            }}
+          >
+            [B] BACK
           </Text>
         </View>
       </View>

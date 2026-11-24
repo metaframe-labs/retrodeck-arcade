@@ -131,7 +131,9 @@ function RetroDeckConsole() {
   // Initialize Retro Synthesizer & Subscribe to High Scores
   useEffect(() => {
     RetroAudioEngine.init().catch(() => {});
-    revenueCatService.initialize().catch(() => {});
+    revenueCatService.initialize().then(() => {
+      revenueCatService.getPackages().catch(() => {});
+    }).catch(() => {});
     const unsubscribeRC = revenueCatService.subscribe((status: SubscriptionStatus) => {
       setIsPro(status.isPro);
     });
@@ -404,6 +406,13 @@ function RetroDeckConsole() {
       onOpenCustomerCenter: () => {
         revenueCatService.presentCustomerCenter();
       },
+      onPurchasePackage: (type) => revenueCatService.purchasePackageByType(type),
+      onRestorePurchases: async () => {
+        const status = await revenueCatService.restorePurchases();
+        return status.isPro;
+      },
+      getProPackages: () => revenueCatService.getCachedPackages(),
+      getProExpirationDate: () => revenueCatService.getStatus().expirationDate,
     })
   );
 

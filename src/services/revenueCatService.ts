@@ -17,6 +17,17 @@ export interface SubscriptionStatus {
   customerInfo: CustomerInfo | null;
 }
 
+export type ProPackageType = 'monthly' | 'yearly' | 'lifetime';
+
+export interface ProPackageInfo {
+  type: ProPackageType;
+  title: string;
+  priceString: string;
+  badge?: string;
+  description: string;
+  rcPackage: PurchasesPackage | null;
+}
+
 class RevenueCatService {
   private isConfigured = false;
   private listeners: ((status: SubscriptionStatus) => void)[] = [];
@@ -26,6 +37,33 @@ class RevenueCatService {
     expirationDate: null,
     customerInfo: null,
   };
+
+  private cachedPackages: ProPackageInfo[] = [
+    {
+      type: 'monthly',
+      title: 'MONTHLY ACCESS',
+      priceString: '$2.99 / MO',
+      badge: 'FLEXIBLE',
+      description: 'Auto-renewing monthly subscription',
+      rcPackage: null,
+    },
+    {
+      type: 'yearly',
+      title: 'YEARLY PASS',
+      priceString: '$19.99 / YR',
+      badge: 'SAVE 45%',
+      description: 'Full year of RetroDeck Pro access',
+      rcPackage: null,
+    },
+    {
+      type: 'lifetime',
+      title: 'LIFETIME VIP',
+      priceString: '$49.99',
+      badge: 'BEST VALUE',
+      description: 'One-time payment for forever Pro access',
+      rcPackage: null,
+    },
+  ];
 
   /**
    * Initializes RevenueCat SDK with API key and configures listener
@@ -107,6 +145,74 @@ class RevenueCatService {
     return () => {
       this.listeners = this.listeners.filter((l) => l !== listener);
     };
+  }
+
+  /**
+   * Fetch current offerings and update package metadata (Monthly, Yearly, Lifetime)
+   */
+  public async getPackages(): Promise<ProPackageInfo[]> {
+    if (!this.isConfigured) return this.cachedPackages;
+    try {
+      const offerings = await Purchases.getOfferings();
+      if (offerings.current && offerings.current.availablePackages.length > 0) {
+        const pkgs = offerings.current.availablePackages;
+        const monthly = pkgs.find(
+          (p) => p.packageType === 'MONTHLY' || p.identifier.toLowerCase().includes('monthly')
+        );
+        const yearly = pkgs.find(
+          (p) => p.packageType === 'ANNUAL' || p.identifier.toLowerCase().includes('annual') || p.identifier.toLowerCase().includes('yearly')
+        );
+        const lifetime = pkgs.find(
+          (p) => p.packageType === 'LIFETIME' || p.identifier.toLowerCase().includes('lifetime')
+        );
+
+        this.cachedPackages = [
+          {
+            type: 'monthly',
+            title: 'MONTHLY ACCESS',
+            priceString: monthly?.product?.priceString ? `${monthly.product.priceString} / MO` : '$2.99 / MO',
+            badge: 'FLEXIBLE',
+            description: monthly?.product?.description || 'Auto-renewing monthly subscription',
+            rcPackage: monthly || null,
+          },
+          {
+            type: 'yearly',
+            title: 'YEARLY PASS',
+            priceString: yearly?.product?.priceString ? `${yearly.product.priceString} / YR` : '$19.99 / YR',
+            badge: 'SAVE 45%',
+            description: yearly?.product?.description || 'Full year of RetroDeck Pro access',
+            rcPackage: yearly || null,
+          },
+          {
+            type: 'lifetime',
+            title: 'LIFETIME VIP',
+            priceString: lifetime?.product?.priceString || '$49.99',
+            badge: 'BEST VALUE',
+            description: lifetime?.product?.description || 'One-time payment for forever Pro access',
+            rcPackage: lifetime || null,
+          },
+        ];
+      }
+    } catch (e) {
+      console.warn('[RevenueCat] Could not fetch live packages, using defaults:', e);
+    }
+    return this.cachedPackages;
+  }
+
+  public getCachedPackages(): ProPackageInfo[] {
+    return this.cachedPackages;
+  }
+
+  /**
+   * Purchase package by package type ('monthly' | 'yearly' | 'lifetime')
+   */
+  public async purchasePackageByType(type: ProPackageType): Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }> {
+    const pkgInfo = this.cachedPackages.find((p) => p.type === type);
+    if (pkgInfo?.rcPackage) {
+      return this.purchasePackage(pkgInfo.rcPackage);
+    }
+    // If running in development/simulator or RC package not returned yet, try paywall or simulate
+    return this.presentPaywall().then((isPro) => ({ success: isPro, isPro }));
   }
 
   /**
