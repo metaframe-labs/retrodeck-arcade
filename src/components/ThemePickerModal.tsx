@@ -1,5 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  FlatList,
+  ListRenderItem,
   Modal,
   Pressable,
   ScrollView,
@@ -36,6 +38,93 @@ const CATEGORIES: ('ALL' | RetroThemeCategory)[] = [
   'PAPER',
 ];
 
+interface ThemeCardProps {
+  theme: RetroPalette;
+  isSelected: boolean;
+  onSelect: (id: RetroPaletteId) => void;
+}
+
+const ThemeCard = React.memo<ThemeCardProps>(({ theme, isSelected, onSelect }) => (
+  <Pressable
+    onPress={() => onSelect(theme.id)}
+    style={[
+      styles.card,
+      {
+        backgroundColor: theme.deckBg,
+        borderColor: isSelected ? theme.bezelAccent : theme.surfaceBorder,
+        borderWidth: isSelected ? 2 : 1.5,
+      },
+    ]}
+  >
+    {/* Mini Handheld Bezel Header */}
+    <View style={styles.cardTop}>
+      <View style={styles.ledGroup}>
+        <View
+          style={[
+            styles.miniLed,
+            { backgroundColor: theme.ledColor || theme.bezelAccent },
+          ]}
+        />
+        <Text style={styles.catBadge}>{theme.category}</Text>
+      </View>
+      {isSelected && (
+        <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
+          <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
+            ACTIVE
+          </Text>
+        </View>
+      )}
+    </View>
+
+    {/* Live Mini LCD Screen Preview */}
+    <View
+      style={[
+        styles.previewScreen,
+        {
+          backgroundColor: theme.screenBg,
+          borderColor: `${theme.bezelAccent}66`,
+        },
+      ]}
+    >
+      <View style={styles.pixelSpriteRow}>
+        <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
+        <View style={[styles.pxBlockWide, { backgroundColor: theme.pixelOn }]} />
+        <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
+      </View>
+      <Text
+        style={[
+          styles.previewLcdTxt,
+          {
+            color: theme.pixelOn,
+            textShadowColor: theme.pixelGlow,
+          },
+        ]}
+        numberOfLines={1}
+      >
+        84x48 OS
+      </Text>
+      <View style={styles.swatchBar}>
+        <View style={[styles.swatchChip, { backgroundColor: theme.chassisBg }]} />
+        <View
+          style={[
+            styles.swatchChip,
+            { backgroundColor: theme.ledColor || theme.bezelAccent },
+          ]}
+        />
+        <View style={[styles.swatchChip, { backgroundColor: theme.pixelOn }]} />
+      </View>
+    </View>
+
+    {/* Theme Name & Tagline */}
+    <Text style={styles.cardTitle} numberOfLines={1}>
+      {theme.name}
+    </Text>
+    <Text style={styles.cardSub} numberOfLines={1}>
+      {theme.tagline}
+    </Text>
+  </Pressable>
+));
+
 export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   visible,
   activePaletteId,
@@ -52,6 +141,19 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
     if (category === 'ALL') return all;
     return all.filter((p) => p.category === category);
   }, [category]);
+
+  const renderItem: ListRenderItem<RetroPalette> = useCallback(
+    ({ item }) => (
+      <ThemeCard
+        theme={item}
+        isSelected={item.id === activePaletteId}
+        onSelect={onSelectPalette}
+      />
+    ),
+    [activePaletteId, onSelectPalette]
+  );
+
+  const keyExtractor = useCallback((item: RetroPalette) => item.id, []);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={false} onRequestClose={onClose}>
@@ -154,103 +256,20 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
           </ScrollView>
         </View>
 
-        {/* Theme Grid */}
-        <ScrollView contentContainerStyle={styles.grid}>
-          {items.map((theme) => {
-            const isSelected = theme.id === activePaletteId;
-            return (
-              <Pressable
-                key={theme.id}
-                onPress={() => onSelectPalette(theme.id)}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: theme.deckBg,
-                    borderColor: isSelected ? theme.bezelAccent : theme.surfaceBorder,
-                    borderWidth: isSelected ? 2 : 1.5,
-                  },
-                ]}
-              >
-                {/* Mini Handheld Bezel Header */}
-                <View style={styles.cardTop}>
-                  <View style={styles.ledGroup}>
-                    <View
-                      style={[
-                        styles.miniLed,
-                        { backgroundColor: theme.ledColor || theme.bezelAccent },
-                      ]}
-                    />
-                    <Text style={styles.catBadge}>{theme.category}</Text>
-                  </View>
-                  {isSelected && (
-                    <View
-                      style={[
-                        styles.activeTag,
-                        { backgroundColor: theme.bezelAccent },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.activeTagTxt,
-                          { color: getAccentInk(theme.bezelAccent) },
-                        ]}
-                      >
-                        ACTIVE
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Live Mini LCD Screen Preview */}
-                <View
-                  style={[
-                    styles.previewScreen,
-                    {
-                      backgroundColor: theme.screenBg,
-                      borderColor: `${theme.bezelAccent}66`,
-                    },
-                  ]}
-                >
-                  <View style={styles.pixelSpriteRow}>
-                    <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
-                    <View style={[styles.pxBlockWide, { backgroundColor: theme.pixelOn }]} />
-                    <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.previewLcdTxt,
-                      {
-                        color: theme.pixelOn,
-                        textShadowColor: theme.pixelGlow,
-                      },
-                    ]}
-                    numberOfLines={1}
-                  >
-                    84x48 OS
-                  </Text>
-                  <View style={styles.swatchBar}>
-                    <View style={[styles.swatchChip, { backgroundColor: theme.chassisBg }]} />
-                    <View
-                      style={[
-                        styles.swatchChip,
-                        { backgroundColor: theme.ledColor || theme.bezelAccent },
-                      ]}
-                    />
-                    <View style={[styles.swatchChip, { backgroundColor: theme.pixelOn }]} />
-                  </View>
-                </View>
-
-                {/* Theme Name & Tagline */}
-                <Text style={styles.cardTitle} numberOfLines={1}>
-                  {theme.name}
-                </Text>
-                <Text style={styles.cardSub} numberOfLines={1}>
-                  {theme.tagline}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        {/* Virtualized 2-Column Theme Grid */}
+        <FlatList
+          data={items}
+          renderItem={renderItem}
+          keyExtractor={keyExtractor}
+          numColumns={2}
+          columnWrapperStyle={styles.gridRow}
+          contentContainerStyle={styles.grid}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews
+          showsVerticalScrollIndicator={false}
+        />
       </View>
     </Modal>
   );
@@ -350,10 +369,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 6,
     paddingBottom: 24,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: 10,
+  },
+  gridRow: {
+    justifyContent: 'space-between',
   },
   card: {
     width: '48.3%',
