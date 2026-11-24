@@ -8,6 +8,7 @@ const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
 const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v2';
 const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
 const MY_TUNES_STORAGE_KEY = '@retrodeck8_custom_tunes_v1';
+const SMS_TONE_STORAGE_KEY = '@retrodeck8_sms_tone_v1';
 
 const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
   { title: 'MY TUNE 1', bpm: 140, notes: '' },
@@ -926,6 +927,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // In-LCD Arcade Browser
   private gameIdx = 0;
 
+  private playActiveSmsTone() {
+    const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
+    RetroAudioEngine.playNokiaMelody(smsTone.notes, smsTone.bpm);
+  }
+
   private triggerPurchaseFailedSms(reason: string) {
     this.smsList.unshift({
       sender: 'BANK-RD8',
@@ -937,8 +943,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
     this.smsBannerTimer = 5.0;
-    RetroAudioEngine.playNokiaSmsTone();
-    this.cb.onPlaySound?.('die');
+    this.playActiveSmsTone();
   }
 
   private triggerPurchaseSuccessSms(planName: string) {
@@ -952,8 +957,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: WELCOME TO PRO!';
     this.smsBannerTimer = 5.0;
-    RetroAudioEngine.playNokiaSmsTone();
-    this.cb.onPlaySound?.('powerup');
+    this.playActiveSmsTone();
   }
 
   // AI & BYOK state
@@ -1161,6 +1165,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
               }
             }
           }
+        }
+      })
+    AsyncStorage.getItem(SMS_TONE_STORAGE_KEY)
+      .then((val) => {
+        const idx = val ? parseInt(val, 10) : NaN;
+        if (!isNaN(idx) && idx >= 0 && idx < NOKIA_SMS_TONES.length) {
+          this.smsToneIdx = idx;
         }
       })
       .catch(() => {});
@@ -1873,7 +1884,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const hasKey =
       !meta.requiresKey || Boolean(this.byokConfig.keys[this.byokConfig.activeProvider]?.trim());
 
-    RetroAudioEngine.playNokiaSmsTone();
+    this.playActiveSmsTone();
 
     if (!hasKey) {
       this.smsBanner = `SENT! (ADD ${meta.shortName} KEY FOR AI REPLY)`;
@@ -2404,8 +2415,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         } else if (this.profRow === 3) {
           this.smsToneIdx =
             (this.smsToneIdx + step + NOKIA_SMS_TONES.length) % NOKIA_SMS_TONES.length;
-          const st = NOKIA_SMS_TONES[this.smsToneIdx];
-          RetroAudioEngine.playNokiaMelody(st.notes, st.bpm);
+          AsyncStorage.setItem(SMS_TONE_STORAGE_KEY, String(this.smsToneIdx)).catch(() => {});
+          this.playActiveSmsTone();
           return null;
         } else if (this.profRow === 4) {
           const curStyle = RetroAudioEngine.getKeySoundStyle();
