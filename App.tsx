@@ -79,6 +79,8 @@ function RetroDeckConsole() {
   modalOpenRef.current = bayVisible || devCartVisible || themeModalVisible;
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
+  const gameOverMenuSelectionRef = useRef<number>(0);
+  gameOverMenuSelectionRef.current = gameOverMenuSelection;
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
   const cartridgeReadyRef = useRef<boolean>(true);
   cartridgeReadyRef.current = cartridgeReady;
@@ -236,17 +238,23 @@ function RetroDeckConsole() {
 
             // Toggle selection with Left/Right/Up/Down
             if ((input.left && !prev.left) || (input.up && !prev.up)) {
+              gameOverMenuSelectionRef.current = 0;
               setGameOverMenuSelection(0);
               handleSoundEvent('hit');
             } else if ((input.right && !prev.right) || (input.down && !prev.down)) {
+              gameOverMenuSelectionRef.current = 1;
               setGameOverMenuSelection(1);
               handleSoundEvent('hit');
             }
 
-            // [A] Button confirms Restart (or active selection)
+            // [A] / [OK] Button executes the highlighted option (0: Restart, 1: Exit OS)
             if (input.a && !prev.a) {
-              handleReset();
-              handleSoundEvent('powerup');
+              if (gameOverMenuSelectionRef.current === 1) {
+                handleGoHomeOS();
+              } else {
+                handleReset();
+                handleSoundEvent('powerup');
+              }
             }
             // [B] Button confirms Exit to OS Desktop
             else if (input.b && !prev.b) {
@@ -382,6 +390,8 @@ function RetroDeckConsole() {
 
   const handleGoHomeOS = () => {
     osRef.current.goDesktop();
+    gameOverMenuSelectionRef.current = 0;
+    setGameOverMenuSelection(0);
     setOsMode(true);
     setIsPaused(false);
     handleSoundEvent('hit');
@@ -399,6 +409,7 @@ function RetroDeckConsole() {
     gameRef.current.reset();
     setStats(gameRef.current.getStats());
     setCartridgeReady(true);
+    gameOverMenuSelectionRef.current = 0;
     setGameOverMenuSelection(0);
     setIsPaused(false);
   };
@@ -437,8 +448,12 @@ function RetroDeckConsole() {
     }
     const curStats = gameRef.current.getStats();
     if (curStats.gameOver) {
-      handleReset();
-      handleSoundEvent('powerup');
+      if (gameOverMenuSelectionRef.current === 1) {
+        handleGoHomeOS();
+      } else {
+        handleReset();
+        handleSoundEvent('powerup');
+      }
       return;
     }
     if (curStats.isMenu) {
