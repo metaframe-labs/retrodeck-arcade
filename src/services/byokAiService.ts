@@ -161,6 +161,11 @@ export interface BYOKChatMessage {
   content: string;
 }
 
+export interface BYOKChatOptions {
+  temperature?: number;
+  maxTokens?: number;
+}
+
 async function callOpenAICompatibleChat(
   url: string,
   apiKey: string | undefined,
@@ -168,8 +173,9 @@ async function callOpenAICompatibleChat(
   chatMessages: BYOKChatMessage[],
   systemPrompt?: string,
   extraHeaders?: Record<string, string>,
-  maxTokens: number = 350
+  options: BYOKChatOptions = {}
 ): Promise<string> {
+  const maxTokens = options.maxTokens ?? 350;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     ...extraHeaders,
@@ -182,10 +188,15 @@ async function callOpenAICompatibleChat(
     messages.push({ role: m.role, content: m.content });
   }
 
+  const body: Record<string, any> = { model, messages, max_tokens: maxTokens };
+  if (typeof options.temperature === 'number') {
+    body.temperature = options.temperature;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers,
-    body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
+    body: JSON.stringify(body),
   });
 
   const data = await res.json();
@@ -198,7 +209,8 @@ async function callOpenAICompatibleChat(
 export async function callBYOKAIChat(
   chatMessages: BYOKChatMessage[],
   config: BYOKConfig,
-  systemPrompt: string = 'You are RetroDeck OS AI running on a Nokia 3310 monochrome LCD (320x240). Respond in PLAIN TEXT ONLY. Do NOT use Markdown, asterisks (**), hashtags (#), or backticks (`). Keep answers short, direct, and punchy.'
+  systemPrompt: string = 'You are RetroDeck OS AI running on a Nokia 3310 monochrome LCD (320x240). Respond in PLAIN TEXT ONLY. Do NOT use Markdown, asterisks (**), hashtags (#), or backticks (`). Keep answers short, direct, and punchy.',
+  options: BYOKChatOptions = {}
 ): Promise<string> {
   const provider = config.activeProvider || 'gemini';
   const apiKey = config.keys?.[provider]?.trim() || '';
@@ -209,9 +221,19 @@ export async function callBYOKAIChat(
     throw new Error(`NO ${meta.shortName} KEY! ADD IN BYOK TAB.`);
   }
 
-  const sanitized = chatMessages.filter(
+  // Merge consecutive same-role entries so strict providers (Claude/Gemini) accept any history shape
+  const filtered = chatMessages.filter(
     (m) => m && typeof m.content === 'string' && m.content.trim().length > 0
   );
+  const sanitized: BYOKChatMessage[] = [];
+  for (const m of filtered) {
+    const prev = sanitized[sanitized.length - 1];
+    if (prev && prev.role === m.role) {
+      prev.content = `${prev.content}\n${m.content}`;
+    } else {
+      sanitized.push({ role: m.role, content: m.content });
+    }
+  }
 
   switch (provider) {
     case 'gemini': {
@@ -222,6 +244,12 @@ export async function callBYOKAIChat(
         })),
         systemInstruction: { parts: [{ text: systemPrompt }] },
       };
+      if (typeof options.temperature === 'number' || typeof options.maxTokens === 'number') {
+        payload.generationConfig = {
+          ...(typeof options.temperature === 'number' ? { temperature: options.temperature } : {}),
+          ...(typeof options.maxTokens === 'number' ? { maxOutputTokens: options.maxTokens } : {}),
+        };
+      }
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
         {
@@ -238,6 +266,19 @@ export async function callBYOKAIChat(
     }
 
     case 'claude': {
+      const claudeMsgs =
+        sanitized[0]?.role === 'assistant'
+          ? [{ role: 'user' as const, content: '[Continue conversation]' }, ...sanitized]
+          : sanitized;
+      const claudeBody: Record<string, any> = {
+        model,
+        max_tokens: options.maxTokens ?? 350,
+        system: systemPrompt,
+        messages: claudeMsgs.map((m) => ({ role: m.role, content: m.content })),
+      };
+      if (typeof options.temperature === 'number') {
+        claudeBody.temperature = options.temperature;
+      }
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: {
@@ -245,12 +286,7 @@ export async function callBYOKAIChat(
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
-        body: JSON.stringify({
-          model,
-          max_tokens: 350,
-          system: systemPrompt,
-          messages: sanitized.map((m) => ({ role: m.role, content: m.content })),
-        }),
+        body: JSON.stringify(claudeBody),
       });
       const data = await res.json();
       if (!res.ok || data.error) {
@@ -265,7 +301,9 @@ export async function callBYOKAIChat(
         apiKey,
         model,
         sanitized,
-        systemPrompt
+        systemPrompt,
+        undefined,
+        options
       );
 
     case 'xai':
@@ -274,7 +312,9 @@ export async function callBYOKAIChat(
         apiKey,
         model,
         sanitized,
-        systemPrompt
+        systemPrompt,
+        undefined,
+        options
       );
 
     case 'groq':
@@ -283,7 +323,9 @@ export async function callBYOKAIChat(
         apiKey,
         model,
         sanitized,
-        systemPrompt
+        systemPrompt,
+        undefined,
+        options
       );
 
     case 'deepseek':
@@ -292,7 +334,9 @@ export async function callBYOKAIChat(
         apiKey,
         model,
         sanitized,
-        systemPrompt
+        systemPrompt,
+        undefined,
+        options
       );
 
     case 'openrouter':
@@ -302,7 +346,8 @@ export async function callBYOKAIChat(
         model,
         sanitized,
         systemPrompt,
-        { 'X-Title': 'RetroDeck OS' }
+        { 'X-Title': 'RetroDeck OS' },
+        options
       );
 
     case 'ollama': {
@@ -313,6 +358,9 @@ export async function callBYOKAIChat(
         body: JSON.stringify({
           model,
           stream: false,
+          ...(typeof options.temperature === 'number'
+            ? { options: { temperature: options.temperature } }
+            : {}),
           messages: [
             { role: 'system', content: systemPrompt },
             ...sanitized.map((m) => ({ role: m.role, content: m.content })),
@@ -333,7 +381,9 @@ export async function callBYOKAIChat(
         undefined,
         model,
         sanitized,
-        systemPrompt
+        systemPrompt,
+        undefined,
+        options
       );
     }
   }

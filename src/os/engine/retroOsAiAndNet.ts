@@ -25,6 +25,41 @@ import {
 import { pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
+function normalizeWords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^a-z0-9\u00c0-\u024f\s]/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+  );
+}
+
+function isSmsTooSimilar(candidate: string, previousTexts: string[]): boolean {
+  const cleanCand = candidate.toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!cleanCand) return true;
+  const candWords = normalizeWords(cleanCand);
+
+  for (const prev of previousTexts) {
+    const cleanPrev = prev.toLowerCase().replace(/\s+/g, ' ').trim();
+    if (!cleanPrev) continue;
+    if (cleanCand === cleanPrev) return true;
+    if (cleanCand.length >= 20 && cleanPrev.length >= 20) {
+      if (cleanCand.includes(cleanPrev) || cleanPrev.includes(cleanCand)) return true;
+    }
+    const prevWords = normalizeWords(cleanPrev);
+    if (candWords.size >= 3 && prevWords.size >= 3) {
+      let overlap = 0;
+      candWords.forEach((w) => {
+        if (prevWords.has(w)) overlap++;
+      });
+      const union = candWords.size + prevWords.size - overlap;
+      if (union > 0 && overlap / union >= 0.55) return true;
+    }
+  }
+  return false;
+}
+
 export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId?: string, userReply?: string): Promise<boolean> {
   if (os.liveSmsFetching) return false;
   const meta = getProviderMeta(os.byokConfig.activeProvider);
@@ -37,15 +72,36 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
   const moods = DYNAMIC_MOODS_BY_LANG[lang] || DYNAMIC_MOODS_BY_LANG.en;
   const twists = UNEXPECTED_TWISTS_BY_LANG[lang] || UNEXPECTED_TWISTS_BY_LANG.en;
 
+  // Avoid picking the same random persona twice in a row
+  const lastLivePersonaId = os.smsList.find((m) => m.isLivePersona)?.personaId;
+  const pool =
+    !forcedPersonaId && personas.length > 1 && lastLivePersonaId
+      ? personas.filter((p) => p.id !== lastLivePersonaId)
+      : personas;
+
   const persona =
     (forcedPersonaId ? personas.find((p) => p.id === forcedPersonaId) : null) ||
-    personas[Math.floor(Math.random() * personas.length)];
+    pool[Math.floor(Math.random() * pool.length)];
 
   os.liveSmsFetching = true;
   try {
-    const history = os.personaHistories[persona.id] || [];
+    // Reconstruct memory from personaHistories, backfilling from inbox SMS if missing
+    let history = [...(os.personaHistories[persona.id] || [])];
+    if (history.length === 0) {
+      const inboxForPersona = os.smsList
+        .filter((m) => m.isLivePersona && m.personaId === persona.id)
+        .slice(0, 5)
+        .reverse();
+      history = inboxForPersona.map((m) => ({ role: 'assistant' as const, content: m.text }));
+    }
+
+    const previousBotTexts = history
+      .filter((h) => h.role === 'assistant')
+      .map((h) => h.content)
+      .slice(-6);
+
     const mood = moods[Math.floor(Math.random() * moods.length)];
-    const isUnexpected = !userReply && Math.random() < 0.3;
+    const isUnexpected = !userReply && Math.random() < 0.35;
     const twist = isUnexpected
       ? pickLang(
           lang,
@@ -54,61 +110,110 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
         )
       : '';
 
-    const systemContext = pickLang(
+    const forbiddenBlock =
+      previousBotTexts.length > 0
+        ? pickLang(
+            lang,
+            `\n\nYOUR PREVIOUS SENT MESSAGES (STRICTLY DO NOT REPEAT OR PARAPHRASE THESE — CONTINUE THE STORY OR MOVE TO A NEW SITUATION):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`,
+            `\n\nDAHA ONCE ATTIGIN MESAJLAR (BUNLARI ASLA TEKRARLAMA VE AYNI SEYI BASKA KELIMELERLE YAZMA — HIKAYEYI DEVAM ETTIR VEYA YENI KONU AC):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`
+          )
+        : '';
+
+    const systemPrompt = pickLang(
       lang,
       `${persona.instruction}\n` +
         `CURRENT MOOD / VIBE: ${mood}.${twist}\n` +
-        `TIME: ${os.formatClock()}.\n` +
-        `RULE: Write ONE realistic SMS strictly in English (40 to 120 chars). Continue naturally if there is prior conversation history. Never use emojis, never reveal you are an AI, no quotes or titles.`,
+        `CURRENT TIME: ${os.formatClock()}.${forbiddenBlock}\n` +
+        `STRICT RULES:\n` +
+        `1) Write ONE realistic SMS strictly in English (25 to 125 chars).\n` +
+        `2) Progress from what you previously texted — acknowledge earlier context naturally OR bring up a totally fresh moment/event.\n` +
+        `3) NEVER repeat openings, jokes, numbers, or phrasing from your previous messages.\n` +
+        `4) Plain text only: NO emojis, NO quotes around output, NEVER mention AI.`,
       `${persona.instruction}\n` +
         `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
-        `SAAT: ${os.formatClock()}.\n` +
-        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci Turkce SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla emoji kullanma, asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`
+        `SAAT: ${os.formatClock()}.${forbiddenBlock}\n` +
+        `KESIN KURALLAR:\n` +
+        `1) En az 25, en fazla 125 karakterlik tek bir gercekci Turkce SMS yaz.\n` +
+        `2) Onceki mesajlarina bagli kalarak olayi devam ettir YA DA tamamen farkli, yeni bir gelisme yaz.\n` +
+        `3) Onceki attigin mesajlarla ayni girisi, espriyi veya cumle yapisini ASLA tekrarlama.\n` +
+        `4) Sadece duz metin: emoji yok, tirnak yok, yapay zeka oldugunu asla belli etme.`
     );
 
-    const messages: BYOKChatMessage[] = [
-      { role: 'user', content: systemContext },
-      ...history.slice(-6),
-      {
-        role: 'user',
-        content: userReply
-          ? pickLang(
-              lang,
-              `The user replied to you: "${userReply}". Reply naturally in character matching your current mood in English.`,
-              `Kullanici sana su cevabi yazdi: "${userReply}". Karakterinle ve ruh halinle dogal bir SMS cevabi yaz.`
-            )
-          : history.length > 0
-          ? pickLang(
-              lang,
-              'Following up on our earlier chat (or starting a fresh topic), send me a random SMS right now.',
-              'Onceki sohbetimize de bagli kalarak (veya yeni bir konuyla) bana simdi rastgele bir SMS at.'
-            )
-          : pickLang(
-              lang,
-              'Send me a realistic SMS message right now.',
-              'Bana simdi tam bir SMS mesaji gonder.'
-            ),
-      },
+    const buildUserTurn = (extraGuard = ''): BYOKChatMessage[] => {
+      const chatTurns: BYOKChatMessage[] = history.slice(-10).map((h) => ({
+        role: h.role,
+        content: h.content,
+      }));
+      const promptText = userReply
+        ? pickLang(
+            lang,
+            `The user just replied to your previous SMS: "${userReply}". React specifically to what they said and continue naturally.${extraGuard}`,
+            `Kullanici az onceki mesajina su cevabi yazdi: "${userReply}". Tam olarak yazdigina gore dogal bir SMS cevabi yaz.${extraGuard}`
+          )
+        : history.length > 0
+        ? pickLang(
+            lang,
+            `Based on the previous SMS messages you already sent above, send the NEXT logical or surprising follow-up text now (do NOT repeat old lines).${extraGuard}`,
+            `Yukarida daha once attigin mesajlara bakarak simdi SIRADAKI mantikli veya surpriz takip SMSini at (eski mesajlari sakin tekrarlama).${extraGuard}`
+          )
+        : pickLang(
+            lang,
+            `Send a spontaneous, natural first SMS message right now.${extraGuard}`,
+            `Bana simdi dogal, samimi ilk SMS mesajini gonder.${extraGuard}`
+          );
+
+      chatTurns.push({ role: 'user', content: promptText });
+      return chatTurns;
+    };
+
+    const parseReply = (raw: string) =>
+      stripMarkdownForLcd(raw)
+        .replace(/^["']|["']$/g, '')
+        .replace(/\n+/g, ' ')
+        .trim()
+        .slice(0, 130);
+
+    const recentGlobalTexts = [
+      ...previousBotTexts,
+      ...os.smsList.slice(0, 6).map((m) => m.text),
     ];
 
-    const raw = await callBYOKAIChat(messages, os.byokConfig);
-    let cleaned = stripMarkdownForLcd(raw)
-      .replace(/^["']|["']$/g, '')
-      .replace(/\n+/g, ' ')
-      .trim()
-      .slice(0, 130);
+    let cleaned = parseReply(
+      await callBYOKAIChat(buildUserTurn(), os.byokConfig, systemPrompt, {
+        temperature: 0.95,
+        maxTokens: 140,
+      })
+    );
 
-    if (!cleaned || cleaned.length < 22) {
+    // Retry once if empty or too similar to previously sent SMS
+    if (!cleaned || cleaned.length < 10 || isSmsTooSimilar(cleaned, recentGlobalTexts)) {
+      const retryGuard = pickLang(
+        lang,
+        ' IMPORTANT: Your previous draft repeated earlier text! Write something 100% NEW with a completely different event or detail.',
+        ' ONEMLI: Onceki taslagin eski mesajla ayni cikti! Tamamen FARKLI bir olay veya detayla yepyeni bir SMS yaz.'
+      );
+      const retried = parseReply(
+        await callBYOKAIChat(buildUserTurn(retryGuard), os.byokConfig, systemPrompt, {
+          temperature: 1.05,
+          maxTokens: 140,
+        })
+      );
+      if (retried && retried.length >= 10 && !isSmsTooSimilar(retried, previousBotTexts)) {
+        cleaned = retried;
+      }
+    }
+
+    if (!cleaned || cleaned.length < 10) {
       cleaned = persona.fallback;
     }
 
-    // Persist conversation memory per persona so future messages adapt to user replies
+    // Persist expanded conversation memory per persona (up to 12 turns)
     const nextHistory = [...history];
     if (userReply) {
       nextHistory.push({ role: 'user', content: userReply });
     }
     nextHistory.push({ role: 'assistant', content: cleaned });
-    os.personaHistories[persona.id] = nextHistory.slice(-6);
+    os.personaHistories[persona.id] = nextHistory.slice(-12);
     os.savePersonaHistories();
 
     os.smsList.unshift({
@@ -359,12 +464,10 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
         `Kisa, net ve yardimsever Turkce cevap ver. Asla emoji kullanma, sadece duz metin yaz. Islem gerekmiyorsa hic ACTION etiketi ekleme.`
     );
 
-    const payload: BYOKChatMessage[] = [
-      { role: 'user', content: sysGuide },
-      ...os.chatHistory,
-    ];
-
-    const reply = await callBYOKAIChat(payload, os.byokConfig);
+    const reply = await callBYOKAIChat(os.chatHistory, os.byokConfig, sysGuide, {
+      temperature: 0.75,
+      maxTokens: 320,
+    });
     const rawClean = reply.trim() || '(EMPTY)';
     const { displayText, actionLogs } = os.executeAiActions(rawClean);
     const shown = stripEmojis(displayText) || (actionLogs.length > 0 ? 'DONE!' : '(EMPTY)');
