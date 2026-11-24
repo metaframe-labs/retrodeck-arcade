@@ -9,6 +9,7 @@ const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v2';
 const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
 const MY_TUNES_STORAGE_KEY = '@retrodeck8_custom_tunes_v1';
 const SMS_TONE_STORAGE_KEY = '@retrodeck8_sms_tone_v1';
+const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
 
 const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
   { title: 'MY TUNE 1', bpm: 140, notes: '' },
@@ -611,7 +612,143 @@ interface NokiaPicSms {
   title: string;
   text: string;
   artKey: PicArtKey;
+  stampIcon?: keyof typeof Ionicons.glyphMap;
+  stampLabel?: string;
 }
+
+const POSTCARD_STAMPS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  { icon: 'heart', label: 'LOVE' },
+  { icon: 'star', label: 'STAR' },
+  { icon: 'sparkles', label: 'MAGIC' },
+  { icon: 'flame', label: 'FIRE' },
+  { icon: 'flash', label: 'BOLT' },
+  { icon: 'happy', label: 'HAPPY' },
+  { icon: 'sad', label: 'SAD' },
+  { icon: 'skull', label: 'SKULL' },
+  { icon: 'glasses', label: 'COOL' },
+  { icon: 'eye', label: 'LOOK' },
+  { icon: 'thumbs-up', label: 'LIKE' },
+  { icon: 'thumbs-down', label: 'NOPE' },
+  { icon: 'hand-left', label: 'HI5' },
+  { icon: 'ribbon', label: 'RIBBON' },
+  { icon: 'rose', label: 'ROSE' },
+  { icon: 'flower', label: 'FLOWER' },
+  { icon: 'leaf', label: 'LEAF' },
+  { icon: 'paw', label: 'PAW' },
+  { icon: 'fish', label: 'FISH' },
+  { icon: 'bug', label: 'BUG' },
+  { icon: 'planet', label: 'PLANET' },
+  { icon: 'rocket', label: 'ROCKET' },
+  { icon: 'earth', label: 'EARTH' },
+  { icon: 'moon', label: 'MOON' },
+  { icon: 'sunny', label: 'SUN' },
+  { icon: 'partly-sunny', label: 'CLOUDY' },
+  { icon: 'cloudy', label: 'CLOUD' },
+  { icon: 'rainy', label: 'RAIN' },
+  { icon: 'thunderstorm', label: 'STORM' },
+  { icon: 'snow', label: 'SNOW' },
+  { icon: 'umbrella', label: 'UMBR' },
+  { icon: 'thermometer', label: 'TEMP' },
+  { icon: 'game-controller', label: 'GAME' },
+  { icon: 'trophy', label: 'TROPHY' },
+  { icon: 'medal', label: 'MEDAL' },
+  { icon: 'diamond', label: 'GEM' },
+  { icon: 'dice', label: 'DICE' },
+  { icon: 'extension-puzzle', label: 'PUZZLE' },
+  { icon: 'hardware-chip', label: 'CHIP' },
+  { icon: 'terminal', label: 'SHELL' },
+  { icon: 'code-slash', label: 'CODE' },
+  { icon: 'desktop', label: 'PC' },
+  { icon: 'tv', label: 'TV' },
+  { icon: 'radio', label: 'RADIO' },
+  { icon: 'disc', label: 'DISC' },
+  { icon: 'headset', label: 'AUDIO' },
+  { icon: 'musical-note', label: 'NOTE' },
+  { icon: 'musical-notes', label: 'MUSIC' },
+  { icon: 'mic', label: 'MIC' },
+  { icon: 'volume-high', label: 'LOUD' },
+  { icon: 'brush', label: 'PAINT' },
+  { icon: 'color-palette', label: 'ART' },
+  { icon: 'camera', label: 'PHOTO' },
+  { icon: 'image', label: 'PIC' },
+  { icon: 'film', label: 'FILM' },
+  { icon: 'easel', label: 'CANVAS' },
+  { icon: 'pencil', label: 'DRAW' },
+  { icon: 'create', label: 'WRITE' },
+  { icon: 'cafe', label: 'COFFEE' },
+  { icon: 'beer', label: 'BEER' },
+  { icon: 'wine', label: 'WINE' },
+  { icon: 'pizza', label: 'PIZZA' },
+  { icon: 'fast-food', label: 'BURGER' },
+  { icon: 'ice-cream', label: 'GELATO' },
+  { icon: 'nutrition', label: 'FRUIT' },
+  { icon: 'egg', label: 'EGG' },
+  { icon: 'restaurant', label: 'DINER' },
+  { icon: 'water', label: 'WATER' },
+  { icon: 'bonfire', label: 'CAMP' },
+  { icon: 'airplane', label: 'FLIGHT' },
+  { icon: 'car', label: 'CAR' },
+  { icon: 'car-sport', label: 'TURBO' },
+  { icon: 'bicycle', label: 'BIKE' },
+  { icon: 'boat', label: 'BOAT' },
+  { icon: 'bus', label: 'BUS' },
+  { icon: 'train', label: 'TRAIN' },
+  { icon: 'subway', label: 'METRO' },
+  { icon: 'walk', label: 'WALK' },
+  { icon: 'footsteps', label: 'STEPS' },
+  { icon: 'trail-sign', label: 'TRAIL' },
+  { icon: 'map', label: 'MAP' },
+  { icon: 'compass', label: 'COMPASS' },
+  { icon: 'navigate', label: 'GPS' },
+  { icon: 'pin', label: 'PIN' },
+  { icon: 'location', label: 'PLACE' },
+  { icon: 'flag', label: 'FLAG' },
+  { icon: 'gift', label: 'GIFT' },
+  { icon: 'balloon', label: 'PARTY' },
+  { icon: 'key', label: 'KEY' },
+  { icon: 'lock-open', label: 'UNLOCK' },
+  { icon: 'shield', label: 'SHIELD' },
+  { icon: 'hammer', label: 'HAMMER' },
+  { icon: 'build', label: 'TOOLS' },
+  { icon: 'construct', label: 'CRAFT' },
+  { icon: 'flashlight', label: 'TORCH' },
+  { icon: 'bulb', label: 'IDEA' },
+  { icon: 'alarm', label: 'ALARM' },
+  { icon: 'notifications', label: 'BELL' },
+  { icon: 'time', label: 'TIME' },
+  { icon: 'hourglass', label: 'SAND' },
+  { icon: 'book', label: 'BOOK' },
+  { icon: 'newspaper', label: 'NEWS' },
+  { icon: 'mail', label: 'MAIL' },
+  { icon: 'chatbubble', label: 'CHAT' },
+  { icon: 'call', label: 'CALL' },
+  { icon: 'megaphone', label: 'ALERT' },
+  { icon: 'briefcase', label: 'WORK' },
+  { icon: 'cart', label: 'SHOP' },
+  { icon: 'bag', label: 'BAG' },
+  { icon: 'card', label: 'CARD' },
+  { icon: 'cash', label: 'CASH' },
+  { icon: 'wallet', label: 'WALLET' },
+  { icon: 'watch', label: 'WATCH' },
+  { icon: 'shirt', label: 'SHIRT' },
+  { icon: 'bed', label: 'SLEEP' },
+  { icon: 'home', label: 'HOME' },
+  { icon: 'school', label: 'SCHOOL' },
+  { icon: 'library', label: 'LIB' },
+  { icon: 'fitness', label: 'HEART+' },
+  { icon: 'barbell', label: 'GYM' },
+  { icon: 'basketball', label: 'HOOPS' },
+  { icon: 'football', label: 'SOCCER' },
+  { icon: 'baseball', label: 'BASE' },
+  { icon: 'tennisball', label: 'TENNIS' },
+  { icon: 'golf', label: 'GOLF' },
+  { icon: 'telescope', label: 'SPACE' },
+  { icon: 'nuclear', label: 'NUKE' },
+  { icon: 'magnet', label: 'MAGNET' },
+  { icon: 'flask', label: 'LAB' },
+  { icon: 'prism', label: 'PRISM' },
+  { icon: 'aperture', label: 'LENS' },
+];
 
 const INITIAL_PIC_MESSAGES: NokiaPicSms[] = [
   {
@@ -961,6 +1098,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
     this.smsBannerTimer = 5.0;
+    this.saveSmsList();
     this.playActiveSmsTone();
   }
 
@@ -975,6 +1113,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: WELCOME TO PRO!';
     this.smsBannerTimer = 5.0;
+    this.saveSmsList();
     this.playActiveSmsTone();
   }
 
@@ -1101,6 +1240,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private smsBannerTimer = 0;
   private smsSendingAi = false;
   private smsDeleteConfirm = false;
+  private smsMode: 'inbox' | 'compose' = 'inbox';
+  private smsStampIdx = 0;
+  private smsDraftText = '';
 
   private profRow = 0;
   private profileIdx = 0;
@@ -1195,6 +1337,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(SMS_LIST_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            this.smsList = parsed;
+            this.smsIdx = 0;
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  private saveSmsList() {
+    AsyncStorage.setItem(SMS_LIST_STORAGE_KEY, JSON.stringify(this.smsList)).catch(() => {});
   }
 
   private isCustomTune(idx = this.songIdx): boolean {
@@ -1400,6 +1557,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
         secure: false,
       };
     }
+    if (this.app === 'sms') {
+      return {
+        targetLabel: 'POSTCARD MSG',
+        value: this.smsDraftText,
+        placeholder: 'WRITE POSTCARD MESSAGE...',
+        secure: false,
+      };
+    }
     const pid = this.byokConfig.activeProvider;
     const meta = getProviderMeta(pid);
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
@@ -1446,6 +1611,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
     if (this.app === 'synth') {
       this.tuneNameDraft = next.toUpperCase().slice(0, 14);
+      return;
+    }
+    if (this.app === 'sms') {
+      this.smsDraftText = next.toUpperCase().slice(0, 82);
+      if (this.smsMode !== 'compose') this.smsMode = 'compose';
       return;
     }
     const pid = this.byokConfig.activeProvider;
@@ -1521,6 +1691,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
       }
       this.tuneNameDraft = '';
       this.cb.onRequestKeyboard?.(false);
+      return;
+    }
+    if (this.app === 'sms') {
+      this.cb.onRequestKeyboard?.(false);
+      this.smsMode = 'compose';
       return;
     }
     if (this.app === 'ai' && this.aiTab === 'byok') {
@@ -1825,6 +2000,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.smsDeleteConfirm = false;
           this.smsBanner = 'SMS DELETED!';
           this.smsBannerTimer = 2.0;
+          this.saveSmsList();
           this.cb.onPlaySound?.('die');
         }
         return;
@@ -1956,10 +2132,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
         text: body || 'HEY! LOW ON CREDITS, CALL ME BACK ON MY 3310 XD',
         artKey,
       });
-      if (this.smsList.length > 10) this.smsList.pop();
+      if (this.smsList.length > 20) this.smsList.pop();
       this.smsIdx = 0;
       this.smsBanner = `NEW PIC-SMS FROM ${meta.shortName}!`;
       this.smsBannerTimer = 3.0;
+      this.saveSmsList();
       const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
       RetroAudioEngine.playNokiaMelody(smsTone.notes, smsTone.bpm);
     } catch (err: any) {
@@ -2192,6 +2369,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.synthClearConfirm = false;
         return 'hit';
       }
+      if (this.app === 'sms' && this.smsMode === 'compose') {
+        this.smsMode = 'inbox';
+        this.cb.onRequestKeyboard?.(false);
+        return 'hit';
+      }
       if (this.melodyPlaying || this.cdAlarmActive || this.callState === 'ringing') {
         this.melodyPlaying = false;
         this.cdAlarmActive = false;
@@ -2371,6 +2553,52 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'sms') {
+      if (this.smsMode === 'compose') {
+        const totalStamps = POSTCARD_STAMPS.length;
+        if (dir === 'left') {
+          this.smsStampIdx = (this.smsStampIdx + totalStamps - 1) % totalStamps;
+          return 'hit';
+        }
+        if (dir === 'right') {
+          this.smsStampIdx = (this.smsStampIdx + 1) % totalStamps;
+          return 'hit';
+        }
+        if (dir === 'down') {
+          this.smsStampIdx = (this.smsStampIdx + 10) % totalStamps;
+          return 'hit';
+        }
+        if (dir === 'up') {
+          this.cb.onRequestKeyboard?.(true);
+          return 'score';
+        }
+        if (pressA) {
+          const text = this.smsDraftText.trim();
+          if (!text) {
+            this.cb.onRequestKeyboard?.(true);
+            return 'score';
+          }
+          const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
+          this.smsList.unshift({
+            sender: 'MY-POSTCARD',
+            title: stamp.label,
+            text,
+            artKey: 'SMILE',
+            stampIcon: stamp.icon,
+            stampLabel: stamp.label,
+          });
+          if (this.smsList.length > 20) this.smsList.pop();
+          this.smsIdx = 0;
+          this.smsDraftText = '';
+          this.smsMode = 'inbox';
+          this.smsBanner = '✉ POSTCARD CREATED!';
+          this.smsBannerTimer = 3.0;
+          this.saveSmsList();
+          this.playActiveSmsTone();
+          return null;
+        }
+        return null;
+      }
+
       if (dir === 'left') {
         if (this.smsList.length > 0) {
           this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
@@ -2399,15 +2627,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.smsDeleteConfirm = false;
         this.smsBanner = 'SMS DELETED!';
         this.smsBannerTimer = 2.0;
+        this.saveSmsList();
         return 'die';
       }
       if (dir === 'up') {
         this.smsDeleteConfirm = false;
-        return 'hit';
+        this.smsMode = 'compose';
+        return 'score';
       }
       if (pressA) {
         if (this.smsDeleteConfirm) {
           this.smsDeleteConfirm = false;
+        }
+        if (this.smsList.length === 0) {
+          this.smsMode = 'compose';
+          return 'score';
         }
         this.sendPictureSmsToAi();
         return null;
@@ -4755,18 +4989,99 @@ export class RetroDeckOS implements ArcadeGameInstance {
     );
   }
 
-  private renderSms(fg: string, _bg: string) {
+  private renderSms(fg: string, bg: string) {
+    if (this.smsMode === 'compose') {
+      const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
+      const total = POSTCARD_STAMPS.length;
+      const stripOffsets = [-3, -2, -1, 0, 1, 2, 3];
+
+      return (
+        <View style={styles.listWrap}>
+          <View style={styles.compHeader}>
+            <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
+              POSTCARD STUDIO
+            </Text>
+            <Text style={[styles.compBpm, { color: fg }]}>
+              {this.smsStampIdx + 1}/{total} [{stamp.label}]
+            </Text>
+          </View>
+
+          {/* 7-icon horizontal stamp strip from 130+ stamps */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: fg,
+              paddingVertical: 4,
+              paddingHorizontal: 4,
+              marginBottom: 4,
+            }}
+          >
+            {stripOffsets.map((off) => {
+              const idx = (this.smsStampIdx + off + total) % total;
+              const item = POSTCARD_STAMPS[idx];
+              const isCenter = off === 0;
+              return (
+                <View
+                  key={`${off}-${item.icon}`}
+                  style={{
+                    width: isCenter ? 28 : 20,
+                    height: isCenter ? 26 : 20,
+                    backgroundColor: isCenter ? fg : 'transparent',
+                    borderWidth: isCenter ? 1.5 : 0,
+                    borderColor: fg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: isCenter ? 1 : 0.65,
+                  }}
+                >
+                  <Ionicons
+                    name={item.icon}
+                    size={isCenter ? 18 : 13}
+                    color={isCenter ? bg : fg}
+                  />
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Message Preview Box */}
+          <View
+            style={[
+              styles.swBox,
+              {
+                borderColor: fg,
+                width: '100%',
+                flex: 1,
+                justifyContent: 'center',
+                paddingHorizontal: 8,
+              },
+            ]}
+          >
+            <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
+              {this.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
+            </Text>
+          </View>
+
+          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 3 }]} numberOfLines={1}>
+            [◀/▶] STAMP • [▼] +10 • [▲] TEXT • [A] SAVE
+          </Text>
+        </View>
+      );
+    }
+
     if (this.smsList.length === 0) {
       return (
         <View style={[styles.listWrap, { justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={[styles.subHeader, { color: fg }]}>INBOX EMPTY</Text>
-          <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>NO MESSAGES IN PIC-SMS STORAGE</Text>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>PRESS [▲] TO CREATE A POSTCARD</Text>
         </View>
       );
     }
     const msg = this.smsList[this.smsIdx] || this.smsList[0];
     const bannerSpans = PIC_BANNERS[msg.artKey] || PIC_BANNERS.COFFEE;
-    const meta = getProviderMeta(this.byokConfig.activeProvider);
 
     return (
       <View style={styles.listWrap}>
@@ -4787,25 +5102,47 @@ export class RetroDeckOS implements ArcadeGameInstance {
               borderColor: fg,
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 10,
+              gap: 8,
             },
           ]}
         >
-          <View style={[styles.picBannerBox, { borderColor: fg }]}>
-            {bannerSpans.map((s) => (
-              <View
-                key={s.key}
-                style={{
-                  position: 'absolute',
-                  left: s.x,
-                  top: s.y,
-                  width: s.w,
-                  height: s.h,
-                  backgroundColor: fg,
-                }}
-              />
-            ))}
-          </View>
+          {msg.stampIcon ? (
+            <View
+              style={[
+                styles.picBannerBox,
+                {
+                  borderColor: fg,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 6,
+                },
+              ]}
+            >
+              <Ionicons name={msg.stampIcon} size={18} color={fg} />
+              {msg.stampLabel ? (
+                <Text style={[styles.compBpm, { color: fg, fontSize: 9 }]}>
+                  {msg.stampLabel}
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View style={[styles.picBannerBox, { borderColor: fg }]}>
+              {bannerSpans.map((s) => (
+                <View
+                  key={s.key}
+                  style={{
+                    position: 'absolute',
+                    left: s.x,
+                    top: s.y,
+                    width: s.w,
+                    height: s.h,
+                    backgroundColor: fg,
+                  }}
+                />
+              ))}
+            </View>
+          )}
 
           <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
             {msg.text}
@@ -4817,7 +5154,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ? this.smsBanner
             : (this.smsDeleteConfirm
                 ? 'PRESS [▼] AGAIN TO CONFIRM DELETE!'
-                : `[◀/▶] READ • [▼]/DEL: DELETE • [A] AI REPLY`)}
+                : `[▲] NEW POSTCARD • [▼]/DEL DELETE • [A] AI`)}
         </Text>
       </View>
     );
