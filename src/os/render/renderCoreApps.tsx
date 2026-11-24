@@ -205,8 +205,63 @@ export function renderStatusRight(os: RetroDeckOS, ink: string): React.ReactNode
 
 export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   const cols = 4;
-  const rows = Math.ceil(DESKTOP_ICONS.length / cols);
+  const rows = 3;
+  const pageSize = cols * rows; // 12 items per page for large, crisp retro icons
+  const totalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / pageSize));
+  const curPage = Math.min(totalPages - 1, Math.floor(os.deskIdx / pageSize));
+  const pageStart = curPage * pageSize;
   const winStyle = os.postFormatWinStyle;
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+
+  const renderPageStrip = (isWin: boolean) => {
+    if (totalPages <= 1) return null;
+    const stripBg = isWin
+      ? 'rgba(0, 0, 0, 0.35)'
+      : os.getActiveWallpaper()
+      ? hexWithAlpha(bg, 0.78)
+      : 'transparent';
+    const stripBorder = isWin ? 'rgba(255,255,255,0.45)' : hexWithAlpha(fg, 0.45);
+    const stripInk = isWin ? '#FFFFFF' : fg;
+
+    return (
+      <Pressable
+        onPress={() => {
+          const nextPage = (curPage + 1) % totalPages;
+          os.deskIdx = nextPage * pageSize;
+          os.cb.onPlaySound?.('hit');
+        }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 6,
+          paddingVertical: 1.5,
+          borderWidth: 1,
+          borderColor: stripBorder,
+          backgroundColor: stripBg,
+          borderRadius: 3,
+        }}
+      >
+        <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: stripInk }}>
+          {pickLang(os.lang, `PAGE ${curPage + 1}/${totalPages}`, `SAYFA ${curPage + 1}/${totalPages}`)}
+        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {Array.from({ length: totalPages }).map((_, p) => (
+            <View
+              key={p}
+              style={{
+                width: p === curPage ? 12 : 5,
+                height: 5,
+                borderRadius: 2.5,
+                backgroundColor: stripInk,
+                opacity: p === curPage ? 1 : 0.35,
+              }}
+            />
+          ))}
+        </View>
+      </Pressable>
+    );
+  };
 
   if (winStyle) {
     const isXp = winStyle === 'winxp';
@@ -254,7 +309,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         {Array.from({ length: rows }, (_, r) => (
           <View key={r} style={styles.deskRow}>
             {Array.from({ length: cols }, (_, c) => {
-              const idx = r * cols + c;
+              const idx = pageStart + r * cols + c;
               const item = DESKTOP_ICONS[idx];
               if (!item) {
                 return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
@@ -272,13 +327,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     borderStyle: sel && !isXp ? 'dotted' : 'solid',
                     borderColor: sel ? '#FFFFFF' : 'transparent',
                     backgroundColor: sel ? `${selHighlight}CC` : 'transparent',
-                    paddingVertical: 1,
+                    paddingVertical: 2,
                   }}
                 >
                   <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
                     <Ionicons
                       name={item.icon}
-                      size={14}
+                      size={18}
                       color={sel ? '#FEF08A' : '#FFFFFF'}
                     />
                     {/* Classic tiny Windows desktop shortcut arrow badge */}
@@ -306,8 +361,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         color: '#FFFFFF',
                         backgroundColor: sel ? selHighlight : 'transparent',
                         paddingHorizontal: 2,
-                        marginTop: 1,
-                        fontSize: 7,
+                        marginTop: 2,
+                        fontSize: 8,
                       },
                     ]}
                     numberOfLines={1}
@@ -319,6 +374,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             })}
           </View>
         ))}
+
+        {renderPageStrip(true)}
       </View>
     );
   }
@@ -360,7 +417,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
       {Array.from({ length: rows }, (_, r) => (
         <View key={r} style={styles.deskRow}>
           {Array.from({ length: cols }, (_, c) => {
-            const idx = r * cols + c;
+            const idx = pageStart + r * cols + c;
             const item = DESKTOP_ICONS[idx];
             if (!item) {
               return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
@@ -384,8 +441,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       },
                 ]}
               >
-                <Ionicons name={item.icon} size={DESKTOP_ICONS.length > 16 ? 13 : 16} color={iconColor} />
-                <Text style={[styles.deskLbl, { color: iconColor, fontSize: DESKTOP_ICONS.length > 16 ? 7 : 7.5 }]}>
+                <Ionicons name={item.icon} size={19} color={iconColor} />
+                <Text style={[styles.deskLbl, { color: iconColor, fontSize: 8.2, marginTop: 2 }]} numberOfLines={1}>
                   {getDesktopLabel(item.id, item.label, os.lang)}
                 </Text>
               </View>
@@ -393,6 +450,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           })}
         </View>
       ))}
+
+      {renderPageStrip(false)}
     </View>
   );
 }
