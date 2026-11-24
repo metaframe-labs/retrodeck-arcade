@@ -16,7 +16,7 @@ import { ArcadeScreen } from './src/arcade/ArcadeScreen';
 import { CartridgeBayPage } from './src/components/CartridgeBayPage';
 import { DevCartModal } from './src/components/DevCartModal';
 import { ThemePickerModal } from './src/components/ThemePickerModal';
-import { ARCADE_CARTRIDGES } from './src/arcade/cartridges';
+import { ARCADE_CARTRIDGES, isCartridgeProLocked } from './src/arcade/cartridges';
 import {
   ArcadeCartridgeDef,
   ArcadeGameInstance,
@@ -298,6 +298,14 @@ function RetroDeckConsole() {
 
   // Cartridge Swap (preserve user's active OS theme)
   const handleSelectCartridge = useCallback((cart: ArcadeCartridgeDef) => {
+    if (isCartridgeProLocked(cart.id, isProRef.current)) {
+      setBayVisible(false);
+      osRef.current.openProScreen('PRO REQUIRED FOR THIS GAME!');
+      setOsMode(true);
+      setIsPaused(false);
+      handleSoundEvent('die');
+      return;
+    }
     const savedHighScore = HighScoreService.getHighScore(cart.id);
     const nextGame = cart.createGame(savedHighScore);
     nextGame.init();
@@ -329,6 +337,19 @@ function RetroDeckConsole() {
       b: false,
     };
   }, []);
+
+  const handleOpenDevCart = useCallback(() => {
+    if (!isProRef.current) {
+      setBayVisible(false);
+      osRef.current.openProScreen('DEV STUDIO REQUIRES PRO!');
+      setOsMode(true);
+      setIsPaused(false);
+      handleSoundEvent('die');
+      return;
+    }
+    setBayVisible(false);
+    setDevCartVisible(true);
+  }, [handleSoundEvent]);
 
   // Burn & Load Custom Sucrase Dev Cartridge (preserve user's active OS theme)
   const handleBurnCustomCartridge = useCallback((cart: ArcadeCartridgeDef) => {
@@ -566,7 +587,7 @@ function RetroDeckConsole() {
             </Pressable>
 
             <Pressable
-              onPress={() => setDevCartVisible(true)}
+              onPress={handleOpenDevCart}
               style={[
                 styles.paletteBtn,
                 {
@@ -872,14 +893,12 @@ function RetroDeckConsole() {
             activeCartridgeId={activeCart.id}
             accentColor={palette.bezelAccent}
             highScores={highScores}
+            isPro={isPro}
             onSelectCartridge={(cart) => {
               handleSelectCartridge(cart);
               setBayVisible(false);
             }}
-            onOpenDevCart={() => {
-              setBayVisible(false);
-              setDevCartVisible(true);
-            }}
+            onOpenDevCart={handleOpenDevCart}
             onBack={() => setBayVisible(false)}
           />
         </View>

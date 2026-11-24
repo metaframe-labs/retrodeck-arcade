@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeCartridgeDef } from '../arcade/types';
+import { isCartridgeProLocked } from '../arcade/cartridges';
 import { getAccentInk } from '../theme/palettes';
 
 const FAV_CARTS_STORAGE_KEY = '@retrodeck8_fav_carts_v1';
@@ -21,6 +22,7 @@ interface CartridgeBayPageProps {
   activeCartridgeId: string;
   accentColor: string;
   highScores?: Record<string, number>;
+  isPro?: boolean;
   onSelectCartridge: (cartridge: ArcadeCartridgeDef) => void;
   onOpenDevCart?: () => void;
   onBack: () => void;
@@ -32,6 +34,7 @@ interface CartridgeCardProps {
   cart: ArcadeCartridgeDef;
   isInserted: boolean;
   isFav: boolean;
+  isLocked: boolean;
   accentColor: string;
   accentInk: string;
   bestScore: number;
@@ -40,7 +43,7 @@ interface CartridgeCardProps {
 }
 
 const CartridgeCard = React.memo<CartridgeCardProps>(
-  ({ cart, isInserted, isFav, accentColor, accentInk, bestScore, onSelect, onToggleFav }) => (
+  ({ cart, isInserted, isFav, isLocked, accentColor, accentInk, bestScore, onSelect, onToggleFav }) => (
     <Pressable
       onPress={() => onSelect(cart)}
       style={[
@@ -112,6 +115,13 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
               INSERTED (ACTIVE)
             </Text>
           </View>
+        ) : isLocked ? (
+          <View style={[styles.loadAction, { borderColor: '#F59E0B', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F59E0B18' }]}>
+            <Ionicons name="lock-closed" size={11} color="#F59E0B" />
+            <Text style={[styles.loadActionText, { color: '#F59E0B' }]}>
+              PRO REQUIRED
+            </Text>
+          </View>
         ) : (
           <View style={styles.loadAction}>
             <Text style={[styles.loadActionText, { color: accentColor }]}>
@@ -130,6 +140,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   activeCartridgeId,
   accentColor,
   highScores = {},
+  isPro = false,
   onSelectCartridge,
   onOpenDevCart,
   onBack,
@@ -180,6 +191,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         cart={item}
         isInserted={item.id === activeCartridgeId}
         isFav={favSet.has(item.id)}
+        isLocked={isCartridgeProLocked(item.id, isPro)}
         accentColor={accentColor}
         accentInk={accentInk}
         bestScore={highScores[item.id] || 0}
@@ -187,7 +199,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         onToggleFav={toggleFav}
       />
     ),
-    [activeCartridgeId, favSet, accentColor, accentInk, highScores, onSelectCartridge, toggleFav]
+    [activeCartridgeId, favSet, isPro, accentColor, accentInk, highScores, onSelectCartridge, toggleFav]
   );
 
   const keyExtractor = useCallback((item: ArcadeCartridgeDef) => item.id, []);
@@ -209,7 +221,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
                 CUSTOM GAME STUDIO
               </Text>
               <View style={styles.studioBadge}>
-                <Text style={styles.studioBadgeText}>CREATOR</Text>
+                <Text style={styles.studioBadgeText}>{isPro ? 'CREATOR' : '🔒 PRO'}</Text>
               </View>
             </View>
             <Text style={styles.studioSub}>
@@ -220,7 +232,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         <Ionicons name="chevron-forward" size={20} color={accentColor} />
       </Pressable>
     );
-  }, [accentColor, onOpenDevCart]);
+  }, [accentColor, isPro, onOpenDevCart]);
 
   return (
     <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6 }]}>

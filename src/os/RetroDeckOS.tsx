@@ -14,6 +14,7 @@ import {
   ArcadeSound,
   ArcadeStats,
 } from '../arcade/types';
+import { isCartridgeProLocked } from '../arcade/cartridges';
 import { RetroPalette } from '../theme/palettes';
 import {
   NokiaNoteEvent,
@@ -1171,6 +1172,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.prevB = false;
   }
 
+  public openProScreen(statusMsg = '') {
+    this.app = 'pro';
+    this.proIdx = 0;
+    this.proStatusMsg = statusMsg;
+    this.keyLocked = false;
+    this.unlockStage = false;
+    this.idleTimer = 0;
+    this.prevA = true;
+    this.prevB = true;
+    this.cb.onRequestKeyboard?.(false);
+  }
+
   public goDesktop() {
     this.app = 'desktop';
     this.keyLocked = false;
@@ -1597,7 +1610,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.gameIdx = (this.gameIdx + 1) % carts.length;
         this.cb.onPlaySound?.('hit');
       } else if (key === 'OK' && carts[this.gameIdx]) {
-        this.cb.onLaunchGame(carts[this.gameIdx]);
+        const isPro = this.cb.getIsPro?.() ?? false;
+        const selected = carts[this.gameIdx];
+        if (isCartridgeProLocked(selected.id, isPro)) {
+          this.openProScreen('PRO REQUIRED FOR THIS GAME!');
+          this.cb.onPlaySound?.('die');
+          return;
+        }
+        this.cb.onLaunchGame(selected);
         this.cb.onPlaySound?.('powerup');
       }
       return;
@@ -2408,7 +2428,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (dir) return 'hit';
 
       if (pressA && carts[this.gameIdx]) {
-        this.cb.onLaunchGame(carts[this.gameIdx]);
+        const isPro = this.cb.getIsPro?.() ?? false;
+        const selected = carts[this.gameIdx];
+        if (isCartridgeProLocked(selected.id, isPro)) {
+          this.openProScreen('PRO REQUIRED FOR THIS GAME!');
+          return 'die';
+        }
+        this.cb.onLaunchGame(selected);
         return 'powerup';
       }
       return null;
@@ -3049,6 +3075,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
             );
       if (found) {
+        const isPro = this.cb.getIsPro?.() ?? false;
+        if (isCartridgeProLocked(found.id, isPro)) {
+          this.pushTermLines([`LOCKED: ${found.title} REQUIRES PRO!`, 'TYPE "pro" TO UPGRADE.']);
+          return 'die';
+        }
         this.pushTermLines([`BOOTING ${found.title}...`]);
         this.cb.onLaunchGame(found);
         return 'powerup';
@@ -3058,7 +3089,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (bin === 'randgame') {
-      const pick = carts[Math.floor(Math.random() * carts.length)];
+      const isPro = this.cb.getIsPro?.() ?? false;
+      const pool = isPro ? carts : carts.filter((c) => !isCartridgeProLocked(c.id, false));
+      const pick = pool[Math.floor(Math.random() * pool.length)];
       if (pick) this.cb.onLaunchGame(pick);
       return 'powerup';
     }
@@ -3936,6 +3969,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderArcadeBrowser(fg: string, bg: string) {
     const carts = this.cb.getCartridges();
     const scores = this.cb.getHighScores();
+    const isPro = this.cb.getIsPro?.() ?? false;
     const visibleCount = 7;
     const start = Math.max(0, Math.min(carts.length - visibleCount, this.gameIdx - 3));
     const slice = carts.slice(start, start + visibleCount);
@@ -3949,6 +3983,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           const realIdx = start + i;
           const sel = realIdx === this.gameIdx;
           const hs = scores[c.id] || 0;
+          const locked = isCartridgeProLocked(c.id, isPro);
           return (
             <View
               key={c.id}
@@ -3958,10 +3993,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ]}
             >
               <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                {String(realIdx + 1).padStart(3, '0')}. {c.title}
+                {String(realIdx + 1).padStart(3, '0')}. {locked ? '🔒 ' : ''}{c.title}
               </Text>
               <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-                {hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6)}
+                {locked ? 'PRO' : (hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6))}
               </Text>
             </View>
           );

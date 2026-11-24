@@ -2602,3 +2602,13 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
     createGame: (hs = 0) => new BreakoutGame(hs),
   },
 ];
+
+export const FREE_CARTRIDGE_LIMIT = 10;
+
+export function isCartridgeProLocked(cartId: string, isPro: boolean): boolean {
+  if (isPro) return false;
+  if (cartId.startsWith('dev-cart-')) return false;
+  const idx = ARCADE_CARTRIDGES.findIndex((c) => c.id === cartId);
+  if (idx === -1) return false;
+  return idx >= FREE_CARTRIDGE_LIMIT;
+}
