@@ -68,6 +68,7 @@ function RetroDeckConsole() {
   const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
   const [scanlines, setScanlines] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isMuted, setIsMuted] = useState(() => RetroAudioEngine.getMuted());
   const [isBeeping, setIsBeeping] = useState(false);
   const [deckMode, setDeckMode] = useState<'pad' | 'num' | 'kbd'>('pad');
   const [, setKbdTick] = useState(0);
@@ -401,6 +402,66 @@ function RetroDeckConsole() {
     setGameOverMenuSelection(0);
     setIsPaused(false);
   };
+
+  const handleToggleMute = useCallback(() => {
+    const next = !RetroAudioEngine.getMuted();
+    RetroAudioEngine.setMuted(next);
+    setIsMuted(next);
+  }, []);
+
+  const handleSelectPress = useCallback(() => {
+    if (osMode) {
+      setDeckMode((m) => (m === 'pad' ? 'num' : m === 'num' ? 'kbd' : 'pad'));
+      handleSoundEvent('hit');
+    } else {
+      setBayVisible(true);
+      handleSoundEvent('hit');
+    }
+  }, [osMode, handleSoundEvent]);
+
+  const handleStartPress = useCallback(() => {
+    if (osMode) {
+      handleButtonChange('a', true);
+      setTimeout(() => handleButtonChange('a', false), 65);
+      handleSoundEvent('hit');
+      return;
+    }
+    if (cartridgeReadyRef.current) {
+      cartridgeReadyRef.current = false;
+      setCartridgeReady(false);
+      handleSoundEvent('hit');
+      if (gameRef.current.getStats().isMenu) {
+        gameRef.current.update({ ...inputRef.current, a: true }, 1 / 60);
+      }
+      return;
+    }
+    const curStats = gameRef.current.getStats();
+    if (curStats.gameOver) {
+      handleReset();
+      handleSoundEvent('powerup');
+      return;
+    }
+    if (curStats.isMenu) {
+      handleButtonChange('a', true);
+      setTimeout(() => handleButtonChange('a', false), 65);
+      return;
+    }
+    setIsPaused((p) => !p);
+    handleSoundEvent('hit');
+  }, [osMode, handleButtonChange, handleSoundEvent]);
+
+  const handleHomePress = useCallback(() => {
+    if (osMode) {
+      setOsMode(false);
+      setIsPaused(false);
+      handleSoundEvent('powerup');
+    } else {
+      osRef.current.goDesktop();
+      setOsMode(true);
+      setIsPaused(false);
+      handleSoundEvent('hit');
+    }
+  }, [osMode, handleSoundEvent]);
 
   return (
     <View
@@ -736,7 +797,14 @@ function RetroDeckConsole() {
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 centerBg={palette.bezelBg}
+                osMode={osMode}
+                isPaused={isPaused}
+                isMuted={isMuted || RetroAudioEngine.getMuted()}
                 onButtonChange={handleButtonChange}
+                onSelectPress={handleSelectPress}
+                onStartPress={handleStartPress}
+                onHomePress={handleHomePress}
+                onToggleMute={handleToggleMute}
               />
             )}
           </View>
@@ -935,8 +1003,8 @@ const styles = StyleSheet.create({
     borderLeftColor: '#131D2A',
     borderRightWidth: 1,
     borderRightColor: '#131D2A',
-    paddingTop: 10,
-    paddingBottom: 16,
+    paddingTop: 8,
+    paddingBottom: 10,
     paddingHorizontal: 12,
     justifyContent: 'space-between',
   },
