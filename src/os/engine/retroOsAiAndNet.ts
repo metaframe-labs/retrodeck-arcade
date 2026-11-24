@@ -728,6 +728,54 @@ export async function fetchWapPageImpl(os: RetroDeckOS, rawUrl: string) {
   if (os.wapLoading) return;
   let url = rawUrl.trim();
   if (!url) url = 'https://www.metaframelabs.space/';
+
+  if (/^(retro:\/\/secrets|secrets)$/i.test(url)) {
+    os.wapUrl = 'retro://secrets';
+    os.wapLoading = false;
+    os.wapScroll = 0;
+    os.wapLines = pickLang(
+      os.lang,
+      [
+        '=== RETRODECK SECRETS & TIPS ===',
+        '[PHONE USSD CODES]',
+        '• *#7370# : HARD FORMAT SIM (WIN98/XP)',
+        '• *#0000# : FIRMWARE & ROM VERSION',
+        '• *#06#   : NOKIA 3310 IMEI SERIAL',
+        '• *#92702689# : WARRANTY MENU',
+        '[SHELL (RDSH) COMMANDS]',
+        '• format c: : LAUNCH FORMAT WIZARD',
+        '• win98 / winxp : 45s WIN TRIAL + WGA',
+        '• wallpaper tokyo : SET PIXEL WALL',
+        '• menustyle nokia|grid|list|cards',
+        '• livesms jake : TRIGGER SIMULATED SMS',
+        '[HIDDEN TIPS]',
+        '• TAP WALLS SCREEN -> PURE FULLSCREEN',
+        '• SETUP -> MENU STYLE CHANGES ALL APPS',
+        '• SMS [▲] -> 31-SCENE POSTCARD STUDIO',
+      ],
+      [
+        '=== RETRODECK GIZLI KODLAR ===',
+        '[TELEFON TUSLAMA KODLARI]',
+        '• *#7370# : HARD FORMAT SIM (WIN98/XP)',
+        '• *#0000# : YAZILIM & ROM SURUMU',
+        '• *#06#   : NOKIA 3310 IMEI SERI NO',
+        '• *#92702689# : GIZLI GARANTI MENUSU',
+        '[KONSOL (RDSH) KOMUTLARI]',
+        '• format c: : FORMAT SIHIRBAZINI AC',
+        '• win98 / winxp : 45sn WIN TEMA + WGA',
+        '• wallpaper tokyo : DUVAR KAGIDI SEC',
+        '• menustyle nokia|grid|list|cards',
+        '• livesms jake : SANAL SMS TETIKLE',
+        '[PUF NOKTALARI]',
+        '• DUVAR EKRANINA DOKUN -> TAM EKRAN',
+        '• AYAR -> MENU STILI TUM MENUYU DEGISTIRIR',
+        '• SMS [▲] -> 31 SAHNELI KARTPOSTAL',
+      ]
+    );
+    os.cb.onPlaySound?.('powerup');
+    return;
+  }
+
   if (!/^https?:\/\//i.test(url)) {
     url = `https://${url}`;
   }

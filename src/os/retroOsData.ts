@@ -322,12 +322,15 @@ export interface PixelNoteItem {
 }
 
 export const DEFAULT_NOTES: PixelNoteItem[] = [
-  { id: '1', text: 'WELCOME TO RETRODECK NOTES!', ts: 'RD-OS' },
-  { id: '2', text: 'PRESS [A] OR [KBD] TO ADD NOTE', ts: 'TIP' },
+  { id: '1', text: 'DIAL *#7370# OR *#0000# IN PHONE!', ts: 'SECRET' },
+  { id: '2', text: 'SHELL: format c:, winxp, win98, livesms', ts: 'SHELL' },
+  { id: '3', text: 'TAP WALLS SCREEN FOR PURE FULLSCREEN!', ts: 'TIP' },
+  { id: '4', text: 'SETUP -> MENU STYLE: NOKIA / GRID / CARDS', ts: 'TIP' },
 ];
 
 export const WAP_BOOKMARKS = [
   'https://www.metaframelabs.space/',
+  'retro://secrets',
   'https://news.ycombinator.com/',
   'https://lite.cnn.com/',
   'https://en.m.wikipedia.org/wiki/Nokia_3310',
@@ -1526,9 +1529,9 @@ export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'neon_ramen', title: 'RAMEN ALLEY', image: require('../../assets/postcards/neon_ramen.jpg') },
   { id: 'fantasy_castle', title: 'MOONLIT CASTLE', image: require('../../assets/postcards/fantasy_castle.jpg') },
   { id: 'winter_cabin', title: 'WINTER CABIN', image: require('../../assets/postcards/winter_cabin.jpg') },
-  { id: 'space_station', title: 'ORBITAL STATION', image: require('../../assets/postcards/space_station.png') },
-  { id: 'volcano_lava', title: 'VOLCANO NIGHT', image: require('../../assets/postcards/volcano_lava.png') },
-  { id: 'retro_diner', title: 'NEON DINER', image: require('../../assets/postcards/retro_diner.png') },
+  { id: 'space_station', title: 'ORBITAL STATION', image: require('../../assets/postcards/space_station.jpg') },
+  { id: 'volcano_lava', title: 'VOLCANO NIGHT', image: require('../../assets/postcards/volcano_lava.jpg') },
+  { id: 'retro_diner', title: 'NEON DINER', image: require('../../assets/postcards/retro_diner.jpg') },
   { id: 'retro_diner_2', title: 'ROUTE 66 DINER', image: require('../../assets/postcards/retro_diner_2.jpg') },
   { id: 'desert_oasis', title: 'DESERT OASIS', image: require('../../assets/postcards/desert_oasis.jpg') },
   { id: 'seoul_rain', title: 'SEOUL RAIN', image: require('../../assets/postcards/seoul_rain.jpg') },
