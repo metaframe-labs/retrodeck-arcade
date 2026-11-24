@@ -93,6 +93,26 @@ import {
   renderStats,
   renderTerm,
 } from './render/renderMediaToolApps';
+import { pushTermLinesImpl, execTermCmdImpl } from './engine/retroOsShell';
+import {
+  triggerLivePersonaSmsImpl,
+  executeAiActionsImpl,
+  sendAiMessageImpl,
+  sendPictureSmsToAiImpl,
+  fetchWapPageImpl,
+  fetchWeatherImpl,
+} from './engine/retroOsAiAndNet';
+import {
+  getControlsHintImpl,
+  getKeyboardBindingImpl,
+  setKeyboardTextImpl,
+  submitKeyboardImpl,
+} from './engine/retroOsKeyboard';
+import {
+  executePhoneKeyImpl,
+  pressNumericKeyImpl,
+  updateOsFrameImpl,
+} from './engine/retroOsInput';
 import {
   CLOCK_FACE_STORAGE_KEY,
   WEATHER_CITY_STORAGE_KEY,
@@ -150,17 +170,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Keyguard & Screensaver state
   /** @internal */ keyLocked = false;
   /** @internal */ unlockStage = false; // true after pressing A once while locked ("NOW PRESS * / UP")
-  private unlockHintTimer = 0;
-  private idleTimer = 0;
+  /** @internal */ unlockHintTimer = 0;
+  /** @internal */ idleTimer = 0;
 
   // Input edge / repeat
-  private moveCd = 0;
-  private prevA = false;
-  private prevB = false;
-  private prevUp = false;
-  private prevDown = false;
-  private prevLeft = false;
-  private prevRight = false;
+  /** @internal */ moveCd = 0;
+  /** @internal */ prevA = false;
+  /** @internal */ prevB = false;
+  /** @internal */ prevUp = false;
+  /** @internal */ prevDown = false;
+  /** @internal */ prevLeft = false;
+  /** @internal */ prevRight = false;
 
   // Desktop 4x3 cursor
   /** @internal */ deskIdx = 0;
@@ -168,12 +188,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // In-LCD Arcade Browser
   /** @internal */ gameIdx = 0;
 
-  private playActiveSmsTone() {
+  /** @internal */ playActiveSmsTone() {
     const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
     RetroAudioEngine.playNokiaMelody(smsTone.notes, smsTone.bpm);
   }
 
-  private triggerPurchaseFailedSms(reason: string) {
+  /** @internal */ triggerPurchaseFailedSms(reason: string) {
     this.smsList.unshift({
       sender: 'BANK-RD8',
       title: 'PAYMENT FAILED',
@@ -189,7 +209,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.playActiveSmsTone();
   }
 
-  private triggerPurchaseSuccessSms(planName: string) {
+  /** @internal */ triggerPurchaseSuccessSms(planName: string) {
     this.smsList.unshift({
       sender: 'RETRODECK-VIP',
       title: 'PRO ACTIVATED!',
@@ -209,12 +229,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
   /** @internal */ aiTab: 'chat' | 'byok' = 'chat';
   /** @internal */ byokRow = 0;
-  private kbdTarget: 'chat' | 'key' | 'model' = 'chat';
+  /** @internal */ kbdTarget: 'chat' | 'key' | 'model' = 'chat';
   /** @internal */ aiPrompt = '';
   /** @internal */ aiLoading = false;
-  private aiStatus = 'READY';
-  private chatClearConfirm = false;
-  private chatHistory: BYOKChatMessage[] = [];
+  /** @internal */ aiStatus = 'READY';
+  /** @internal */ chatClearConfirm = false;
+  /** @internal */ chatHistory: BYOKChatMessage[] = [];
   /** @internal */ chatLines: string[] = [
     'AI> WELCOME TO RETRODECK AI!',
     'AI> PRESS [KBD] OR [A] TO TYPE,',
@@ -228,7 +248,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ calcDisplay = '0';
   /** @internal */ calcAcc: number | null = null;
   /** @internal */ calcOp: string | null = null;
-  private calcFresh = true;
+  /** @internal */ calcFresh = true;
 
   // Clock / Stopwatch / Countdown Timer state
   /** @internal */ clockTab: 'clk' | 'sw' | 'cd' = 'clk';
@@ -236,7 +256,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ swRunning = false;
   /** @internal */ swTime = 0;
   /** @internal */ swLap = 0;
-  private cdRunning = false;
+  /** @internal */ cdRunning = false;
   /** @internal */ cdPresetSec = 30;
   /** @internal */ cdRemaining = 30;
   /** @internal */ cdAlarmActive = false;
@@ -246,7 +266,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ synthMode: 'pad' | 'list' = 'pad';
   /** @internal */ synthListIdx = 0;
   /** @internal */ synthClearConfirm = false;
-  private tuneNameDraft = '';
+  /** @internal */ tuneNameDraft = '';
   /** @internal */ songIdx = 0;
   /** @internal */ songs: NokiaSong[] = [
     ...NOKIA_SONGS.map((s) => ({ ...s })),
@@ -254,22 +274,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
   ];
   /** @internal */ melodyPlaying = false;
   /** @internal */ melodyTimer = 0;
-  private melodyDuration = 0;
+  /** @internal */ melodyDuration = 0;
   /** @internal */ melodyEvents: NokiaNoteEvent[] = [];
 
   // Pixel Paint 16x10
-  private paintW = 16;
-  private paintH = 10;
+  /** @internal */ paintW = 16;
+  /** @internal */ paintH = 10;
   /** @internal */ paintGrid: boolean[][] = [];
   /** @internal */ paintR = 4;
   /** @internal */ paintC = 7;
 
   // Nokia WAP 1.1 Browser state
   /** @internal */ wapUrl = 'https://www.metaframelabs.space/';
-  private wapBookmarkIdx = 0;
+  /** @internal */ wapBookmarkIdx = 0;
   /** @internal */ wapLoading = false;
   /** @internal */ wapScroll = 0;
-  private wapFetchedOnce = false;
+  /** @internal */ wapFetchedOnce = false;
   /** @internal */ wapLines: string[] = [
     '=== METAFRAME LABS ===',
     '// AI-NATIVE · PRIVACY-FIRST',
@@ -285,7 +305,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   ];
 
   // Real Interactive Shell (rdsh) state
-  private termIdx = -1;
+  /** @internal */ termIdx = -1;
   /** @internal */ termCwd = '/home';
   /** @internal */ termInput = '';
   /** @internal */ termScroll = 0;
@@ -308,7 +328,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // RetroDeck Pro In-LCD App state
   /** @internal */ proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
   /** @internal */ proStatusMsg = '';
-  private proBusy = false;
+  /** @internal */ proBusy = false;
 
   // Nokia 3310 Phone / SMS / Profiles state
   /** @internal */ dialR = 0;
@@ -320,26 +340,26 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ callTitle = '';
   /** @internal */ callSub = '';
   /** @internal */ callTimer = 0;
-  private ringRepeatTimer = 0;
-  private ringDuration = 0;
+  /** @internal */ ringRepeatTimer = 0;
+  /** @internal */ ringDuration = 0;
 
   /** @internal */ smsList: NokiaPicSms[] = INITIAL_PIC_MESSAGES.map((m) => ({ ...m }));
   /** @internal */ smsIdx = 0;
   /** @internal */ smsBanner = '';
   /** @internal */ smsBannerTimer = 0;
   /** @internal */ unreadSmsCount = 0;
-  private smsSendingAi = false;
+  /** @internal */ smsSendingAi = false;
   /** @internal */ smsDeleteConfirm = false;
   /** @internal */ smsMode: 'inbox' | 'compose' = 'inbox';
   /** @internal */ smsStudioTab: 'art' | 'stamps' = 'art';
   /** @internal */ smsArtIdx = 0;
   /** @internal */ smsStampIdx = 0;
   /** @internal */ smsDraftText = '';
-  private smsReplyTargetIdx: number | null = null;
+  /** @internal */ smsReplyTargetIdx: number | null = null;
   /** @internal */ liveAiSmsEnabled = true;
-  private liveSmsTimer = 80;
-  private liveSmsFetching = false;
-  private personaHistories: Record<string, { role: 'user' | 'assistant'; content: string }[]> = {};
+  /** @internal */ liveSmsTimer = 80;
+  /** @internal */ liveSmsFetching = false;
+  /** @internal */ personaHistories: Record<string, { role: 'user' | 'assistant'; content: string }[]> = {};
 
   /** @internal */ profRow = 0;
   /** @internal */ profileIdx = 0;
@@ -351,13 +371,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Device battery telemetry for OS status bar
   /** @internal */ batteryPct: number | null = null;
   /** @internal */ batteryCharging = false;
-  private batteryPollTimer = 0;
+  /** @internal */ batteryPollTimer = 0;
 
   // Live Weather state (Open-Meteo, zero API key required)
-  private weatherCityIdx = 0;
+  /** @internal */ weatherCityIdx = 0;
   /** @internal */ weatherQuery = 'Palo Alto';
   /** @internal */ weatherLoading = false;
-  private weatherFetchedOnce = false;
+  /** @internal */ weatherFetchedOnce = false;
   /** @internal */ weatherError = '';
   /** @internal */ weatherData: {
     city: string;
@@ -374,7 +394,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Persistent Pixel Notepad state
   /** @internal */ notes: PixelNoteItem[] = DEFAULT_NOTES.map((n) => ({ ...n }));
   /** @internal */ noteIdx = 0;
-  private noteDraft = '';
+  /** @internal */ noteDraft = '';
   /** @internal */ noteDeleteConfirm = false;
 
   constructor(cb: RetroDeckOSCallbacks) {
@@ -464,100 +484,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
       .catch(() => {});
   }
 
-  private savePersonaHistories() {
+  /** @internal */ savePersonaHistories() {
     AsyncStorage.setItem(LIVE_SMS_HISTORY_STORAGE_KEY, JSON.stringify(this.personaHistories)).catch(() => {});
   }
 
-  private toggleLiveAiSms() {
+  /** @internal */ toggleLiveAiSms() {
     this.liveAiSmsEnabled = !this.liveAiSmsEnabled;
     AsyncStorage.setItem(LIVE_AI_SMS_STORAGE_KEY, this.liveAiSmsEnabled ? '1' : '0').catch(() => {});
   }
 
-  private async triggerLivePersonaSms(forcedPersonaId?: string, userReply?: string): Promise<boolean> {
-    if (this.liveSmsFetching) return false;
-    const meta = getProviderMeta(this.byokConfig.activeProvider);
-    const hasKey =
-      !meta.requiresKey || Boolean(this.byokConfig.keys[this.byokConfig.activeProvider]?.trim());
-    if (!hasKey) return false;
-
-    const persona =
-      (forcedPersonaId ? LIVE_SMS_PERSONAS.find((p) => p.id === forcedPersonaId) : null) ||
-      LIVE_SMS_PERSONAS[Math.floor(Math.random() * LIVE_SMS_PERSONAS.length)];
-
-    this.liveSmsFetching = true;
-    try {
-      const history = this.personaHistories[persona.id] || [];
-      const mood = DYNAMIC_MOODS[Math.floor(Math.random() * DYNAMIC_MOODS.length)];
-      const isUnexpected = !userReply && Math.random() < 0.3;
-      const twist = isUnexpected
-        ? `\nEKSTRA DURUM: ${UNEXPECTED_TWISTS[Math.floor(Math.random() * UNEXPECTED_TWISTS.length)]}`
-        : '';
-
-      const systemContext =
-        `${persona.instruction}\n` +
-        `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
-        `SAAT: ${this.formatClock()}.\n` +
-        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla emoji kullanma, asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`;
-
-      const messages: BYOKChatMessage[] = [
-        { role: 'user', content: systemContext },
-        ...history.slice(-6),
-        {
-          role: 'user',
-          content: userReply
-            ? `Kullanici sana su cevabi yazdi: "${userReply}". Karakterinle ve ruh halinle dogal bir SMS cevabi yaz.`
-            : history.length > 0
-            ? 'Onceki sohbetimize de bagli kalarak (veya yeni bir konuyla) bana simdi rastgele bir SMS at.'
-            : 'Bana simdi tam bir SMS mesaji gonder.',
-        },
-      ];
-
-      const raw = await callBYOKAIChat(messages, this.byokConfig);
-      let cleaned = stripMarkdownForLcd(raw)
-        .replace(/^["']|["']$/g, '')
-        .replace(/\n+/g, ' ')
-        .trim()
-        .slice(0, 130);
-
-      if (!cleaned || cleaned.length < 22) {
-        cleaned = persona.fallback;
-      }
-
-      // Persist conversation memory per persona so future messages adapt to user replies
-      const nextHistory = [...history];
-      if (userReply) {
-        nextHistory.push({ role: 'user', content: userReply });
-      }
-      nextHistory.push({ role: 'assistant', content: cleaned });
-      this.personaHistories[persona.id] = nextHistory.slice(-6);
-      this.savePersonaHistories();
-
-      this.smsList.unshift({
-        sender: persona.sender,
-        title: persona.tag,
-        text: cleaned,
-        artKey: 'SMILE',
-        isLivePersona: true,
-        personaId: persona.id,
-        timestamp: this.formatClock(),
-        mood: isUnexpected ? 'SURPRIZ' : mood.split(' ')[0],
-      });
-      if (this.smsList.length > 25) this.smsList.pop();
-      this.smsIdx = 0;
-      this.smsBanner = `✉ NEW SMS: ${persona.sender}`;
-      this.smsBannerTimer = 4.5;
-      if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
-      this.saveSmsList();
-      this.playActiveSmsTone();
-      return true;
-    } catch {
-      return false;
-    } finally {
-      this.liveSmsFetching = false;
-    }
+  /** @internal */ async triggerLivePersonaSms(forcedPersonaId?: string, userReply?: string): Promise<boolean> {
+    return triggerLivePersonaSmsImpl(this, forcedPersonaId, userReply);
   }
 
-  private saveSmsList() {
+  /** @internal */ saveSmsList() {
     AsyncStorage.setItem(SMS_LIST_STORAGE_KEY, JSON.stringify(this.smsList)).catch(() => {});
   }
 
@@ -565,17 +505,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
     return idx >= NOKIA_SONGS.length;
   }
 
-  private saveCustomTunes() {
+  /** @internal */ saveCustomTunes() {
     const custom = this.songs.slice(NOKIA_SONGS.length);
     AsyncStorage.setItem(MY_TUNES_STORAGE_KEY, JSON.stringify(custom)).catch(() => {});
   }
 
-  private toggleClockFace() {
+  /** @internal */ toggleClockFace() {
     this.clockFace = this.clockFace === 'analog' ? 'digital' : 'analog';
     AsyncStorage.setItem(CLOCK_FACE_STORAGE_KEY, this.clockFace).catch(() => {});
   }
 
-  private async refreshBattery() {
+  /** @internal */ async refreshBattery() {
     try {
       const state = await Battery.getPowerStateAsync();
       if (typeof state.batteryLevel === 'number' && state.batteryLevel >= 0 && state.batteryLevel <= 1) {
@@ -592,7 +532,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
   }
 
-  private clearCanvas() {
+  /** @internal */ clearCanvas() {
     this.paintGrid = Array.from({ length: this.paintH }, () =>
       Array(this.paintW).fill(false)
     );
@@ -665,57 +605,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public getControlsHint(): string {
-    if (this.keyLocked) {
-      return this.unlockStage
-        ? 'NOW PRESS [▲] (STAR *) TO UNLOCK KEYGUARD!'
-        : 'KEYGUARD ACTIVE • PRESS [A] THEN [▲] (*) TO UNLOCK';
-    }
-    switch (this.app) {
-      case 'boot':
-        return 'Booting RetroDeck OS... Press [A] to skip';
-      case 'desktop':
-        return 'D-PAD: Select Icon • [A]: Open • KBD: Keyboard';
-      case 'arcade':
-        return '[▲]/[▼]: Browse 100 Games • [A]: Launch • [B]: Desktop';
-      case 'radio':
-        return '[◀]/[▶]: Tune Station • [A]: Play/Stop • [▲]/[▼]: Vol • [B]: Desktop';
-      case 'ai':
-        return this.aiTab === 'chat'
-          ? '[▲]/[▼]: Scroll • [A]: Type • [◀]x2: Clear • [▶]: BYOK'
-          : '[▲]/[▼]: Select • [◀]/[▶]: Provider • [A]: Edit Key/Model';
-      case 'wap':
-        return '[▲]/[▼]: Scroll Page • [◀]/[▶]: Bookmarks • [A]: Type URL / Go';
-      case 'calc':
-        return 'D-PAD: Key • [A]: Press • [B]: Exit';
-      case 'clock':
-        return '[◀]/[▶]: Stopwatch/Timer • [A]: Start/Stop • [▲]/[▼]: Set/Reset';
-      case 'synth':
-        return 'D-PAD: Select Note/Play • [A]: Play/Add Note • [B]: Exit';
-      case 'phone':
-        return 'D-PAD: Keypad • [A]: Dial (*#0000# / LOCK) • [B]: Exit';
-      case 'sms':
-        return '[◀]/[▶]: Read • [▼]x2 or DEL: Delete • [A]: AI Reply';
-      case 'profiles':
-        return '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit';
-      case 'paint':
-        return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
-      case 'weather':
-        return '[◀]/[▶]: City • [▲]/[▼]: Refresh • [A]: Search City • [B]: Desktop';
-      case 'notes':
-        return '[▲]/[▼]: Browse Notes • [A]: New Note • [▶]x2: Delete • [B]: Desktop';
-      case 'stats':
-        return 'Viewing Arcade High Scores & Rank • [B]: Desktop';
-      case 'term':
-        return '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit';
-      case 'setup':
-        return '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop';
-      case 'themes':
-        return '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back';
-      case 'pro':
-        return '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back';
-      default:
-        return 'D-PAD: Navigate • [A]: Select • [B]: Back';
-    }
+    return getControlsHintImpl(this);
   }
 
   public getKeyboardBinding(): {
@@ -724,286 +614,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
     placeholder: string;
     secure: boolean;
   } {
-    if (this.app === 'wap') {
-      return {
-        targetLabel: 'WAP URL',
-        value: this.wapUrl,
-        placeholder: 'https://www.metaframelabs.space/',
-        secure: false,
-      };
-    }
-    if (this.app === 'term') {
-      return {
-        targetLabel: `RDSH ${this.termCwd}$`,
-        value: this.termInput,
-        placeholder: 'help, ls, neofetch, open snake, ai ...',
-        secure: false,
-      };
-    }
-    if (this.app === 'weather') {
-      return {
-        targetLabel: 'WEATHER CITY',
-        value: this.weatherQuery,
-        placeholder: 'Istanbul, Tokyo, London...',
-        secure: false,
-      };
-    }
-    if (this.app === 'notes') {
-      return {
-        targetLabel: 'NEW NOTE',
-        value: this.noteDraft,
-        placeholder: 'TYPE YOUR PIXEL NOTE...',
-        secure: false,
-      };
-    }
-    if (this.app === 'synth') {
-      return {
-        targetLabel: 'TUNE NAME',
-        value: this.tuneNameDraft,
-        placeholder: 'MY TUNE NAME...',
-        secure: false,
-      };
-    }
-    if (this.app === 'sms') {
-      if (this.smsReplyTargetIdx !== null) {
-        const target = this.smsList[this.smsReplyTargetIdx];
-        return {
-          targetLabel: `REPLY ${target?.sender || 'SMS'}`.slice(0, 14),
-          value: this.smsDraftText,
-          placeholder: 'TYPE YOUR REPLY...',
-          secure: false,
-        };
-      }
-      return {
-        targetLabel: 'POSTCARD MSG',
-        value: this.smsDraftText,
-        placeholder: 'WRITE POSTCARD MESSAGE...',
-        secure: false,
-      };
-    }
-    const pid = this.byokConfig.activeProvider;
-    const meta = getProviderMeta(pid);
-    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
-      return {
-        targetLabel: `${meta.shortName} KEY`,
-        value: this.byokConfig.keys[pid] || '',
-        placeholder: meta.keyPlaceholder || 'PASTE API KEY...',
-        secure: false,
-      };
-    }
-    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'model') {
-      return {
-        targetLabel: `${meta.shortName} MDL`,
-        value: this.byokConfig.models[pid] ?? meta.defaultModel,
-        placeholder: meta.defaultModel,
-        secure: false,
-      };
-    }
-    return {
-      targetLabel: 'AI PROMPT',
-      value: this.aiPrompt,
-      placeholder: 'ASK RETRODECK AI...',
-      secure: false,
-    };
+    return getKeyboardBindingImpl(this);
   }
 
   public setKeyboardText(next: string) {
-    this.idleTimer = 0;
-    if (this.app === 'wap') {
-      this.wapUrl = next;
-      return;
-    }
-    if (this.app === 'term') {
-      this.termInput = next;
-      return;
-    }
-    if (this.app === 'weather') {
-      this.weatherQuery = next;
-      return;
-    }
-    if (this.app === 'notes') {
-      this.noteDraft = next;
-      return;
-    }
-    if (this.app === 'synth') {
-      this.tuneNameDraft = next.toUpperCase().slice(0, 14);
-      return;
-    }
-    if (this.app === 'sms') {
-      if (this.smsReplyTargetIdx !== null) {
-        this.smsDraftText = next.slice(0, 120);
-        return;
-      }
-      this.smsDraftText = next.toUpperCase().slice(0, 82);
-      if (this.smsMode !== 'compose') this.smsMode = 'compose';
-      return;
-    }
-    const pid = this.byokConfig.activeProvider;
-    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
-      this.byokConfig = {
-        ...this.byokConfig,
-        keys: { ...this.byokConfig.keys, [pid]: next },
-      };
-      saveBYOKConfig(this.byokConfig);
-      return;
-    }
-    if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'model') {
-      this.byokConfig = {
-        ...this.byokConfig,
-        models: { ...this.byokConfig.models, [pid]: next },
-      };
-      saveBYOKConfig(this.byokConfig);
-      return;
-    }
-    this.aiPrompt = next;
-    if (this.app !== 'ai') {
-      this.app = 'ai';
-      this.aiTab = 'chat';
-    }
+    setKeyboardTextImpl(this, next);
   }
 
   public submitKeyboard() {
-    this.idleTimer = 0;
-    if (this.app === 'wap') {
-      this.cb.onRequestKeyboard?.(false);
-      this.fetchWapPage(this.wapUrl);
-      return;
-    }
-    if (this.app === 'term') {
-      const cmd = this.termInput.trim() || 'help';
-      this.termInput = '';
-      const s = this.execTermCmd(cmd);
-      this.cb.onPlaySound?.(s);
-      return;
-    }
-    if (this.app === 'weather') {
-      this.cb.onRequestKeyboard?.(false);
-      this.fetchWeather(this.weatherQuery);
-      return;
-    }
-    if (this.app === 'notes') {
-      const text = this.noteDraft.trim();
-      if (text.length > 0) {
-        const d = new Date();
-        const hh = d.getHours().toString().padStart(2, '0');
-        const mm = d.getMinutes().toString().padStart(2, '0');
-        this.notes = [
-          { id: String(Date.now()), text, ts: `${hh}:${mm}` },
-          ...this.notes.slice(0, 29),
-        ];
-        this.noteIdx = 0;
-        this.noteDeleteConfirm = false;
-        this.saveNotes();
-        this.cb.onPlaySound?.('score');
-      }
-      this.noteDraft = '';
-      this.cb.onRequestKeyboard?.(false);
-      return;
-    }
-    if (this.app === 'synth') {
-      const targetIdx = this.synthMode === 'list' ? this.synthListIdx : this.songIdx;
-      if (this.isCustomTune(targetIdx)) {
-        const clean = this.tuneNameDraft.trim().toUpperCase().slice(0, 14);
-        const fallback = DEFAULT_CUSTOM_TUNES[targetIdx - NOKIA_SONGS.length]?.title || 'MY TUNE';
-        this.songs[targetIdx].title = clean || fallback;
-        this.saveCustomTunes();
-        this.cb.onPlaySound?.('powerup');
-      }
-      this.tuneNameDraft = '';
-      this.cb.onRequestKeyboard?.(false);
-      return;
-    }
-    if (this.app === 'sms') {
-      this.cb.onRequestKeyboard?.(false);
-      if (this.smsReplyTargetIdx !== null) {
-        const target = this.smsList[this.smsReplyTargetIdx];
-        const replyText = this.smsDraftText.trim();
-        this.smsDraftText = '';
-        this.smsReplyTargetIdx = null;
-        if (replyText && target?.personaId) {
-          this.smsBanner = `SENT TO ${target.sender}!`;
-          this.smsBannerTimer = 3.0;
-          this.cb.onPlaySound?.('score');
-          this.triggerLivePersonaSms(target.personaId, replyText);
-        }
-        return;
-      }
-      this.smsMode = 'compose';
-      return;
-    }
-    if (this.app === 'ai' && this.aiTab === 'byok') {
-      saveBYOKConfig(this.byokConfig);
-      this.aiStatus = 'SAVED!';
-      this.cb.onPlaySound?.('score');
-      this.cb.onRequestKeyboard?.(false);
-      return;
-    }
-    if (this.app !== 'ai') {
-      this.app = 'ai';
-      this.aiTab = 'chat';
-    }
-    this.sendAiMessage();
+    submitKeyboardImpl(this);
   }
 
-  private executePhoneKey(k: string): ArcadeSound | null {
-    if (k === 'CLR') {
-      this.dialBuffer = this.dialBuffer.slice(0, -1);
-      return 'hit';
-    }
-    if (k === 'LOCK') {
-      this.keyLocked = true;
-      this.unlockStage = false;
-      return 'score';
-    }
-    if (k === 'RING') {
-      const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
-      this.callState = 'ringing';
-      this.callTitle = 'RETRODECK CALLING';
-      this.callSub = `♪ ${activeRing.title.trim()}`;
-      const res = RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
-      this.ringRepeatTimer = 0;
-      this.ringDuration = res.totalSec > 0 ? res.totalSec : 2.5;
-      return null;
-    }
-    if (k === 'CALL') {
-      const num = this.dialBuffer || '0532-3310';
-      this.callState = 'connected';
-      this.callTitle = `CALLING ${num}`;
-      this.callSub = 'VOICE LINE ACTIVE';
-      this.callTimer = 0;
-      return 'powerup';
-    }
-    if (this.dialBuffer.length < 16) {
-      this.dialBuffer += k;
-    }
-    RetroAudioEngine.playDialKey(k);
-    if (this.dialBuffer === '*#0000#') {
-      this.callState = 'info';
-      this.callTitle = 'V 05.57  23-11-26';
-      this.callSub = 'NHM-5NX (c) NOKIA';
-      this.dialBuffer = '';
-    } else if (this.dialBuffer === '*#06#') {
-      this.callState = 'info';
-      this.callTitle = 'IMEI SERIAL NO:';
-      this.callSub = '350993-10-331000-8';
-      this.dialBuffer = '';
-    } else if (this.dialBuffer === '*#92702689#') {
-      this.callState = 'warranty';
-      this.warrantyPage = 0;
-      this.dialBuffer = '';
-      return 'powerup';
-    } else if (this.dialBuffer === '*#7780#') {
-      this.callState = 'info';
-      this.callTitle = 'FACTORY RESTORE';
-      this.callSub = '3310 ROM SETTINGS OK';
-      this.dialBuffer = '';
-    } else if (this.dialBuffer === '*#7370#') {
-      this.callState = 'info';
-      this.callTitle = 'DEEP FORMAT 3310';
-      this.callSub = '100 CARTS VERIFIED';
-      this.dialBuffer = '';
-    }
-    return null;
+  /** @internal */ executePhoneKey(k: string): ArcadeSound | null {
+    return executePhoneKeyImpl(this, k);
   }
 
   public setNumericDeckActive(active: boolean) {
@@ -1032,236 +655,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public pressNumericKey(key: string) {
-    this.idleTimer = 0;
-
-    // Keyguard unlock support
-    if (this.keyLocked) {
-      if (key === 'OK') {
-        this.unlockStage = true;
-        this.unlockHintTimer = 2.5;
-        this.cb.onPlaySound?.('hit');
-      } else if (key === '*' && this.unlockStage) {
-        this.keyLocked = false;
-        this.unlockStage = false;
-        this.cb.onPlaySound?.('powerup');
-      }
-      return;
-    }
-
-    // Global BACK action
-    if (key === 'BACK') {
-      if (this.app === 'phone' && this.callState !== 'idle') {
-        this.callState = 'idle';
-        RetroAudioEngine.stopNokiaMelody();
-        this.cb.onPlaySound?.('hit');
-        return;
-      }
-      if (this.app !== 'desktop') {
-        this.app = 'desktop';
-        this.cb.onPlaySound?.('hit');
-      }
-      return;
-    }
-
-    // Text input apps (AI, WAP, Terminal, Weather, Notes)
-    if (
-      this.app === 'wap' ||
-      this.app === 'term' ||
-      this.app === 'ai' ||
-      this.app === 'weather' ||
-      this.app === 'notes'
-    ) {
-      const cur = this.getKeyboardBinding().value;
-      if (key === 'DEL') this.setKeyboardText(cur.slice(0, -1));
-      else if (key === 'CLR') this.setKeyboardText('');
-      else if (key === 'OK') this.submitKeyboard();
-      else this.setKeyboardText(cur + key);
-      this.cb.onPlaySound?.('hit');
-      return;
-    }
-
-    // Calculator
-    if (this.app === 'calc') {
-      if (key === 'DEL' || key === 'CLR') this.pressCalcKey('C');
-      else if (key === 'OK') this.pressCalcKey('=');
-      else if (key === '*') {
-        const ops = ['+', '-', '*', '/'];
-        const curIdx = this.calcOp ? ops.indexOf(this.calcOp) : -1;
-        const nextOp = ops[(curIdx + 1) % ops.length];
-        if (this.calcAcc === null) {
-          this.pressCalcKey(nextOp);
-        } else {
-          this.calcOp = nextOp;
-          this.calcFresh = true;
-        }
-      } else if (key === '#') this.pressCalcKey('=');
-      else if ('0123456789'.includes(key)) this.pressCalcKey(key);
-      this.cb.onPlaySound?.('hit');
-      return;
-    }
-
-    // SomaFM Radio: 1-9 & 0 tune stations, * / # adjust volume, OK toggles play
-    if (this.app === 'radio') {
-      if (key === 'OK') {
-        somaRadioService.togglePlay();
-        this.cb.onPlaySound?.(somaRadioService.getIsPlaying() ? 'hit' : 'powerup');
-      } else if (key === '*') {
-        somaRadioService.setVolume(Math.max(0, somaRadioService.getVolume() - 0.1));
-        this.cb.onPlaySound?.('hit');
-      } else if (key === '#') {
-        somaRadioService.setVolume(Math.min(1, somaRadioService.getVolume() + 0.1));
-        this.cb.onPlaySound?.('score');
-      } else if ('0123456789'.includes(key)) {
-        const chIdx = key === '0' ? 9 : parseInt(key, 10) - 1;
-        somaRadioService.setChannel(chIdx);
-        if (!somaRadioService.getIsPlaying()) {
-          somaRadioService.playCurrentChannel();
-        }
-        this.cb.onPlaySound?.('score');
-      }
-      return;
-    }
-
-    // Arcade Browser: 2/8 browse, OK launches
-    if (this.app === 'arcade') {
-      const carts = this.cb.getCartridges();
-      if (key === '2') {
-        this.gameIdx = (this.gameIdx + carts.length - 1) % carts.length;
-        this.cb.onPlaySound?.('hit');
-      } else if (key === '8') {
-        this.gameIdx = (this.gameIdx + 1) % carts.length;
-        this.cb.onPlaySound?.('hit');
-      } else if (key === 'OK' && carts[this.gameIdx]) {
-        const isPro = this.cb.getIsPro?.() ?? false;
-        const selected = carts[this.gameIdx];
-        if (isCartridgeProLocked(selected.id, isPro)) {
-          this.openProScreen('PRO REQUIRED FOR THIS GAME!');
-          this.cb.onPlaySound?.('die');
-          return;
-        }
-        this.cb.onLaunchGame(selected);
-        this.cb.onPlaySound?.('powerup');
-      }
-      return;
-    }
-
-    // Desktop: OK opens highlighted app; digits jump straight to Phone dialer like Nokia 3310!
-    if (this.app === 'desktop') {
-      if (key === 'OK') {
-        this.app = DESKTOP_ICONS[this.deskIdx].id;
-        if (this.app === 'radio') somaRadioService.fetchNowPlaying();
-        this.cb.onPlaySound?.('score');
-        return;
-      }
-      if (key === 'DEL' || key === 'CLR') return;
-      this.app = 'phone';
-      this.callState = 'idle';
-      this.dialBuffer = '';
-    }
-
-    // Phone Dialer: full interactive 3310 keypad + DTMF tones + USSD codes
-    if (this.app === 'phone') {
-      if (this.callState === 'warranty') {
-        if (key === 'OK' || key === '8' || key === '6') {
-          this.warrantyPage = (this.warrantyPage + 1) % 5;
-          this.cb.onPlaySound?.('score');
-        } else if (key === '2' || key === '4') {
-          this.warrantyPage = (this.warrantyPage + 4) % 5;
-          this.cb.onPlaySound?.('hit');
-        }
-        return;
-      }
-      if (this.callState !== 'idle') {
-        if (key === 'OK' && this.callState === 'ringing') {
-          RetroAudioEngine.stopNokiaMelody();
-          this.callState = 'connected';
-          this.callTimer = 0;
-          this.cb.onPlaySound?.('score');
-        } else {
-          this.callState = 'idle';
-          RetroAudioEngine.stopNokiaMelody();
-          this.cb.onPlaySound?.('hit');
-        }
-        return;
-      }
-
-      if (key === 'DEL') {
-        if (this.dialBuffer.length > 0) {
-          this.dialBuffer = this.dialBuffer.slice(0, -1);
-          this.dialR = 2;
-          this.dialC = 3;
-        } else {
-          this.app = 'desktop';
-        }
-        this.cb.onPlaySound?.('hit');
-        return;
-      }
-      if (key === 'CLR') {
-        this.dialBuffer = '';
-        this.dialR = 2;
-        this.dialC = 3;
-        this.cb.onPlaySound?.('hit');
-        return;
-      }
-      if (key === 'OK') {
-        this.dialR = 0;
-        this.dialC = 3; // CALL
-        const s = this.executePhoneKey('CALL');
-        if (s) this.cb.onPlaySound?.(s);
-        return;
-      }
-
-      // Highlight matching key on LCD DIAL_KEYS & dial with DTMF tone
-      for (let r = 0; r < DIAL_KEYS.length; r++) {
-        const c = DIAL_KEYS[r].indexOf(key);
-        if (c !== -1) {
-          this.dialR = r;
-          this.dialC = c;
-          break;
-        }
-      }
-      const s = this.executePhoneKey(key);
-      if (s) this.cb.onPlaySound?.(s);
-    }
-
-    // SMS App keypad shortcuts (DEL / CLR deletes active SMS, OK sends to AI)
-    if (this.app === 'sms') {
-      if (key === 'DEL' || key === 'CLR') {
-        if (this.smsList.length > 0) {
-          this.smsList = this.smsList.filter((_, idx) => idx !== this.smsIdx);
-          this.smsIdx = Math.min(this.smsIdx, Math.max(0, this.smsList.length - 1));
-          this.smsDeleteConfirm = false;
-          this.smsBanner = 'SMS DELETED!';
-          this.smsBannerTimer = 2.0;
-          this.saveSmsList();
-          this.cb.onPlaySound?.('die');
-        }
-        return;
-      }
-      if (key === '4') {
-        if (this.smsList.length > 0) {
-          this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
-        }
-        this.smsDeleteConfirm = false;
-        this.cb.onPlaySound?.('hit');
-        return;
-      }
-      if (key === '6') {
-        if (this.smsList.length > 0) {
-          this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
-        }
-        this.smsDeleteConfirm = false;
-        this.cb.onPlaySound?.('hit');
-        return;
-      }
-      if (key === 'OK') {
-        this.sendPictureSmsToAi();
-        return;
-      }
-    }
+    pressNumericKeyImpl(this, key);
   }
 
-  private appendChatLines(prefix: string, text: string) {
+  /** @internal */ appendChatLines(prefix: string, text: string) {
     const wrapped = wrapTextLines(`${prefix} ${text}`, 33);
     this.chatLines.push(...wrapped);
     if (this.chatLines.length > 60) {
@@ -1270,163 +667,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.chatScroll = Math.max(0, this.chatLines.length - 6);
   }
 
-  private executeAiActions(rawReply: string): { displayText: string; actionLogs: string[] } {
-    const actionLogs: string[] = [];
-    const regex = /\[\[ACTION:([A-Z_]+)(?:\|([^\]]*))?\]\]/gi;
-    const matches = Array.from(rawReply.matchAll(regex));
-    const displayText = rawReply.replace(regex, '').replace(/\n{3,}/g, '\n\n').trim();
-
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const carts = this.cb.getCartridges();
-
-    for (const m of matches) {
-      const cmd = (m[1] || '').toUpperCase();
-      const arg = (m[2] || '').trim();
-
-      if (cmd === 'OPEN_APP') {
-        const target = arg.toLowerCase() as OsAppId;
-        const validApps: OsAppId[] = [
-          'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'sms',
-          'profiles', 'calc', 'clock', 'paint', 'weather', 'notes',
-          'stats', 'term', 'setup', 'themes', 'pro',
-        ];
-        if (validApps.includes(target)) {
-          actionLogs.push(`OPENING ${target.toUpperCase()}...`);
-          setTimeout(() => {
-            this.app = target;
-            if (target === 'radio') somaRadioService.fetchNowPlaying();
-            if (target === 'themes') {
-              const curId = this.cb.getPaletteId?.();
-              const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
-              this.themeIdx = idx >= 0 ? idx : 0;
-            }
-            this.cb.onRequestKeyboard?.(false);
-            this.cb.onPlaySound?.('powerup');
-          }, 550);
-        }
-      } else if (cmd === 'PLAY_GAME') {
-        const q = arg.toLowerCase();
-        const found = carts.find(
-          (c) => c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
-        );
-        if (found) {
-          if (isCartridgeProLocked(found.id, isPro)) {
-            actionLogs.push(`LOCKED: ${found.title} (PRO)`);
-            setTimeout(() => {
-              this.openProScreen('PRO REQUIRED FOR THIS GAME!');
-              this.cb.onPlaySound?.('die');
-            }, 550);
-          } else {
-            actionLogs.push(`LAUNCHING ${found.title}`);
-            setTimeout(() => {
-              this.cb.onRequestKeyboard?.(false);
-              this.cb.onLaunchGame(found);
-            }, 600);
-          }
-        }
-      } else if (cmd === 'SET_THEME') {
-        const q = arg.toLowerCase().replace(/\s+/g, '_');
-        const foundId = PALETTE_ORDER.find((id) => {
-          const p = RETRO_PALETTES[id];
-          return id === q || id.includes(q) || p.name.toLowerCase().includes(arg.toLowerCase());
-        });
-        if (foundId) {
-          if (isPaletteProLocked(foundId, isPro)) {
-            actionLogs.push(`THEME ${RETRO_PALETTES[foundId].name} REQUIRES PRO`);
-            setTimeout(() => {
-              this.openProScreen('PRO REQUIRED FOR THIS THEME!');
-              this.cb.onPlaySound?.('die');
-            }, 550);
-          } else {
-            this.cb.onSelectPalette?.(foundId);
-            actionLogs.push(`THEME -> ${RETRO_PALETTES[foundId].name}`);
-          }
-        }
-      } else if (cmd === 'CYCLE_THEME') {
-        this.cb.onCyclePalette();
-        actionLogs.push(`THEME -> ${this.cb.getPaletteName()}`);
-      } else if (cmd === 'RADIO') {
-        const sub = arg.toUpperCase();
-        if (sub === 'PLAY') {
-          somaRadioService.playCurrentChannel();
-          actionLogs.push('RADIO: PLAYING');
-        } else if (sub === 'STOP') {
-          somaRadioService.stop();
-          actionLogs.push('RADIO: STOPPED');
-        } else if (sub === 'NEXT') {
-          somaRadioService.nextChannel();
-          somaRadioService.playCurrentChannel();
-          actionLogs.push(`RADIO -> ${somaRadioService.getChannel().name}`);
-        } else if (sub === 'PREV') {
-          somaRadioService.prevChannel();
-          somaRadioService.playCurrentChannel();
-          actionLogs.push(`RADIO -> ${somaRadioService.getChannel().name}`);
-        }
-      } else if (cmd === 'WEATHER') {
-        const city = arg || this.weatherQuery;
-        this.weatherQuery = city;
-        AsyncStorage.setItem(WEATHER_CITY_STORAGE_KEY, city).catch(() => {});
-        this.fetchWeather(city);
-        actionLogs.push(`WEATHER -> ${city.toUpperCase()}`);
-        setTimeout(() => {
-          this.app = 'weather';
-          this.cb.onRequestKeyboard?.(false);
-        }, 550);
-      } else if (cmd === 'ADD_NOTE' && arg) {
-        const d = new Date();
-        const hh = String(d.getHours()).padStart(2, '0');
-        const mm = String(d.getMinutes()).padStart(2, '0');
-        this.notes = [{ id: String(Date.now()), text: arg, ts: `${hh}:${mm}` }, ...this.notes.slice(0, 29)];
-        this.noteIdx = 0;
-        this.saveNotes();
-        actionLogs.push(`NOTE SAVED!`);
-      } else if (cmd === 'SCANLINES') {
-        const sub = arg.toUpperCase();
-        const cur = this.cb.getScanlines();
-        if (sub === 'TOGGLE' || (sub === 'ON' && !cur) || (sub === 'OFF' && cur)) {
-          this.cb.onToggleScanlines();
-          actionLogs.push(`SCANLINES: ${!cur ? 'ON' : 'OFF'}`);
-        }
-      } else if (cmd === 'MUTE') {
-        const mute = arg.toUpperCase() === 'ON';
-        RetroAudioEngine.setMuted(mute);
-        actionLogs.push(`AUDIO: ${mute ? 'MUTED' : 'UNMUTED'}`);
-      } else if (cmd === 'PLAY_SONG') {
-        const q = arg.toLowerCase();
-        const song = this.songs.find((s) => s.title.toLowerCase().includes(q)) || this.songs[0];
-        if (song && song.notes) {
-          RetroAudioEngine.playNokiaMelody(song.notes, song.bpm);
-          actionLogs.push(`PLAYING ${song.title.trim()}`);
-        }
-      } else if (cmd === 'STOP_AUDIO') {
-        this.melodyPlaying = false;
-        RetroAudioEngine.stopNokiaMelody();
-        somaRadioService.stop();
-        actionLogs.push('AUDIO STOPPED');
-      } else if (cmd === 'LIVE_SMS') {
-        this.triggerLivePersonaSms();
-        actionLogs.push('INCOMING SMS TRIGGERED');
-      } else if (cmd === 'LOCK') {
-        actionLogs.push('LOCKING KEYGUARD...');
-        setTimeout(() => {
-          this.keyLocked = true;
-          this.unlockStage = false;
-          this.cb.onRequestKeyboard?.(false);
-        }, 550);
-      } else if (cmd === 'REBOOT') {
-        actionLogs.push('REBOOTING OS...');
-        setTimeout(() => {
-          this.app = 'boot';
-          this.bootTimer = 0;
-          this.cb.onRequestKeyboard?.(false);
-        }, 600);
-      }
-    }
-
-    return { displayText, actionLogs };
+  /** @internal */ executeAiActions(rawReply: string): { displayText: string; actionLogs: string[] } {
+    return executeAiActionsImpl(this, rawReply);
   }
 
-  private clearAiChat() {
+  /** @internal */ clearAiChat() {
     this.chatHistory = [];
     this.chatLines = [
       'AI> CHAT CLEARED! READY.',
@@ -1437,262 +682,28 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.chatClearConfirm = false;
   }
 
-  private async sendAiMessage() {
-    const msg = this.aiPrompt.trim();
-    if (!msg || this.aiLoading) return;
-    if (msg.toLowerCase() === '/clear' || msg.toLowerCase() === 'clear') {
-      this.aiPrompt = '';
-      this.clearAiChat();
-      this.cb.onPlaySound?.('die');
-      return;
-    }
-    this.aiPrompt = '';
-    this.appendChatLines('YOU>', msg);
-    this.chatHistory.push({ role: 'user', content: msg });
-    if (this.chatHistory.length > 10) {
-      this.chatHistory = this.chatHistory.slice(-10);
-    }
-
-    this.aiLoading = true;
-    this.aiStatus = 'THINKING...';
-    this.cb.onPlaySound?.('shoot');
-
-    try {
-      const sysGuide =
-        `Sen RetroDeck OS el konsolunun dahili AI asistanisin. Kullanicinin cihazini dogrudan kontrol edebilirsin.\n` +
-        `Mevcut durum: Tema=${this.cb.getPaletteName()}, Pro=${this.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${this.cb.getScanlines() ? 'ON' : 'OFF'}.\n` +
-        `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
-        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
-        `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
-        `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
-        `[[ACTION:CYCLE_THEME]]\n` +
-        `[[ACTION:RADIO|PLAY|STOP|NEXT|PREV]]\n` +
-        `[[ACTION:WEATHER|<sehir>]]\n` +
-        `[[ACTION:ADD_NOTE|<not metni>]]\n` +
-        `[[ACTION:SCANLINES|ON|OFF|TOGGLE]]\n` +
-        `[[ACTION:MUTE|ON|OFF]]\n` +
-        `[[ACTION:PLAY_SONG|<melodi adi>]]\n` +
-        `[[ACTION:STOP_AUDIO]]\n` +
-        `[[ACTION:LIVE_SMS]]\n` +
-        `[[ACTION:LOCK]]\n` +
-        `[[ACTION:REBOOT]]\n` +
-        `Kisa, net ve yardimsever cevap ver. Asla emoji kullanma, sadece duz metin yaz. Islem gerekmiyorsa hic ACTION etiketi ekleme.`;
-
-      const payload: BYOKChatMessage[] = [
-        { role: 'user', content: sysGuide },
-        ...this.chatHistory,
-      ];
-
-      const reply = await callBYOKAIChat(payload, this.byokConfig);
-      const rawClean = reply.trim() || '(EMPTY)';
-      const { displayText, actionLogs } = this.executeAiActions(rawClean);
-      const shown = stripEmojis(displayText) || (actionLogs.length > 0 ? 'DONE!' : '(EMPTY)');
-
-      this.chatHistory.push({ role: 'assistant', content: shown });
-      this.appendChatLines('AI>', shown);
-      for (const log of actionLogs) {
-        this.appendChatLines('OS>', log);
-      }
-      this.aiStatus = 'OK';
-      this.cb.onPlaySound?.('powerup');
-    } catch (err: any) {
-      const errMsg = err?.message || 'API ERROR';
-      this.appendChatLines('ERR>', errMsg.toUpperCase());
-      this.aiStatus = 'ERR';
-      this.cb.onPlaySound?.('die');
-    } finally {
-      this.aiLoading = false;
-    }
+  /** @internal */ async sendAiMessage() {
+    return sendAiMessageImpl(this);
   }
 
   /** Sends a Nokia 3310 Picture Message to Groq / Active BYOK AI and receives a Picture SMS back! */
-  private async sendPictureSmsToAi() {
-    if (this.smsSendingAi) return;
-    const cur = this.smsList[this.smsIdx];
-    if (!cur) {
-      this.smsBanner = 'INBOX EMPTY!';
-      this.smsBannerTimer = 2.0;
-      this.cb.onPlaySound?.('hit');
-      return;
-    }
-    const meta = getProviderMeta(this.byokConfig.activeProvider);
-    const hasKey =
-      !meta.requiresKey || Boolean(this.byokConfig.keys[this.byokConfig.activeProvider]?.trim());
-
-    this.playActiveSmsTone();
-
-    if (!hasKey) {
-      this.smsBanner = `SENT! (ADD ${meta.shortName} KEY FOR AI REPLY)`;
-      this.smsBannerTimer = 2.8;
-      return;
-    }
-
-    this.smsSendingAi = true;
-    this.smsBanner = `SENDING PIC-SMS TO ${meta.shortName}...`;
-    this.smsBannerTimer = 10;
-
-    try {
-      const prompt = `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only). Start your reply with one tag: [COFFEE], [SMILE], [COOL], [WINK], [HEART], [SAD], [CAT], [ALIEN], [SKULL], [MUSIC], [CAKE], or [SNAKE].`;
-      const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
-      const cleaned = stripMarkdownForLcd(raw).toUpperCase();
-
-      const allKeys: PicArtKey[] = [
-        'COFFEE',
-        'SMILE',
-        'COOL',
-        'WINK',
-        'HEART',
-        'SAD',
-        'CAT',
-        'ALIEN',
-        'SKULL',
-        'MUSIC',
-        'CAKE',
-        'SNAKE',
-      ];
-      let artKey: PicArtKey = 'SMILE';
-      for (const k of allKeys) {
-        if (cleaned.includes(k)) {
-          artKey = k;
-          break;
-        }
-      }
-
-      const body = cleaned
-        .replace(/\[(COFFEE|SMILE|COOL|WINK|HEART|SAD|CAT|ALIEN|SKULL|MUSIC|CAKE|SNAKE)\]/g, '')
-        .trim()
-        .slice(0, 82);
-
-      this.smsList.unshift({
-        sender: `${meta.shortName}-3310`,
-        title: `${meta.shortName} PIC-SMS`,
-        text: body || 'HEY! LOW ON CREDITS, CALL ME BACK ON MY 3310 XD',
-        artKey,
-      });
-      if (this.smsList.length > 20) this.smsList.pop();
-      this.smsIdx = 0;
-      this.smsBanner = `NEW PIC-SMS FROM ${meta.shortName}!`;
-      this.smsBannerTimer = 3.0;
-      this.saveSmsList();
-      const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
-      RetroAudioEngine.playNokiaMelody(smsTone.notes, smsTone.bpm);
-    } catch (err: any) {
-      this.smsBanner = `SMS ERR: ${(err?.message || 'FAILED').slice(0, 24).toUpperCase()}`;
-      this.smsBannerTimer = 3.0;
-    } finally {
-      this.smsSendingAi = false;
-    }
+  /** @internal */ async sendPictureSmsToAi() {
+    return sendPictureSmsToAiImpl(this);
   }
 
-  private async fetchWapPage(rawUrl: string) {
-    if (this.wapLoading) return;
-    let url = rawUrl.trim();
-    if (!url) url = 'https://www.metaframelabs.space/';
-    if (!/^https?:\/\//i.test(url)) {
-      url = `https://${url}`;
-    }
-    this.wapUrl = url;
-    this.wapLoading = true;
-    this.wapScroll = 0;
-    this.cb.onPlaySound?.('shoot');
-
-    try {
-      const res = await fetch(url, {
-        headers: {
-          'User-Agent': 'Nokia3330/1.0 (RetroDeckOS WAP 1.1)',
-          Accept: 'text/html,application/xhtml+xml,text/plain',
-        },
-      });
-      const text = await res.text();
-      this.wapLines = parseHtmlToWapLines(text);
-      this.cb.onPlaySound?.('powerup');
-    } catch (err: any) {
-      this.wapLines = [
-        '=== WAP CONNECTION ERROR ===',
-        `URL: ${url.slice(0, 28)}`,
-        `ERR: ${(err?.message || 'UNREACHABLE').toUpperCase().slice(0, 28)}`,
-        'CHECK URL OR TRY ANOTHER SITE.',
-      ];
-      this.cb.onPlaySound?.('die');
-    } finally {
-      this.wapLoading = false;
-    }
+  /** @internal */ async fetchWapPage(rawUrl: string) {
+    return fetchWapPageImpl(this, rawUrl);
   }
 
-  private saveNotes() {
+  /** @internal */ saveNotes() {
     AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(this.notes)).catch(() => {});
   }
 
-  private async fetchWeather(rawCity: string) {
-    if (this.weatherLoading) return;
-    let city = rawCity.trim() || 'Palo Alto';
-    if (/^(silicon valley|silikon vadisi)$/i.test(city)) {
-      city = 'Palo Alto';
-    }
-    this.weatherQuery = city;
-    this.weatherLoading = true;
-    this.weatherError = '';
-    this.cb.onPlaySound?.('shoot');
-
-    try {
-      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
-        city
-      )}&count=1&language=en&format=json`;
-      const geoRes = await fetch(geoUrl);
-      const geoJson = await geoRes.json();
-      const loc = geoJson?.results?.[0];
-      if (!loc) {
-        this.weatherError = `CITY NOT FOUND: ${city.toUpperCase().slice(0, 14)}`;
-        this.cb.onPlaySound?.('die');
-        return;
-      }
-
-      const fcUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4`;
-      const fcRes = await fetch(fcUrl);
-      const fcJson = await fcRes.json();
-      const cur = fcJson?.current;
-      const daily = fcJson?.daily;
-      if (!cur || !daily) {
-        this.weatherError = 'WEATHER FEED UNAVAILABLE';
-        this.cb.onPlaySound?.('die');
-        return;
-      }
-
-      const nextDaily: { minC: number; maxC: number; code: number }[] = [];
-      for (let i = 1; i <= 3; i++) {
-        nextDaily.push({
-          minC: Math.round(daily.temperature_2m_min?.[i] ?? cur.temperature_2m),
-          maxC: Math.round(daily.temperature_2m_max?.[i] ?? cur.temperature_2m),
-          code: Number(daily.weather_code?.[i] ?? cur.weather_code ?? 0),
-        });
-      }
-
-      const regionLabel =
-        String(loc.admin1 || '').toLowerCase() === 'california' ? 'CA' : '';
-
-      this.weatherData = {
-        city: String(loc.name || city).toUpperCase(),
-        region: regionLabel,
-        country: String(loc.country_code || '').toUpperCase(),
-        tempC: Math.round(cur.temperature_2m),
-        feelsC: Math.round(cur.apparent_temperature),
-        humidity: Math.round(cur.relative_humidity_2m),
-        windKmh: Math.round(cur.wind_speed_10m),
-        code: Number(cur.weather_code ?? 0),
-        daily: nextDaily,
-      };
-      this.weatherQuery = loc.name || city;
-      AsyncStorage.setItem(WEATHER_CITY_STORAGE_KEY, this.weatherQuery).catch(() => {});
-      this.cb.onPlaySound?.('powerup');
-    } catch {
-      this.weatherError = 'OFFLINE / CONNECTION ERROR';
-      this.cb.onPlaySound?.('die');
-    } finally {
-      this.weatherLoading = false;
-    }
+  /** @internal */ async fetchWeather(rawCity: string) {
+    return fetchWeatherImpl(this, rawCity);
   }
 
-  private cycleProvider(delta: number) {
+  /** @internal */ cycleProvider(delta: number) {
     const idx = BYOK_PROVIDERS.findIndex((p) => p.id === this.byokConfig.activeProvider);
     const nextIdx = (idx + delta + BYOK_PROVIDERS.length) % BYOK_PROVIDERS.length;
     this.byokConfig = {
@@ -1703,1075 +714,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public update(input: ArcadeInput, dt: number): ArcadeSound | null {
-    this.uptime += dt;
-    this.batteryPollTimer += dt;
-    if (this.batteryPollTimer >= 10) {
-      this.batteryPollTimer = 0;
-      this.refreshBattery();
-    }
-    if (this.swRunning) this.swTime += dt;
-    if (this.moveCd > 0) this.moveCd -= dt;
-    if (this.unlockHintTimer > 0) this.unlockHintTimer -= dt;
-
-    // Countdown timer tick
-    if (this.cdRunning) {
-      this.cdRemaining -= dt;
-      if (this.cdRemaining <= 0) {
-        this.cdRemaining = 0;
-        this.cdRunning = false;
-        this.cdAlarmActive = true;
-        const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
-        RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
-      }
-    }
-
-    if (this.callState === 'ringing') {
-      this.ringRepeatTimer += dt;
-      if (this.ringRepeatTimer >= this.ringDuration + 0.45) {
-        this.ringRepeatTimer = 0;
-        const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
-        const res = RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
-        this.ringDuration = res.totalSec > 0 ? res.totalSec : 2.5;
-      }
-    }
-    if (this.callState === 'connected') {
-      this.callTimer += dt;
-    }
-    if (this.smsBannerTimer > 0) {
-      this.smsBannerTimer -= dt;
-    }
-
-    // Background Live AI Persona & Ad SMS scheduler (only fires if BYOK key is configured)
-    if (this.liveAiSmsEnabled && this.app !== 'boot' && !this.liveSmsFetching) {
-      this.liveSmsTimer -= dt;
-      if (this.liveSmsTimer <= 0) {
-        this.liveSmsTimer = 135 + Math.random() * 145; // Next SMS in ~2.2 - 4.6 mins
-        this.triggerLivePersonaSms();
-      }
-    }
-
-    if (this.melodyPlaying) {
-      this.melodyTimer += dt;
-      if (this.melodyTimer >= this.melodyDuration) {
-        this.melodyPlaying = false;
-        this.melodyTimer = 0;
-      }
-    }
-
-    const pressA = input.a && !this.prevA;
-    const pressB = input.b && !this.prevB;
-    this.prevA = input.a;
-    this.prevB = input.b;
-
-    const anyInput =
-      input.up || input.down || input.left || input.right || pressA || pressB;
-
-    // Boot sequence
-    if (this.app === 'boot') {
-      this.bootTimer += dt;
-      if (this.bootTimer >= 1.5 || pressA || pressB) {
-        this.app = 'desktop';
-        return 'powerup';
-      }
-      return null;
-    }
-
-    // Keyguard / Pixel Clock Screensaver Handling (Unlock with Menu [A] + Star [▲])
-    if (this.keyLocked) {
-      if (pressA) {
-        this.unlockStage = true;
-        this.unlockHintTimer = 2.5;
-        return 'hit';
-      }
-      if (this.unlockStage && (input.up || pressB)) {
-        this.keyLocked = false;
-        this.unlockStage = false;
-        this.idleTimer = 0;
-        return 'powerup';
-      }
-      if (input.down || input.left || input.right) {
-        this.unlockHintTimer = 2.0;
-        return 'hit';
-      }
-      return null;
-    }
-
-    // Auto Screensaver / Keyguard after 28s idle on desktop
-    if (anyInput) {
-      this.idleTimer = 0;
-    } else if (this.app === 'desktop') {
-      this.idleTimer += dt;
-      if (this.idleTimer >= 28) {
-        this.keyLocked = true;
-        this.unlockStage = false;
-        this.idleTimer = 0;
-      }
-    }
-
-    // Global B = return to desktop from any sub-app (except synth list -> back to pad)
-    if (this.app !== 'desktop' && pressB) {
-      if (this.app === 'synth' && this.synthMode === 'list') {
-        this.synthMode = 'pad';
-        this.synthClearConfirm = false;
-        return 'hit';
-      }
-      if (this.app === 'sms' && this.smsMode === 'compose') {
-        this.smsMode = 'inbox';
-        this.cb.onRequestKeyboard?.(false);
-        return 'hit';
-      }
-      if (this.melodyPlaying || this.cdAlarmActive || this.callState === 'ringing') {
-        this.melodyPlaying = false;
-        this.cdAlarmActive = false;
-        RetroAudioEngine.stopNokiaMelody();
-      }
-      this.callState = 'idle';
-      this.app = 'desktop';
-      this.cb.onRequestKeyboard?.(false);
-      return 'hit';
-    }
-
-    // Directional helper with single-press edge trigger & initial repeat delay
-    const pressUp = input.up && !this.prevUp;
-    const pressDown = input.down && !this.prevDown;
-    const pressLeft = input.left && !this.prevLeft;
-    const pressRight = input.right && !this.prevRight;
-
-    this.prevUp = input.up;
-    this.prevDown = input.down;
-    this.prevLeft = input.left;
-    this.prevRight = input.right;
-
-    let dir: 'up' | 'down' | 'left' | 'right' | null = null;
-    if (pressUp) { dir = 'up'; this.moveCd = 0.28; }
-    else if (pressDown) { dir = 'down'; this.moveCd = 0.28; }
-    else if (pressLeft) { dir = 'left'; this.moveCd = 0.28; }
-    else if (pressRight) { dir = 'right'; this.moveCd = 0.28; }
-    else if (this.moveCd <= 0) {
-      if (input.up) { dir = 'up'; this.moveCd = 0.16; }
-      else if (input.down) { dir = 'down'; this.moveCd = 0.16; }
-      else if (input.left) { dir = 'left'; this.moveCd = 0.16; }
-      else if (input.right) { dir = 'right'; this.moveCd = 0.16; }
-    }
-
-    if (this.app === 'desktop') {
-      const cols = 4;
-      const total = DESKTOP_ICONS.length;
-      if (dir === 'left') this.deskIdx = (this.deskIdx + total - 1) % total;
-      if (dir === 'right') this.deskIdx = (this.deskIdx + 1) % total;
-      if (dir === 'up') {
-        if (this.deskIdx >= cols) {
-          this.deskIdx -= cols;
-        } else {
-          const col = this.deskIdx % cols;
-          const lastRowBase = Math.floor((total - 1) / cols) * cols;
-          this.deskIdx =
-            lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
-        }
-      }
-      if (dir === 'down') {
-        this.deskIdx =
-          this.deskIdx + cols < total ? this.deskIdx + cols : this.deskIdx % cols;
-      }
-      if (dir) return 'hit';
-
-      if (pressA) {
-        this.app = DESKTOP_ICONS[this.deskIdx].id;
-        if (this.app === 'ai') {
-          this.kbdTarget = 'chat';
-        }
-        if (this.app === 'wap' && !this.wapFetchedOnce) {
-          this.wapFetchedOnce = true;
-          this.fetchWapPage(this.wapUrl);
-        }
-        if (this.app === 'radio') {
-          somaRadioService.fetchNowPlaying();
-        }
-        if (this.app === 'weather' && !this.weatherFetchedOnce) {
-          this.weatherFetchedOnce = true;
-          this.fetchWeather(this.weatherQuery);
-        }
-        if (this.app === 'notes') {
-          this.noteDeleteConfirm = false;
-        }
-        if (this.app === 'sms') {
-          this.smsDeleteConfirm = false;
-          this.unreadSmsCount = 0;
-        }
-        return 'score';
-      }
-      return null;
-    }
-
-    if (this.app === 'radio') {
-      if (dir === 'left') {
-        somaRadioService.prevChannel();
-        return 'hit';
-      }
-      if (dir === 'right') {
-        somaRadioService.nextChannel();
-        return 'hit';
-      }
-      if (dir === 'up') {
-        const curVol = somaRadioService.getVolume();
-        somaRadioService.setVolume(Math.min(1, curVol + 0.1));
-        return 'score';
-      }
-      if (dir === 'down') {
-        const curVol = somaRadioService.getVolume();
-        somaRadioService.setVolume(Math.max(0, curVol - 0.1));
-        return 'score';
-      }
-      if (pressA) {
-        somaRadioService.togglePlay();
-        return somaRadioService.getIsPlaying() ? 'hit' : 'powerup';
-      }
-      return null;
-    }
-
-    if (this.app === 'wap') {
-      if (dir === 'up') {
-        this.wapScroll = Math.max(0, this.wapScroll - 1);
-        return 'hit';
-      }
-      if (dir === 'down') {
-        this.wapScroll = Math.min(Math.max(0, this.wapLines.length - 6), this.wapScroll + 1);
-        return 'hit';
-      }
-      if (dir === 'left') {
-        this.wapBookmarkIdx =
-          (this.wapBookmarkIdx + WAP_BOOKMARKS.length - 1) % WAP_BOOKMARKS.length;
-        this.wapUrl = WAP_BOOKMARKS[this.wapBookmarkIdx];
-        this.fetchWapPage(this.wapUrl);
-        return 'score';
-      }
-      if (dir === 'right') {
-        this.wapBookmarkIdx = (this.wapBookmarkIdx + 1) % WAP_BOOKMARKS.length;
-        this.wapUrl = WAP_BOOKMARKS[this.wapBookmarkIdx];
-        this.fetchWapPage(this.wapUrl);
-        return 'score';
-      }
-      if (pressA) {
-        this.cb.onRequestKeyboard?.(true);
-        return 'score';
-      }
-      return null;
-    }
-
-    if (this.app === 'phone') {
-      if (this.callState === 'warranty') {
-        if (dir === 'up' || dir === 'left') {
-          this.warrantyPage = (this.warrantyPage + 4) % 5;
-          return 'hit';
-        }
-        if (dir === 'down' || dir === 'right' || pressA) {
-          this.warrantyPage = (this.warrantyPage + 1) % 5;
-          return 'score';
-        }
-        return null;
-      }
-
-      if (this.callState !== 'idle') {
-        if (pressA) {
-          if (this.callState === 'ringing') {
-            RetroAudioEngine.stopNokiaMelody();
-            this.callState = 'connected';
-            this.callTimer = 0;
-            return 'score';
-          } else {
-            this.callState = 'idle';
-            RetroAudioEngine.stopNokiaMelody();
-            return 'hit';
-          }
-        }
-        return null;
-      }
-
-      if (dir === 'up') this.dialR = (this.dialR + 3) % 4;
-      if (dir === 'down') this.dialR = (this.dialR + 1) % 4;
-      if (dir === 'left') this.dialC = (this.dialC + 3) % 4;
-      if (dir === 'right') this.dialC = (this.dialC + 1) % 4;
-      if (dir) return 'hit';
-
-      if (pressA) {
-        return this.executePhoneKey(DIAL_KEYS[this.dialR][this.dialC]);
-      }
-      return null;
-    }
-
-    if (this.app === 'sms') {
-      if (this.smsMode === 'compose') {
-        if (dir === 'down') {
-          this.smsStudioTab = this.smsStudioTab === 'art' ? 'stamps' : 'art';
-          return 'score';
-        }
-        if (this.smsStudioTab === 'art') {
-          const totalScenes = REAL_POSTCARDS.length;
-          if (dir === 'left') {
-            this.smsArtIdx = (this.smsArtIdx + totalScenes - 1) % totalScenes;
-            return 'hit';
-          }
-          if (dir === 'right') {
-            this.smsArtIdx = (this.smsArtIdx + 1) % totalScenes;
-            return 'hit';
-          }
-        } else {
-          const totalStamps = POSTCARD_STAMPS.length;
-          if (dir === 'left') {
-            this.smsStampIdx = (this.smsStampIdx + totalStamps - 1) % totalStamps;
-            return 'hit';
-          }
-          if (dir === 'right') {
-            this.smsStampIdx = (this.smsStampIdx + 1) % totalStamps;
-            return 'hit';
-          }
-        }
-        if (dir === 'up') {
-          this.cb.onRequestKeyboard?.(true);
-          return 'score';
-        }
-        if (pressA) {
-          const text = this.smsDraftText.trim();
-          if (!text) {
-            this.cb.onRequestKeyboard?.(true);
-            return 'score';
-          }
-          const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
-          const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
-          this.smsList.unshift({
-            sender: 'MY-POSTCARD',
-            title: scene.title,
-            text,
-            artKey: 'SMILE',
-            postcardId: scene.id,
-            stampIcon: stamp.icon,
-            stampLabel: stamp.label,
-            timestamp: this.formatClock(),
-          });
-          if (this.smsList.length > 20) this.smsList.pop();
-          this.smsIdx = 0;
-          this.smsDraftText = '';
-          this.smsMode = 'inbox';
-          this.smsBanner = '✉ POSTCARD SENT!';
-          this.smsBannerTimer = 3.0;
-          this.saveSmsList();
-          this.playActiveSmsTone();
-          return null;
-        }
-        return null;
-      }
-
-      if (dir === 'left') {
-        if (this.smsList.length > 0) {
-          this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
-        }
-        this.smsDeleteConfirm = false;
-        return 'hit';
-      }
-      if (dir === 'right') {
-        if (this.smsList.length > 0) {
-          this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
-        }
-        this.smsDeleteConfirm = false;
-        return 'hit';
-      }
-      if (dir === 'down') {
-        // [▼] Request delete confirmation, then 2nd [▼] deletes message
-        if (this.smsList.length === 0) return 'hit';
-        if (!this.smsDeleteConfirm) {
-          this.smsDeleteConfirm = true;
-          this.smsBanner = 'PRESS [▼] AGAIN TO DELETE SMS!';
-          this.smsBannerTimer = 3.0;
-          return 'hit';
-        }
-        this.smsList = this.smsList.filter((_, idx) => idx !== this.smsIdx);
-        this.smsIdx = Math.min(this.smsIdx, Math.max(0, this.smsList.length - 1));
-        this.smsDeleteConfirm = false;
-        this.smsBanner = 'SMS DELETED!';
-        this.smsBannerTimer = 2.0;
-        this.saveSmsList();
-        return 'die';
-      }
-      if (dir === 'up') {
-        this.smsDeleteConfirm = false;
-        this.smsMode = 'compose';
-        return 'score';
-      }
-      if (pressA) {
-        if (this.smsDeleteConfirm) {
-          this.smsDeleteConfirm = false;
-        }
-        if (this.smsList.length === 0) {
-          this.smsMode = 'compose';
-          return 'score';
-        }
-        const curMsg = this.smsList[this.smsIdx];
-        if (curMsg?.isLivePersona && curMsg.personaId) {
-          this.smsReplyTargetIdx = this.smsIdx;
-          this.smsDraftText = '';
-          this.cb.onRequestKeyboard?.(true);
-          return 'score';
-        }
-        this.sendPictureSmsToAi();
-        return null;
-      }
-      return null;
-    }
-
-    if (this.app === 'profiles') {
-      if (dir === 'up') {
-        this.profRow = (this.profRow + 6) % 7;
-        return 'hit';
-      }
-      if (dir === 'down') {
-        this.profRow = (this.profRow + 1) % 7;
-        return 'hit';
-      }
-      if (pressA || dir === 'left' || dir === 'right') {
-        const step = dir === 'left' ? -1 : 1;
-        if (this.profRow === 0) {
-          this.profileIdx =
-            (this.profileIdx + step + NOKIA_PROFILES.length) % NOKIA_PROFILES.length;
-          RetroAudioEngine.setMuted(NOKIA_PROFILES[this.profileIdx] === 'SILENT');
-          return 'score';
-        } else if (this.profRow === 1) {
-          // VOLUME CONTROL (0% to 100% in 10% steps)
-          const curVol = RetroAudioEngine.getVolume();
-          const nextVol = Math.round(Math.max(0, Math.min(1, curVol + step * 0.1)) * 10) / 10;
-          RetroAudioEngine.setVolume(nextVol);
-          return nextVol > 0 ? 'hit' : null;
-        } else if (this.profRow === 2) {
-          this.ringtoneIdx =
-            (this.ringtoneIdx + step + this.songs.length) % this.songs.length;
-          const ring = this.songs[this.ringtoneIdx];
-          RetroAudioEngine.playNokiaMelody(ring.notes, ring.bpm);
-          return null;
-        } else if (this.profRow === 3) {
-          this.smsToneIdx =
-            (this.smsToneIdx + step + NOKIA_SMS_TONES.length) % NOKIA_SMS_TONES.length;
-          AsyncStorage.setItem(SMS_TONE_STORAGE_KEY, String(this.smsToneIdx)).catch(() => {});
-          this.playActiveSmsTone();
-          return null;
-        } else if (this.profRow === 4) {
-          const curStyle = RetroAudioEngine.getKeySoundStyle();
-          const curIdx = KEYPAD_SOUND_STYLES.findIndex((s) => s.id === curStyle);
-          const nextIdx =
-            (curIdx + step + KEYPAD_SOUND_STYLES.length) % KEYPAD_SOUND_STYLES.length;
-          RetroAudioEngine.setKeySoundStyle(KEYPAD_SOUND_STYLES[nextIdx].id);
-          return 'hit';
-        } else if (this.profRow === 5) {
-          this.operatorIdx =
-            (this.operatorIdx + step + NOKIA_OPERATORS.length) % NOKIA_OPERATORS.length;
-          return 'score';
-        } else if (this.profRow === 6) {
-          if (pressA) {
-            this.keyLocked = true;
-            this.unlockStage = false;
-            return 'score';
-          } else {
-            this.torchInvert = !this.torchInvert;
-            return 'powerup';
-          }
-        }
-      }
-      return null;
-    }
-
-    if (this.app === 'ai') {
-      if (this.aiTab === 'chat') {
-        if (dir === 'up') {
-          this.chatClearConfirm = false;
-          this.chatScroll = Math.max(0, this.chatScroll - 1);
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.chatClearConfirm = false;
-          this.chatScroll = Math.min(Math.max(0, this.chatLines.length - 6), this.chatScroll + 1);
-          return 'hit';
-        }
-        if (dir === 'left') {
-          if (!this.chatClearConfirm) {
-            this.chatClearConfirm = true;
-            this.aiStatus = 'PRESS [◀] CLR';
-            return 'hit';
-          }
-          this.clearAiChat();
-          return 'die';
-        }
-        if (dir === 'right') {
-          this.chatClearConfirm = false;
-          this.aiTab = 'byok';
-          this.byokRow = 0;
-          this.kbdTarget = 'key';
-          return 'hit';
-        }
-        if (pressA) {
-          this.chatClearConfirm = false;
-          this.kbdTarget = 'chat';
-          if (this.aiPrompt.trim().length > 0) {
-            this.sendAiMessage();
-          } else {
-            this.cb.onRequestKeyboard?.(true);
-          }
-          return 'score';
-        }
-      } else {
-        if (dir === 'up') {
-          this.byokRow = (this.byokRow + 3) % 4;
-          this.kbdTarget = this.byokRow === 2 ? 'model' : 'key';
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.byokRow = (this.byokRow + 1) % 4;
-          this.kbdTarget = this.byokRow === 2 ? 'model' : 'key';
-          return 'hit';
-        }
-        if (dir === 'left') {
-          if (this.byokRow === 0) {
-            this.cycleProvider(-1);
-          } else {
-            this.aiTab = 'chat';
-            this.kbdTarget = 'chat';
-          }
-          return 'hit';
-        }
-        if (dir === 'right') {
-          if (this.byokRow === 0) {
-            this.cycleProvider(1);
-            return 'hit';
-          }
-        }
-        if (pressA) {
-          if (this.byokRow === 0) {
-            this.cycleProvider(1);
-            return 'score';
-          } else if (this.byokRow === 1) {
-            this.kbdTarget = 'key';
-            this.cb.onRequestKeyboard?.(true);
-            return 'score';
-          } else if (this.byokRow === 2) {
-            this.kbdTarget = 'model';
-            this.cb.onRequestKeyboard?.(true);
-            return 'score';
-          } else {
-            this.aiTab = 'chat';
-            this.kbdTarget = 'chat';
-            return 'score';
-          }
-        }
-      }
-      return null;
-    }
-
-    if (this.app === 'arcade') {
-      const carts = this.cb.getCartridges();
-      if (dir === 'up') this.gameIdx = (this.gameIdx + carts.length - 1) % carts.length;
-      if (dir === 'down') this.gameIdx = (this.gameIdx + 1) % carts.length;
-      if (dir === 'left') this.gameIdx = (this.gameIdx + carts.length - 5) % carts.length;
-      if (dir === 'right') this.gameIdx = (this.gameIdx + 5) % carts.length;
-      if (dir) return 'hit';
-
-      if (pressA && carts[this.gameIdx]) {
-        const isPro = this.cb.getIsPro?.() ?? false;
-        const selected = carts[this.gameIdx];
-        if (isCartridgeProLocked(selected.id, isPro)) {
-          this.openProScreen('PRO REQUIRED FOR THIS GAME!');
-          return 'die';
-        }
-        this.cb.onLaunchGame(selected);
-        return 'powerup';
-      }
-      return null;
-    }
-
-    if (this.app === 'calc') {
-      if (this.isNumericDeckActive) {
-        const ops = ['+', '-', '*', '/'];
-        if (dir === 'left' || dir === 'right') {
-          const curIdx = this.calcOp ? ops.indexOf(this.calcOp) : -1;
-          const nextIdx =
-            dir === 'right'
-              ? (curIdx + 1) % ops.length
-              : (curIdx - 1 + ops.length) % ops.length;
-          const nextOp = ops[nextIdx];
-          if (this.calcAcc === null) {
-            this.pressCalcKey(nextOp);
-          } else {
-            this.calcOp = nextOp;
-            this.calcFresh = true;
-          }
-          return 'hit';
-        }
-        if (dir === 'up') {
-          this.pressCalcKey('C');
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.pressCalcKey('.');
-          return 'hit';
-        }
-        if (pressA) {
-          this.pressCalcKey('=');
-          return 'score';
-        }
-        return null;
-      }
-
-      if (dir === 'up') this.calcR = (this.calcR + 3) % 4;
-      if (dir === 'down') this.calcR = (this.calcR + 1) % 4;
-      if (dir === 'left') this.calcC = (this.calcC + 4) % 5;
-      if (dir === 'right') this.calcC = (this.calcC + 1) % 5;
-      if (dir) return 'hit';
-      if (pressA) {
-        this.pressCalcKey(CALC_KEYS[this.calcR][this.calcC]);
-        return 'score';
-      }
-      return null;
-    }
-
-    if (this.app === 'clock') {
-      if (dir === 'left' || dir === 'right') {
-        const tabs: ('clk' | 'sw' | 'cd')[] = ['clk', 'sw', 'cd'];
-        const cur = tabs.indexOf(this.clockTab);
-        this.clockTab =
-          dir === 'right'
-            ? tabs[(cur + 1) % tabs.length]
-            : tabs[(cur + tabs.length - 1) % tabs.length];
-        return 'hit';
-      }
-      if (this.clockTab === 'clk') {
-        if (pressA) {
-          this.toggleClockFace();
-          return 'score';
-        }
-        return null;
-      }
-      if (this.clockTab === 'sw') {
-        if (pressA) {
-          this.swRunning = !this.swRunning;
-          return 'score';
-        }
-        if (dir === 'up') {
-          this.swRunning = false;
-          this.swTime = 0;
-          this.swLap = 0;
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.swLap = this.swTime;
-          return 'hit';
-        }
-      } else {
-        // Countdown Timer
-        if (this.cdAlarmActive && pressA) {
-          this.cdAlarmActive = false;
-          RetroAudioEngine.stopNokiaMelody();
-          this.cdRemaining = this.cdPresetSec;
-          return 'hit';
-        }
-        if (pressA) {
-          if (this.cdRemaining <= 0) this.cdRemaining = this.cdPresetSec;
-          this.cdRunning = !this.cdRunning;
-          return 'score';
-        }
-        if (dir === 'up') {
-          this.cdRunning = false;
-          this.cdPresetSec = Math.min(600, this.cdPresetSec + 15);
-          this.cdRemaining = this.cdPresetSec;
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.cdRunning = false;
-          this.cdPresetSec = Math.max(5, this.cdPresetSec - 5);
-          this.cdRemaining = this.cdPresetSec;
-          return 'hit';
-        }
-      }
-      return null;
-    }
-
-    if (this.app === 'synth') {
-      if (this.synthMode === 'list') {
-        const total = this.songs.length;
-        if (dir === 'up') {
-          this.synthListIdx = (this.synthListIdx + total - 1) % total;
-          this.synthClearConfirm = false;
-          return 'hit';
-        }
-        if (dir === 'down') {
-          this.synthListIdx = (this.synthListIdx + 1) % total;
-          this.synthClearConfirm = false;
-          return 'hit';
-        }
-        if (dir === 'left') {
-          this.synthClearConfirm = false;
-          if (!this.isCustomTune(this.synthListIdx)) return 'hit';
-          const isPro = this.cb.getIsPro?.() ?? false;
-          if (!isPro) {
-            this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
-            return 'die';
-          }
-          this.tuneNameDraft = this.songs[this.synthListIdx].title.trim();
-          this.cb.onRequestKeyboard?.(true);
-          return 'score';
-        }
-        if (dir === 'right') {
-          if (!this.isCustomTune(this.synthListIdx)) {
-            this.synthClearConfirm = false;
-            return 'hit';
-          }
-          if (!this.synthClearConfirm) {
-            this.synthClearConfirm = true;
-            return 'hit';
-          }
-          this.songs[this.synthListIdx].notes = '';
-          this.saveCustomTunes();
-          this.synthClearConfirm = false;
-          if (this.songIdx === this.synthListIdx && this.melodyPlaying) {
-            this.melodyPlaying = false;
-            RetroAudioEngine.stopNokiaMelody();
-          }
-          return 'explode';
-        }
-        if (pressA) {
-          const isPro = this.cb.getIsPro?.() ?? false;
-          if (this.isCustomTune(this.synthListIdx) && !isPro) {
-            this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
-            return 'die';
-          }
-          this.songIdx = this.synthListIdx;
-          this.synthMode = 'pad';
-          this.synthClearConfirm = false;
-          this.melodyPlaying = false;
-          RetroAudioEngine.stopNokiaMelody();
-          return 'score';
-        }
-        return null;
-      }
-
-      const totalKeys = COMPOSER_KEYS.length;
-      if (dir === 'left') this.synthIdx = (this.synthIdx + totalKeys - 1) % totalKeys;
-      if (dir === 'right') this.synthIdx = (this.synthIdx + 1) % totalKeys;
-      if (dir === 'up') this.synthIdx = (this.synthIdx + totalKeys - 4) % totalKeys;
-      if (dir === 'down') this.synthIdx = (this.synthIdx + 4) % totalKeys;
-      if (dir) return 'hit';
-
-      if (pressA) {
-        const key = COMPOSER_KEYS[this.synthIdx];
-        const curSong = this.songs[this.songIdx];
-        if (key.token === 'SONG') {
-          this.melodyPlaying = false;
-          RetroAudioEngine.stopNokiaMelody();
-          this.synthListIdx = this.songIdx;
-          this.synthClearConfirm = false;
-          this.synthMode = 'list';
-          return 'score';
-        }
-        const isPro = this.cb.getIsPro?.() ?? false;
-        if (this.isCustomTune() && !isPro) {
-          this.melodyPlaying = false;
-          RetroAudioEngine.stopNokiaMelody();
-          this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
-          return 'die';
-        }
-        if (key.token === 'PLAY') {
-          if (this.melodyPlaying) {
-            this.melodyPlaying = false;
-            RetroAudioEngine.stopNokiaMelody();
-          } else {
-            const res = RetroAudioEngine.playNokiaMelody(curSong.notes, curSong.bpm);
-            this.melodyEvents = res.events;
-            this.melodyDuration = res.totalSec;
-            this.melodyTimer = 0;
-            this.melodyPlaying = res.totalSec > 0;
-          }
-          return null;
-        }
-        if (key.token === 'RING') {
-          this.ringtoneIdx = this.songIdx;
-          const res = RetroAudioEngine.playNokiaMelody(curSong.notes, curSong.bpm);
-          this.melodyEvents = res.events;
-          this.melodyDuration = res.totalSec;
-          this.melodyTimer = 0;
-          this.melodyPlaying = res.totalSec > 0;
-          return null;
-        }
-        if (key.token === 'DEL') {
-          this.melodyPlaying = false;
-          RetroAudioEngine.stopNokiaMelody();
-          const parts = curSong.notes.trim().split(/\s+/).filter(Boolean);
-          parts.pop();
-          curSong.notes = parts.join(' ');
-          if (this.isCustomTune()) this.saveCustomTunes();
-          return 'hit';
-        }
-        this.melodyPlaying = false;
-        RetroAudioEngine.stopNokiaMelody();
-        RetroAudioEngine.playNokiaNote(key.token, curSong.bpm);
-        const parts = curSong.notes.trim().split(/\s+/).filter(Boolean);
-        if (parts.length >= 24) parts.shift();
-        parts.push(key.token);
-        curSong.notes = parts.join(' ');
-        if (this.isCustomTune()) this.saveCustomTunes();
-        return null;
-      }
-      return null;
-    }
-
-    if (this.app === 'paint') {
-      if (dir === 'up') this.paintR = (this.paintR + this.paintH - 1) % this.paintH;
-      if (dir === 'down') this.paintR = (this.paintR + 1) % this.paintH;
-      if (dir === 'left') this.paintC = (this.paintC + this.paintW - 1) % this.paintW;
-      if (dir === 'right') this.paintC = (this.paintC + 1) % this.paintW;
-      if (pressA) {
-        this.paintGrid[this.paintR][this.paintC] = !this.paintGrid[this.paintR][this.paintC];
-        return 'hit';
-      }
-      return null;
-    }
-
-    if (this.app === 'weather') {
-      if (dir === 'left') {
-        this.weatherCityIdx =
-          (this.weatherCityIdx + WEATHER_CITIES.length - 1) % WEATHER_CITIES.length;
-        this.weatherQuery = WEATHER_CITIES[this.weatherCityIdx];
-        this.fetchWeather(this.weatherQuery);
-        return 'hit';
-      }
-      if (dir === 'right') {
-        this.weatherCityIdx = (this.weatherCityIdx + 1) % WEATHER_CITIES.length;
-        this.weatherQuery = WEATHER_CITIES[this.weatherCityIdx];
-        this.fetchWeather(this.weatherQuery);
-        return 'hit';
-      }
-      if (dir === 'up' || dir === 'down') {
-        this.fetchWeather(this.weatherQuery);
-        return 'hit';
-      }
-      if (pressA) {
-        this.cb.onRequestKeyboard?.(true);
-        return 'score';
-      }
-      return null;
-    }
-
-    if (this.app === 'notes') {
-      if (dir === 'up') {
-        if (this.notes.length > 0) {
-          this.noteIdx = (this.noteIdx + this.notes.length - 1) % this.notes.length;
-        }
-        this.noteDeleteConfirm = false;
-        return 'hit';
-      }
-      if (dir === 'down') {
-        if (this.notes.length > 0) {
-          this.noteIdx = (this.noteIdx + 1) % this.notes.length;
-        }
-        this.noteDeleteConfirm = false;
-        return 'hit';
-      }
-      if (dir === 'left') {
-        this.noteDeleteConfirm = false;
-        return 'hit';
-      }
-      if (dir === 'right') {
-        if (this.notes.length === 0) return 'hit';
-        if (!this.noteDeleteConfirm) {
-          this.noteDeleteConfirm = true;
-          return 'hit';
-        }
-        this.notes = this.notes.filter((_, idx) => idx !== this.noteIdx);
-        this.noteIdx = Math.min(this.noteIdx, Math.max(0, this.notes.length - 1));
-        this.noteDeleteConfirm = false;
-        this.saveNotes();
-        return 'explode';
-      }
-      if (pressA) {
-        this.noteDeleteConfirm = false;
-        this.cb.onRequestKeyboard?.(true);
-        return 'score';
-      }
-      return null;
-    }
-
-    if (this.app === 'term') {
-      if (dir === 'up') {
-        this.termScroll = Math.max(0, this.termScroll - 1);
-        return 'hit';
-      }
-      if (dir === 'down') {
-        this.termScroll = Math.min(Math.max(0, this.termOut.length - 6), this.termScroll + 1);
-        return 'hit';
-      }
-      if (dir === 'left') {
-        this.termIdx =
-          this.termIdx <= 0 ? TERM_PRESETS.length - 1 : this.termIdx - 1;
-        this.termInput = TERM_PRESETS[this.termIdx];
-        return 'hit';
-      }
-      if (dir === 'right') {
-        this.termIdx = (this.termIdx + 1) % TERM_PRESETS.length;
-        this.termInput = TERM_PRESETS[this.termIdx];
-        return 'hit';
-      }
-      if (pressA) {
-        if (this.termInput.trim().length > 0) {
-          const cmd = this.termInput.trim();
-          this.termInput = '';
-          return this.execTermCmd(cmd);
-        } else {
-          this.cb.onRequestKeyboard?.(true);
-          return 'score';
-        }
-      }
-      return null;
-    }
-
-    if (this.app === 'setup') {
-      const isPro = this.cb.getIsPro?.() ?? false;
-      const totalSetupItems = 7;
-      if (dir === 'up') this.setupIdx = (this.setupIdx + totalSetupItems - 1) % totalSetupItems;
-      if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % totalSetupItems;
-      if (dir === 'left' || dir === 'right') {
-        if (this.setupIdx === 1) {
-          this.cb.onCyclePalette();
-          return 'score';
-        }
-        if (this.setupIdx === 2) {
-          this.cb.onToggleScanlines();
-          return 'score';
-        }
-        if (this.setupIdx === 3) {
-          this.toggleClockFace();
-          return 'score';
-        }
-        if (this.setupIdx === 4) {
-          this.toggleLiveAiSms();
-          return 'score';
-        }
-      }
-      if (dir) return 'hit';
-      if (pressA) {
-        if (this.setupIdx === 0) {
-          this.app = 'pro';
-          this.proIdx = 0;
-          this.proStatusMsg = '';
-          return 'powerup';
-        }
-        else if (this.setupIdx === 1) {
-          const curId = this.cb.getPaletteId?.();
-          const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
-          this.themeIdx = idx >= 0 ? idx : 0;
-          this.app = 'themes';
-          return 'score';
-        }
-        else if (this.setupIdx === 2) this.cb.onToggleScanlines();
-        else if (this.setupIdx === 3) this.toggleClockFace();
-        else if (this.setupIdx === 4) this.toggleLiveAiSms();
-        else if (this.setupIdx === 5) this.cb.onOpenCartVault();
-        else if (this.setupIdx === 6) {
-          this.app = 'boot';
-          this.bootTimer = 0;
-        }
-        return 'powerup';
-      }
-      return null;
-    }
-
-    if (this.app === 'themes') {
-      const total = PALETTE_ORDER.length;
-      if (dir === 'up') this.themeIdx = (this.themeIdx + total - 1) % total;
-      if (dir === 'down') this.themeIdx = (this.themeIdx + 1) % total;
-      if (dir === 'left') this.themeIdx = (this.themeIdx + total - 5) % total;
-      if (dir === 'right') this.themeIdx = (this.themeIdx + 5) % total;
-      if (dir) return 'hit';
-
-      if (pressA) {
-        const isPro = this.cb.getIsPro?.() ?? false;
-        const selectedId = PALETTE_ORDER[this.themeIdx];
-        if (selectedId) {
-          if (isPaletteProLocked(selectedId, isPro)) {
-            this.openProScreen('PRO REQUIRED FOR THIS THEME!');
-            return 'die';
-          }
-          this.cb.onSelectPalette?.(selectedId);
-          return 'powerup';
-        }
-      }
-      return null;
-    }
-
-    if (this.app === 'pro') {
-      const isPro = this.cb.getIsPro?.() ?? false;
-      const totalProItems = 5; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore, 4: Debug Revoke
-      if (dir === 'up') this.proIdx = (this.proIdx + totalProItems - 1) % totalProItems;
-      if (dir === 'down') this.proIdx = (this.proIdx + 1) % totalProItems;
-      if (dir) return 'hit';
-
-      if (pressA) {
-        if (this.proBusy) return null;
-
-        if (this.proIdx === 3) {
-          // Restore purchases
-          this.proBusy = true;
-          this.proStatusMsg = 'RESTORING PURCHASES...';
-          this.cb.onRestorePurchases?.().then((restored) => {
-            this.proBusy = false;
-            this.proStatusMsg = restored ? 'PURCHASES RESTORED!' : 'NO PURCHASES FOUND.';
-          }).catch(() => {
-            this.proBusy = false;
-            this.proStatusMsg = 'RESTORE ERROR. TRY AGAIN.';
-          });
-          return 'powerup';
-        }
-
-        if (this.proIdx === 4) {
-          // Debug: Revoke / Reset Purchases
-          this.proBusy = true;
-          this.proStatusMsg = 'REVOKING PURCHASES...';
-          this.cb.onResetProDebug?.().then(() => {
-            this.proBusy = false;
-            this.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
-          }).catch(() => {
-            this.proBusy = false;
-            this.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
-          });
-          return 'die';
-        }
-
-        const packageTypes: ('monthly' | 'yearly' | 'lifetime')[] = ['monthly', 'yearly', 'lifetime'];
-        const targetType = packageTypes[this.proIdx];
-        if (targetType) {
-          if (isPro) {
-            this.proStatusMsg = 'PRO IS ALREADY ACTIVE!';
-            return 'score';
-          }
-          this.proBusy = true;
-          this.proStatusMsg = 'CONNECTING TO STORE...';
-          this.cb.onPurchasePackage?.(targetType).then((res) => {
-            this.proBusy = false;
-            if (res.success || res.isPro) {
-              this.proStatusMsg = 'WELCOME TO PRO!';
-              this.triggerPurchaseSuccessSms(targetType);
-            } else if (res.userCancelled) {
-              this.proStatusMsg = 'TRANSACTION CANCELLED.';
-              this.triggerPurchaseFailedSms('USER CANCELLED');
-            } else {
-              this.proStatusMsg = 'TRANSACTION FAILED.';
-              this.triggerPurchaseFailedSms('CARD DECLINED');
-            }
-          }).catch((err) => {
-            this.proBusy = false;
-            this.proStatusMsg = 'PURCHASE ERROR.';
-            this.triggerPurchaseFailedSms(err?.message || 'STORE ERROR');
-          });
-          return 'powerup';
-        }
-      }
-      return null;
-    }
-
-    return null;
+    return updateOsFrameImpl(this, input, dt);
   }
 
   /** @internal */ pressCalcKey(k: string) {
@@ -2822,367 +765,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.calcFresh = true;
   }
 
-  private pushTermLines(lines: string[], showLogo = false) {
-    this.termShowLogo = showLogo;
-    if (showLogo) {
-      this.termOut = lines.slice(0, 6);
-      this.termScroll = 0;
-      return;
-    }
-    this.termOut.push(...lines);
-    if (this.termOut.length > 80) {
-      this.termOut = this.termOut.slice(this.termOut.length - 80);
-    }
-    this.termScroll = Math.max(0, this.termOut.length - 6);
+  /** @internal */ pushTermLines(lines: string[], showLogo = false) {
+    pushTermLinesImpl(this, lines, showLogo);
   }
 
-  private execTermCmd(rawCmd: string): ArcadeSound {
-    const clean = rawCmd.trim();
-    if (!clean) return 'hit';
-
-    const carts = this.cb.getCartridges();
-    const scores = this.cb.getHighScores();
-    const meta = getProviderMeta(this.byokConfig.activeProvider);
-    const parts = clean.split(/\s+/);
-    const bin = parts[0].toLowerCase();
-    const arg = parts.slice(1).join(' ');
-
-    if (bin === 'clear' || bin === 'cls') {
-      this.termShowLogo = false;
-      this.termOut = [];
-      this.termScroll = 0;
-      return 'hit';
-    }
-
-    if (bin === 'neofetch') {
-      this.pushTermLines(
-        [
-          'root@retrodeck',
-          '------------------',
-          'OS: RetroDeck v1.2',
-          `PAL: ${this.cb.getPaletteName().slice(0, 13)}`,
-          `ROM: ${carts.length} | AI:${meta.shortName}`,
-          `UP: ${Math.floor(this.uptime)}s | 18/64KB`,
-        ],
-        true
-      );
-      return 'score';
-    }
-
-    // Echo command line into scrollback
-    if (this.termShowLogo) {
-      this.termOut = [];
-      this.termShowLogo = false;
-    }
-    this.pushTermLines([`${this.termCwd}$ ${clean}`]);
-
-    if (bin === 'help' || bin === '?') {
-      this.pushTermLines([
-        'CMDS: ls, cd, pwd, cat, clear, top,',
-        'neofetch, uname, free, date, whoami,',
-        'open <game>, randgame, play <song>,',
-        'stop, ai <msg>, theme, lock, reboot',
-      ]);
-      return 'score';
-    }
-
-    if (bin === 'pwd') {
-      this.pushTermLines([this.termCwd]);
-      return 'score';
-    }
-
-    if (bin === 'whoami') {
-      this.pushTermLines(['root (uid=0, gid=0, groups=nokia3310)']);
-      return 'score';
-    }
-
-    if (bin === 'date') {
-      this.pushTermLines([new Date().toUTCString().toUpperCase()]);
-      return 'score';
-    }
-
-    if (bin === 'uptime') {
-      this.pushTermLines([`UP ${Math.floor(this.uptime)}s, LOAD AVG: 0.02, 0.01`]);
-      return 'score';
-    }
-
-    if (bin === 'echo') {
-      this.pushTermLines([arg || '']);
-      return 'score';
-    }
-
-    if (bin === 'uname') {
-      this.pushTermLines([
-        'RetroDeckOS 1.2.0-arm64 #1 SMP PREEMPT',
-        `LCD 320x240 60Hz | AI: ${meta.name.toUpperCase()}`,
-      ]);
-      return 'score';
-    }
-
-    if (bin === 'free') {
-      this.pushTermLines([
-        '      TOTAL  USED  FREE',
-        'RAM:   64KB  18KB  46KB [#####---------]',
-        'VRAM:  16KB   9KB   7KB [########------]',
-      ]);
-      return 'score';
-    }
-
-    if (bin === 'top' || bin === 'ps') {
-      this.pushTermLines([
-        'PID USER  CPU% MEM  COMMAND',
-        '  1 root   4.2 6KB  /sbin/rd-kernel',
-        ' 12 root   8.5 8KB  /bin/arcade-60fps',
-        ` 24 root   1.1 4KB  /bin/byok-${meta.id}`,
-      ]);
-      return 'score';
-    }
-
-    if (bin === 'cd') {
-      const target = (arg || '/home').trim();
-      if (target === '..') {
-        this.termCwd = '/';
-      } else if (['/home', '/carts', '/etc', '/bin', '/'].includes(target)) {
-        this.termCwd = target;
-      } else if (['home', 'carts', 'etc', 'bin'].includes(target)) {
-        this.termCwd = `/${target}`;
-      } else {
-        this.pushTermLines([`cd: ${target}: No such directory`]);
-        return 'die';
-      }
-      return 'score';
-    }
-
-    if (bin === 'ls' || bin === 'dir') {
-      const target = arg.trim() || this.termCwd;
-      if (target === '/' || target === '.') {
-        this.pushTermLines(['bin/  carts/  etc/  home/  boot.rom']);
-      } else if (target.includes('cart')) {
-        this.pushTermLines([
-          `TOTAL ${carts.length} CARTRIDGES (USE "open <name>"):`,
-          `01:${carts[0]?.id}  02:${carts[1]?.id}`,
-          `03:${carts[2]?.id}  04:${carts[3]?.id}`,
-          `05:${carts[4]?.id}  06:${carts[5]?.id}`,
-        ]);
-      } else if (target.includes('etc')) {
-        this.pushTermLines(['os-release  byok.conf  palettes.conf']);
-      } else if (target.includes('bin')) {
-        this.pushTermLines(['rdsh  neofetch  open  play  ai  top']);
-      } else {
-        this.pushTermLines(['readme.txt  scores.log  nokia3310.rom']);
-      }
-      return 'score';
-    }
-
-    if (bin === 'cat') {
-      const f = arg.toLowerCase();
-      if (!f) {
-        this.pushTermLines(['usage: cat <readme.txt|scores.log|/etc/os>']);
-        return 'hit';
-      }
-      if (f.includes('score')) {
-        const entries = Object.entries(scores)
-          .filter(([, v]) => v > 0)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 4);
-        if (entries.length === 0) {
-          this.pushTermLines(['scores.log: (empty - play a game!)']);
-        } else {
-          this.pushTermLines(
-            entries.map(([id, val], i) => `#${i + 1} ${id}: ${val} PTS`)
-          );
-        }
-      } else if (f.includes('os') || f.includes('etc')) {
-        this.pushTermLines([
-          'NAME="RetroDeck OS"',
-          'VERSION="1.2 (Nokia 3310 Edition)"',
-          `PALETTE="${this.cb.getPaletteName()}"`,
-        ]);
-      } else {
-        this.pushTermLines([
-          'RETRODECK OS // 100-IN-1 POCKET CONSOLE',
-          'TYPE "open snake" OR "play nokia"!',
-        ]);
-      }
-      return 'score';
-    }
-
-    if (bin === 'open' || bin === 'run') {
-      if (!arg) {
-        this.pushTermLines(['usage: open <game name or 1..100>']);
-        return 'hit';
-      }
-      const num = parseInt(arg, 10);
-      const q = arg.toLowerCase();
-      const found =
-        !isNaN(num) && num >= 1 && num <= carts.length
-          ? carts[num - 1]
-          : carts.find(
-              (c) =>
-                c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
-            );
-      if (found) {
-        const isPro = this.cb.getIsPro?.() ?? false;
-        if (isCartridgeProLocked(found.id, isPro)) {
-          this.pushTermLines([`LOCKED: ${found.title} REQUIRES PRO!`, 'TYPE "pro" TO UPGRADE.']);
-          return 'die';
-        }
-        this.pushTermLines([`BOOTING ${found.title}...`]);
-        this.cb.onLaunchGame(found);
-        return 'powerup';
-      }
-      this.pushTermLines([`open: "${arg}" not found in /carts`]);
-      return 'die';
-    }
-
-    if (bin === 'randgame') {
-      const isPro = this.cb.getIsPro?.() ?? false;
-      const pool = isPro ? carts : carts.filter((c) => !isCartridgeProLocked(c.id, false));
-      const pick = pool[Math.floor(Math.random() * pool.length)];
-      if (pick) this.cb.onLaunchGame(pick);
-      return 'powerup';
-    }
-
-    if (bin === 'ringtones' || bin === 'ringtone' || bin === 'tones') {
-      if (arg) {
-        const q = arg.toLowerCase();
-        const idx = this.songs.findIndex((s) => s.title.toLowerCase().includes(q));
-        if (idx >= 0) {
-          this.ringtoneIdx = idx;
-          const s = this.songs[idx];
-          RetroAudioEngine.playNokiaMelody(s.notes, s.bpm);
-          this.pushTermLines([`ACTIVE RINGTONE SET TO: ${s.title.trim()}`]);
-          return 'score';
-        }
-      }
-      this.pushTermLines([
-        `ACTIVE RING: ${this.songs[this.ringtoneIdx]?.title.trim()}`,
-        '3310 RINGTONES: nokia, kick, hurdy,',
-        'espagnole, badinerie, valkyries, tell,',
-        'city, groovy, tetris, mario, star, axel,',
-        'mission, pacman, custom (use "play <name>")',
-      ]);
-      return 'score';
-    }
-
-    if (bin === 'play') {
-      const q = (arg || 'nokia').toLowerCase();
-      if (q === 'sms') {
-        RetroAudioEngine.playNokiaSmsTone();
-        this.pushTermLines(['PLAYING NOKIA 3310 MORSE SMS TONE...']);
-        return 'score';
-      }
-      const song =
-        this.songs.find((s) => s.title.toLowerCase().includes(q)) || this.songs[0];
-      RetroAudioEngine.playNokiaMelody(song.notes, song.bpm);
-      this.pushTermLines([`PLAYING: ${song.title} (${song.bpm} BPM)`]);
-      return 'score';
-    }
-
-    if (bin === 'stop') {
-      RetroAudioEngine.stopNokiaMelody();
-      this.pushTermLines(['AUDIO STOPPED.']);
-      return 'hit';
-    }
-
-    if (bin === 'theme' || bin === 'palette') {
-      this.cb.onCyclePalette();
-      this.pushTermLines([`THEME SWITCHED.`]);
-      return 'powerup';
-    }
-
-    if (bin === 'pro' || bin === 'buy') {
-      this.app = 'pro';
-      this.proIdx = 0;
-      this.proStatusMsg = '';
-      this.cb.onRequestKeyboard?.(false);
-      return 'powerup';
-    }
-
-    if (bin === 'revokepro' || bin === 'resetpro' || bin === 'unpro') {
-      this.cb.onResetProDebug?.().then(() => {
-        this.pushTermLines(['PRO STATUS REVOKED (DEBUG OK).']);
-      });
-      this.pushTermLines(['REVOKING PRO STATUS...']);
-      return 'die';
-    }
-
-    if (bin === 'failsms' || bin === 'testfailsms') {
-      this.triggerPurchaseFailedSms('TEST ERROR: INSUFFICIENT FUNDS');
-      this.pushTermLines(['SENT TEST FAILED PURCHASE SMS TO 3310!']);
-      return 'die';
-    }
-
-    if (bin === 'prosms' || bin === 'winsms') {
-      this.triggerPurchaseSuccessSms('LIFETIME');
-      this.pushTermLines(['SENT WELCOME PRO SMS TO 3310!']);
-      return 'powerup';
-    }
-
-    if (bin === 'livesms') {
-      this.pushTermLines(['FETCHING LIVE AI SMS...']);
-      this.triggerLivePersonaSms().then((ok) => {
-        if (!ok) {
-          this.pushTermLines(['ADD BYOK API KEY IN CHAT FIRST!']);
-        }
-      });
-      return 'score';
-    }
-
-    if (bin === 'lock') {
-      this.keyLocked = true;
-      this.unlockStage = false;
-      return 'score';
-    }
-
-    if (bin === 'exit') {
-      this.app = 'desktop';
-      this.cb.onRequestKeyboard?.(false);
-      return 'hit';
-    }
-
-    if (bin === 'reboot') {
-      this.app = 'boot';
-      this.bootTimer = 0;
-      this.cb.onRequestKeyboard?.(false);
-      return 'powerup';
-    }
-
-    if (bin === 'wap' || bin === 'curl') {
-      const targetUrl = arg.trim() || 'https://www.metaframelabs.space/';
-      this.app = 'wap';
-      this.fetchWapPage(targetUrl);
-      return 'powerup';
-    }
-
-    if (bin === 'stats') {
-      this.app = 'stats';
-      return 'score';
-    }
-
-    if (bin === 'ai' || bin === 'ask') {
-      if (!arg) {
-        this.pushTermLines(['usage: ai <your question>']);
-        return 'hit';
-      }
-      this.pushTermLines([`[${meta.shortName} THINKING...]`]);
-      callBYOKAIChat([{ role: 'user', content: arg }], this.byokConfig)
-        .then((reply) => {
-          const lines = wrapTextLines(`AI> ${reply}`, 34);
-          this.pushTermLines(lines);
-          this.cb.onPlaySound?.('powerup');
-        })
-        .catch((err: any) => {
-          this.pushTermLines([
-            `ERR> ${(err?.message || 'API ERROR').toUpperCase().slice(0, 32)}`,
-          ]);
-          this.cb.onPlaySound?.('die');
-        });
-      return 'shoot';
-    }
-
-    this.pushTermLines([`rdsh: ${bin}: command not found (try "help")`]);
-    return 'die';
+  /** @internal */ execTermCmd(rawCmd: string): ArcadeSound {
+    return execTermCmdImpl(this, rawCmd);
   }
 
   public getStats(): ArcadeStats {
