@@ -100,7 +100,7 @@ import { SumoRingGame } from './games/SumoRingGame';
 import { BubbleShooterGame } from './games/BubbleShooterGame';
 import { BossRushGame } from './games/BossRushGame';
 
-export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+const RAW_ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
   {
     id: 'boss-rush-100',
     title: 'BOSS RUSH 100',
@@ -2603,7 +2603,7 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
   },
 ];
 
-export const FREE_CARTRIDGE_IDS = new Set<string>([
+const FREE_ORDER = [
   'snake-3310',
   'tetris-brick',
   'pong-dx',
@@ -2614,7 +2614,16 @@ export const FREE_CARTRIDGE_IDS = new Set<string>([
   'bounce-retro',
   'minesweeper-dx',
   'dino-runner',
-]);
+];
+
+export const FREE_CARTRIDGE_IDS = new Set<string>(FREE_ORDER);
+
+export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
+  ...FREE_ORDER
+    .map((id) => RAW_ARCADE_CARTRIDGES.find((c) => c.id === id))
+    .filter((c): c is ArcadeCartridgeDef => Boolean(c)),
+  ...RAW_ARCADE_CARTRIDGES.filter((c) => !FREE_CARTRIDGE_IDS.has(c.id)),
+];
 
 export function isCartridgeProLocked(cartId: string, isPro: boolean): boolean {
   if (isPro) return false;
