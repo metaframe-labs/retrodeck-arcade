@@ -54,6 +54,30 @@ function parseActionLabel(
   return { letter: defaultLetter, sub: fullLabel };
 }
 
+/** Extracts directional arrow and short action sublabel for 50x50 D-pad caps so text never clips */
+function parseDpadLabel(
+  defaultArrow: string,
+  fullLabel?: string,
+  fallback?: string
+): { arrow: string; sub: string } {
+  const raw = (fullLabel || fallback || defaultArrow).trim();
+  if (!raw || raw === defaultArrow) {
+    return { arrow: defaultArrow, sub: '' };
+  }
+  const parenMatch = raw.match(/^([▲▼◀▶])\s*\((.+)\)$/);
+  if (parenMatch) {
+    return { arrow: parenMatch[1], sub: parenMatch[2].trim() };
+  }
+  const trailingArrow = raw.match(/^(.+?)\s+([▲▼◀▶])$/);
+  if (trailingArrow) {
+    return { arrow: trailingArrow[2], sub: trailingArrow[1].trim() };
+  }
+  if (/^[▲▼◀▶]$/.test(raw)) {
+    return { arrow: raw, sub: '' };
+  }
+  return { arrow: defaultArrow, sub: raw };
+}
+
 export const RetroKeypad: React.FC<RetroKeypadProps> = ({
   labels,
   accentColor,
@@ -119,6 +143,51 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
 
   const btnAInfo = parseActionLabel('A', labels?.aLabel, labels?.a);
   const btnBInfo = parseActionLabel('B', labels?.bLabel, labels?.b);
+  const upInfo = parseDpadLabel('▲', labels?.upLabel, labels?.up);
+  const downInfo = parseDpadLabel('▼', labels?.downLabel, labels?.down);
+  const leftInfo = parseDpadLabel('◀', labels?.leftLabel, labels?.left);
+  const rightInfo = parseDpadLabel('▶', labels?.rightLabel, labels?.right);
+
+  const renderDpadButton = (
+    dir: 'up' | 'down' | 'left' | 'right',
+    info: { arrow: string; sub: string }
+  ) => (
+    <Pressable
+      hitSlop={BUTTON_HIT_SLOP}
+      onPressIn={() => handlePressIn(dir)}
+      onPressOut={() => handlePressOut(dir)}
+      style={[
+        styles.dpadBtn,
+        { backgroundColor: buttonBg, borderColor: buttonBorder },
+        pressed[dir] && [
+          styles.dpadBtnPressed,
+          {
+            borderColor: accentColor,
+            backgroundColor: `${accentColor}33`,
+          },
+        ],
+      ]}
+    >
+      <Text
+        style={[
+          styles.dpadArrow,
+          info.sub ? styles.dpadArrowCompact : null,
+          pressed[dir] && { color: accentColor },
+        ]}
+      >
+        {info.arrow}
+      </Text>
+      {info.sub ? (
+        <Text
+          style={[styles.dpadSub, pressed[dir] && { color: accentColor }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+        >
+          {info.sub}
+        </Text>
+      ) : null}
+    </Pressable>
+  );
 
   return (
     <View style={styles.gamepadRow}>
@@ -126,97 +195,19 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
       <View style={styles.dpadBox}>
         {/* UP */}
         <View style={styles.dpadTopRow}>
-          <Pressable
-            hitSlop={BUTTON_HIT_SLOP}
-            onPressIn={() => handlePressIn('up')}
-            onPressOut={() => handlePressOut('up')}
-            style={[
-              styles.dpadBtn,
-              { backgroundColor: buttonBg, borderColor: buttonBorder },
-              pressed.up && [
-                styles.dpadBtnPressed,
-                {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}33`,
-                },
-              ],
-            ]}
-          >
-            <Text style={[styles.dpadArrow, pressed.up && { color: accentColor }]}>
-              {labels?.upLabel || labels?.up || '▲'}
-            </Text>
-          </Pressable>
+          {renderDpadButton('up', upInfo)}
         </View>
 
         {/* LEFT / CENTER / RIGHT */}
         <View style={styles.dpadMidRow}>
-          <Pressable
-            hitSlop={BUTTON_HIT_SLOP}
-            onPressIn={() => handlePressIn('left')}
-            onPressOut={() => handlePressOut('left')}
-            style={[
-              styles.dpadBtn,
-              { backgroundColor: buttonBg, borderColor: buttonBorder },
-              pressed.left && [
-                styles.dpadBtnPressed,
-                {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}33`,
-                },
-              ],
-            ]}
-          >
-            <Text style={[styles.dpadArrow, pressed.left && { color: accentColor }]}>
-              {labels?.leftLabel || labels?.left || '◀'}
-            </Text>
-          </Pressable>
-
+          {renderDpadButton('left', leftInfo)}
           <View style={[styles.dpadCenter, { backgroundColor: centerBg, borderColor: buttonBorder }]} />
-
-          <Pressable
-            hitSlop={BUTTON_HIT_SLOP}
-            onPressIn={() => handlePressIn('right')}
-            onPressOut={() => handlePressOut('right')}
-            style={[
-              styles.dpadBtn,
-              { backgroundColor: buttonBg, borderColor: buttonBorder },
-              pressed.right && [
-                styles.dpadBtnPressed,
-                {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}33`,
-                },
-              ],
-            ]}
-          >
-            <Text style={[styles.dpadArrow, pressed.right && { color: accentColor }]}>
-              {labels?.rightLabel || labels?.right || '▶'}
-            </Text>
-          </Pressable>
+          {renderDpadButton('right', rightInfo)}
         </View>
 
         {/* DOWN */}
         <View style={styles.dpadTopRow}>
-          <Pressable
-            hitSlop={BUTTON_HIT_SLOP}
-            onPressIn={() => handlePressIn('down')}
-            onPressOut={() => handlePressOut('down')}
-            style={[
-              styles.dpadBtn,
-              { backgroundColor: buttonBg, borderColor: buttonBorder },
-              pressed.down && [
-                styles.dpadBtnPressed,
-                {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}33`,
-                },
-              ],
-            ]}
-          >
-            <Text style={[styles.dpadArrow, pressed.down && { color: accentColor }]}>
-              {labels?.downLabel || labels?.down || '▼'}
-            </Text>
-          </Pressable>
+          {renderDpadButton('down', downInfo)}
         </View>
       </View>
 
@@ -347,6 +338,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '900',
     fontFamily: 'monospace',
+  },
+  dpadArrowCompact: {
+    fontSize: 15,
+    lineHeight: 17,
+  },
+  dpadSub: {
+    color: '#94A3B8',
+    fontSize: 7.5,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    letterSpacing: 0.3,
+    paddingHorizontal: 2,
   },
   abCluster: {
     flexDirection: 'row',
