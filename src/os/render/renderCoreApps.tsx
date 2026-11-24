@@ -382,37 +382,314 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   const activeWall = os.getActiveWallpaper();
 
+  const renderWallBackdrop = () =>
+    activeWall ? (
+      <>
+        <Image
+          source={activeWall.image}
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            width: undefined,
+            height: undefined,
+          }}
+          resizeMode="cover"
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            backgroundColor: bg,
+            opacity: os.getWallpaperDimOpacity(),
+          }}
+        />
+      </>
+    ) : null;
+
+  // STYLE 2: Classic Nokia 3310 Single-Item Carousel Menu
+  if (os.menuStyle === 'nokia') {
+    const total = DESKTOP_ICONS.length;
+    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const prevItem = DESKTOP_ICONS[(os.deskIdx + total - 1) % total];
+    const nextItem = DESKTOP_ICONS[(os.deskIdx + 1) % total];
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
+        {renderWallBackdrop()}
+
+        {/* Top Menu Number Badge */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: fg }}>
+            {pickLang(os.lang, 'MENU', 'MENU')}
+          </Text>
+          <View
+            style={{
+              backgroundColor: fg,
+              paddingHorizontal: 6,
+              paddingVertical: 1,
+            }}
+          >
+            <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: bg }}>
+              {String(os.deskIdx + 1).padStart(2, '0')}/{total}
+            </Text>
+          </View>
+        </View>
+
+        {/* Center Hero Nokia 3310 Card */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 4 }}>
+          <View style={{ alignItems: 'center', opacity: 0.45, width: 38 }}>
+            <Ionicons name={prevItem.icon} size={16} color={fg} />
+            <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
+              ◀ {getDesktopLabel(prevItem.id, prevItem.label, os.lang)}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              marginHorizontal: 6,
+              borderWidth: 2,
+              borderColor: fg,
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.80) : 'transparent',
+              borderRadius: 6,
+              paddingVertical: 14,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 6,
+            }}
+          >
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 8,
+                backgroundColor: fg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name={curItem.icon} size={26} color={bg} />
+            </View>
+            <Text style={{ fontFamily: monoFont, fontSize: 13, fontWeight: '900', color: fg, letterSpacing: 1 }}>
+              {getDesktopLabel(curItem.id, curItem.label, os.lang)}
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'center', opacity: 0.45, width: 38 }}>
+            <Ionicons name={nextItem.icon} size={16} color={fg} />
+            <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
+              {getDesktopLabel(nextItem.id, nextItem.label, os.lang)} ▶
+            </Text>
+          </View>
+        </View>
+
+        {/* Bottom Selector Strip */}
+        <View
+          style={{
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            borderTopWidth: 1,
+            borderTopColor: hexWithAlpha(fg, 0.4),
+            paddingVertical: 2,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(os.lang, '◀ / ▶ BROWSE  •  [A] SELECT', '◀ / ▶ GEZ  •  [A] SEC')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 3: Classic Retro Vertical List (6 rows per window)
+  if (os.menuStyle === 'list') {
+    const visibleCount = 6;
+    const total = DESKTOP_ICONS.length;
+    const start = Math.max(0, Math.min(total - visibleCount, os.deskIdx - 2));
+    const slice = DESKTOP_ICONS.slice(start, start + visibleCount);
+
+    return (
+      <View style={[styles.listWrap, { position: 'relative', justifyContent: 'space-between' }]}>
+        {renderWallBackdrop()}
+
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginBottom: 2,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            paddingHorizontal: 4,
+            paddingVertical: 1,
+          }}
+        >
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            {pickLang(os.lang, 'APPLICATIONS', 'UYGULAMALAR')}
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {String(os.deskIdx + 1).padStart(2, '0')}/{total}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, justifyContent: 'flex-start', gap: 2.5 }}>
+          {slice.map((item, i) => {
+            const realIdx = start + i;
+            const sel = realIdx === os.deskIdx;
+            const rowInk = sel ? bg : fg;
+            return (
+              <View
+                key={item.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 6,
+                  paddingVertical: 3.5,
+                  borderWidth: 1,
+                  borderColor: sel ? fg : hexWithAlpha(fg, activeWall ? 0.55 : 0.25),
+                  backgroundColor: sel
+                    ? fg
+                    : activeWall
+                    ? hexWithAlpha(bg, 0.74)
+                    : 'transparent',
+                  borderRadius: 3,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                  <Ionicons name={item.icon} size={13} color={rowInk} />
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 9.5,
+                      fontWeight: '900',
+                      color: rowInk,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {String(realIdx + 1).padStart(2, '0')}. {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                </View>
+                <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: rowInk }}>
+                  {sel ? '◀' : ''}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 4: Big 3x2 Cards (6 large cards per page — ideal for showcasing wallpapers!)
+  if (os.menuStyle === 'cards') {
+    const cardCols = 3;
+    const cardRows = 2;
+    const cardPageSize = cardCols * cardRows;
+    const cardTotalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / cardPageSize));
+    const cardCurPage = Math.min(cardTotalPages - 1, Math.floor(os.deskIdx / cardPageSize));
+    const cardStart = cardCurPage * cardPageSize;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative' }]}>
+        {renderWallBackdrop()}
+
+        {Array.from({ length: cardRows }, (_, r) => (
+          <View key={r} style={styles.deskRow}>
+            {Array.from({ length: cardCols }, (_, c) => {
+              const idx = cardStart + r * cardCols + c;
+              const item = DESKTOP_ICONS[idx];
+              if (!item) {
+                return <View key={`sp-c-${c}`} style={styles.deskTileSpacer} />;
+              }
+              const sel = idx === os.deskIdx;
+              const iconColor = sel ? bg : fg;
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.deskTile,
+                    { borderRadius: 6 },
+                    activeWall
+                      ? {
+                          borderWidth: 2,
+                          borderColor: sel ? fg : hexWithAlpha(fg, 0.85),
+                          backgroundColor: sel ? fg : hexWithAlpha(bg, 0.72),
+                        }
+                      : {
+                          borderColor: fg,
+                          backgroundColor: sel ? fg : 'transparent',
+                        },
+                  ]}
+                >
+                  <Ionicons name={item.icon} size={24} color={iconColor} />
+                  <Text
+                    style={[styles.deskLbl, { color: iconColor, fontSize: 9, marginTop: 4 }]}
+                    numberOfLines={1}
+                  >
+                    {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ))}
+
+        {/* Custom 3x2 Page Strip */}
+        <Pressable
+          onPress={() => {
+            const nextPage = (cardCurPage + 1) % cardTotalPages;
+            os.deskIdx = nextPage * cardPageSize;
+            os.cb.onPlaySound?.('hit');
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 6,
+            paddingVertical: 1.5,
+            borderWidth: 1,
+            borderColor: hexWithAlpha(fg, 0.45),
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(
+              os.lang,
+              `PAGE ${cardCurPage + 1}/${cardTotalPages}`,
+              `SAYFA ${cardCurPage + 1}/${cardTotalPages}`
+            )}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            {Array.from({ length: cardTotalPages }).map((_, p) => (
+              <View
+                key={p}
+                style={{
+                  width: p === cardCurPage ? 12 : 5,
+                  height: 5,
+                  borderRadius: 2.5,
+                  backgroundColor: fg,
+                  opacity: p === cardCurPage ? 1 : 0.35,
+                }}
+              />
+            ))}
+          </View>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // STYLE 1 (DEFAULT): Crisp 4x3 Grid (12 items per page)
   return (
     <View style={[styles.deskGrid, { position: 'relative' }]}>
-      {activeWall && (
-        <>
-          <Image
-            source={activeWall.image}
-            style={{
-              position: 'absolute',
-              left: -8,
-              right: -8,
-              top: -6,
-              bottom: -6,
-              width: undefined,
-              height: undefined,
-            }}
-            resizeMode="cover"
-          />
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: -8,
-              right: -8,
-              top: -6,
-              bottom: -6,
-              backgroundColor: bg,
-              opacity: os.getWallpaperDimOpacity(),
-            }}
-          />
-        </>
-      )}
+      {renderWallBackdrop()}
 
       {Array.from({ length: rows }, (_, r) => (
         <View key={r} style={styles.deskRow}>
@@ -499,10 +776,17 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
   const isPro = os.cb.getIsPro?.() ?? false;
   const L = os.lang;
   const activeWall = os.getActiveWallpaper();
+  const menuStyleLabelMap = {
+    grid: tOs('menuStyleGrid', L),
+    nokia: tOs('menuStyleNokia', L),
+    list: tOs('menuStyleList', L),
+    cards: tOs('menuStyleCards', L),
+  };
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
     `${tOs('setupPalette', L)}: ${os.cb.getPaletteName()}`,
     `${tOs('setupWallpaper', L)}: ${activeWall ? activeWall.title : tOs('off', L)}`,
+    `${tOs('setupMenuStyle', L)}: ${menuStyleLabelMap[os.menuStyle]}`,
     `${tOs('setupScanlines', L)}: ${os.cb.getScanlines() ? tOs('on', L) : tOs('off', L)}`,
     `${tOs('setupClockFace', L)}: ${os.clockFace === 'analog' ? tOs('analog', L) : tOs('digital', L)}`,
     `${tOs('setupLiveSms', L)}: ${os.liveAiSmsEnabled ? tOs('on', L) : tOs('off', L)}`,

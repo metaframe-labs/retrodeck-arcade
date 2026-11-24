@@ -284,6 +284,17 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
     return 'powerup';
   }
 
+  if (bin === 'menustyle' || bin === 'layout') {
+    const q = arg.trim().toLowerCase();
+    if (q === 'grid' || q === 'nokia' || q === 'list' || q === 'cards') {
+      os.setMenuStyle(q);
+    } else {
+      os.cycleMenuStyle(1);
+    }
+    os.pushTermLines([`MENU STYLE: ${os.menuStyle.toUpperCase()}`]);
+    return 'score';
+  }
+
   if (bin === 'wallpaper' || bin === 'wall' || bin === 'wp') {
     const q = arg.trim().toLowerCase();
     if (!q) {

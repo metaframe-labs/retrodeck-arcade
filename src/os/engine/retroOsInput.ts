@@ -686,23 +686,28 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'desktop') {
-    const cols = 4;
     const total = DESKTOP_ICONS.length;
-    if (dir === 'left') os.deskIdx = (os.deskIdx + total - 1) % total;
-    if (dir === 'right') os.deskIdx = (os.deskIdx + 1) % total;
-    if (dir === 'up') {
-      if (os.deskIdx >= cols) {
-        os.deskIdx -= cols;
-      } else {
-        const col = os.deskIdx % cols;
-        const lastRowBase = Math.floor((total - 1) / cols) * cols;
-        os.deskIdx =
-          lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+    if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list')) {
+      if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
+      if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+    } else {
+      const cols = !os.postFormatWinStyle && os.menuStyle === 'cards' ? 3 : 4;
+      if (dir === 'left') os.deskIdx = (os.deskIdx + total - 1) % total;
+      if (dir === 'right') os.deskIdx = (os.deskIdx + 1) % total;
+      if (dir === 'up') {
+        if (os.deskIdx >= cols) {
+          os.deskIdx -= cols;
+        } else {
+          const col = os.deskIdx % cols;
+          const lastRowBase = Math.floor((total - 1) / cols) * cols;
+          os.deskIdx =
+            lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+        }
       }
-    }
-    if (dir === 'down') {
-      os.deskIdx =
-        os.deskIdx + cols < total ? os.deskIdx + cols : os.deskIdx % cols;
+      if (dir === 'down') {
+        os.deskIdx =
+          os.deskIdx + cols < total ? os.deskIdx + cols : os.deskIdx % cols;
+      }
     }
     if (dir) return 'hit';
 
@@ -1596,7 +1601,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'setup') {
-    const totalSetupItems = 10;
+    const totalSetupItems = 11;
     if (dir === 'up') os.setupIdx = (os.setupIdx + totalSetupItems - 1) % totalSetupItems;
     if (dir === 'down') os.setupIdx = (os.setupIdx + 1) % totalSetupItems;
     if (dir === 'left' || dir === 'right') {
@@ -1609,18 +1614,22 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'score';
       }
       if (os.setupIdx === 3) {
-        os.cb.onToggleScanlines();
+        os.cycleMenuStyle(dir === 'left' ? -1 : 1);
         return 'score';
       }
       if (os.setupIdx === 4) {
-        os.toggleClockFace();
+        os.cb.onToggleScanlines();
         return 'score';
       }
       if (os.setupIdx === 5) {
-        os.toggleLiveAiSms();
+        os.toggleClockFace();
         return 'score';
       }
       if (os.setupIdx === 6) {
+        os.toggleLiveAiSms();
+        return 'score';
+      }
+      if (os.setupIdx === 7) {
         os.toggleLang();
         return 'score';
       }
@@ -1641,15 +1650,18 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       } else if (os.setupIdx === 2) {
         os.openWallpaperGallery();
         return 'score';
-      } else if (os.setupIdx === 3) os.cb.onToggleScanlines();
-      else if (os.setupIdx === 4) os.toggleClockFace();
-      else if (os.setupIdx === 5) os.toggleLiveAiSms();
-      else if (os.setupIdx === 6) os.toggleLang();
-      else if (os.setupIdx === 7) os.cb.onOpenCartVault();
-      else if (os.setupIdx === 8) {
+      } else if (os.setupIdx === 3) {
+        os.cycleMenuStyle(1);
+        return 'score';
+      } else if (os.setupIdx === 4) os.cb.onToggleScanlines();
+      else if (os.setupIdx === 5) os.toggleClockFace();
+      else if (os.setupIdx === 6) os.toggleLiveAiSms();
+      else if (os.setupIdx === 7) os.toggleLang();
+      else if (os.setupIdx === 8) os.cb.onOpenCartVault();
+      else if (os.setupIdx === 9) {
         os.app = 'boot';
         os.bootTimer = 0;
-      } else if (os.setupIdx === 9) {
+      } else if (os.setupIdx === 10) {
         openFormatSimulator(os, 0, false);
         return 'explode';
       }

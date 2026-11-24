@@ -157,6 +157,9 @@ import {
   WALLPAPER_STORAGE_KEY,
   WALLPAPER_DIM_STORAGE_KEY,
   WALLPAPER_DIM_OPACITIES,
+  MENU_STYLE_STORAGE_KEY,
+  DESKTOP_MENU_STYLES,
+  DesktopMenuStyle,
   hexWithAlpha,
   DEFAULT_CONTACTS_BY_LANG,
   RetroContact,
@@ -376,6 +379,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS
   /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark
   /** @internal */ wallpaperCleanPreview = false;
+  /** @internal */ menuStyle: DesktopMenuStyle = 'grid';
   /** @internal */ formatSim: FormatSimState = createInitialFormatState();
   /** @internal */ postFormatWinStyle: PostFormatWinStyle | null = null;
   /** @internal */ postFormatWinTimer = 0;
@@ -605,6 +609,26 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(MENU_STYLE_STORAGE_KEY)
+      .then((savedStyle) => {
+        if (savedStyle && DESKTOP_MENU_STYLES.includes(savedStyle as DesktopMenuStyle)) {
+          this.menuStyle = savedStyle as DesktopMenuStyle;
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ setMenuStyle(next: DesktopMenuStyle) {
+    if (DESKTOP_MENU_STYLES.includes(next)) {
+      this.menuStyle = next;
+      AsyncStorage.setItem(MENU_STYLE_STORAGE_KEY, next).catch(() => {});
+    }
+  }
+
+  /** @internal */ cycleMenuStyle(delta = 1) {
+    const idx = DESKTOP_MENU_STYLES.indexOf(this.menuStyle);
+    const nextIdx = (idx + delta + DESKTOP_MENU_STYLES.length) % DESKTOP_MENU_STYLES.length;
+    this.setMenuStyle(DESKTOP_MENU_STYLES[nextIdx]);
   }
 
   /** @internal */ getActiveWallpaper(): { id: string; title: string; image: any } | null {
