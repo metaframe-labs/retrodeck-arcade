@@ -297,9 +297,99 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
   const safeIdx = Math.max(0, Math.min(os.contactIdx, totalRows - 1));
   const isAddRow = safeIdx === contacts.length;
   const selected = !isAddRow ? contacts[safeIdx] : null;
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
 
-  const visibleCount = 6;
-  const start = Math.max(0, Math.min(safeIdx - 2, Math.max(0, totalRows - visibleCount)));
+  // STYLE: Nokia 3310 Single-Contact Phonebook Card
+  if (os.menuStyle === 'nokia') {
+    const prevIdx = (safeIdx + totalRows - 1) % totalRows;
+    const nextIdx = (safeIdx + 1) % totalRows;
+    const prevLabel = prevIdx < contacts.length ? contacts[prevIdx].name : '+NEW';
+    const nextLabel = nextIdx < contacts.length ? contacts[nextIdx].name : '+NEW';
+
+    return (
+      <View style={[styles.listWrap, { justifyContent: 'space-between' }]}>
+        <View style={styles.compHeader}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            {tOs('contactsTitle', { total: contacts.length }, L)}
+          </Text>
+          <View style={{ backgroundColor: fg, paddingHorizontal: 5, paddingVertical: 1 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: bg }}>
+              {os.contactDeleteConfirm
+                ? tOs('contactsConfirmDel', L)
+                : `${String(safeIdx + 1).padStart(2, '0')}/${totalRows}`}
+            </Text>
+          </View>
+        </View>
+
+        <Text
+          style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '800', color: fg, opacity: 0.55, textAlign: 'center' }}
+          numberOfLines={1}
+        >
+          ▲ {prevLabel}
+        </Text>
+
+        {/* Center Hero Nokia 3310 Contact Card */}
+        <View
+          style={{
+            borderWidth: 2,
+            borderColor: fg,
+            borderRadius: 6,
+            paddingHorizontal: 10,
+            paddingVertical: 10,
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <View
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 6,
+              backgroundColor: fg,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name={selected ? 'person' : 'person-add'} size={20} color={bg} />
+          </View>
+          <Text
+            style={{ fontFamily: monoFont, fontSize: 12, fontWeight: '900', color: fg, textAlign: 'center' }}
+            numberOfLines={1}
+          >
+            {selected ? selected.name : tOs('contactsAddRow', L)}
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 9.5, fontWeight: '800', color: fg }} numberOfLines={1}>
+            {selected ? selected.number : tOs('contactsAddSub', L)}
+          </Text>
+          {selected && (
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+              <View style={{ backgroundColor: fg, paddingHorizontal: 6, paddingVertical: 1.5 }}>
+                <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: bg }}>
+                  {tOs('contactsBtnCall', L)}
+                </Text>
+              </View>
+              <View style={{ borderWidth: 1, borderColor: fg, paddingHorizontal: 6, paddingVertical: 1.5 }}>
+                <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+                  {tOs('contactsBtnSms', L)}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        <Text
+          style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '800', color: fg, opacity: 0.55, textAlign: 'center' }}
+          numberOfLines={1}
+        >
+          ▼ {nextLabel}
+        </Text>
+      </View>
+    );
+  }
+
+  const isCards = os.menuStyle === 'cards';
+  const visibleCount = isCards ? 4 : 6;
+  const start = Math.max(0, Math.min(safeIdx - (isCards ? 1 : 2), Math.max(0, totalRows - visibleCount)));
   const windowIndices = Array.from(
     { length: Math.min(visibleCount, totalRows - start) },
     (_, i) => start + i
@@ -364,7 +454,7 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
       </View>
 
       {/* Scrollable Phonebook Index */}
-      <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+      <View style={{ flex: 1, justifyContent: 'flex-start', gap: isCards ? 3 : 0 }}>
         {windowIndices.map((absIdx) => {
           const sel = absIdx === safeIdx;
           const c = absIdx < contacts.length ? contacts[absIdx] : null;
@@ -375,16 +465,19 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
                 styles.listRow,
                 {
                   backgroundColor: sel ? fg : 'transparent',
-                  paddingVertical: 2,
-                  marginBottom: 1.5,
+                  paddingVertical: isCards ? 4.5 : 2,
+                  marginBottom: isCards ? 0 : 1.5,
+                  borderWidth: isCards ? 1 : 0,
+                  borderColor: fg,
+                  borderRadius: isCards ? 4 : 0,
                 },
               ]}
             >
-              <Text style={[styles.listTxt, { color: sel ? bg : fg, fontSize: 9.5 }]} numberOfLines={1}>
+              <Text style={[styles.listTxt, { color: sel ? bg : fg, fontSize: isCards ? 10 : 9.5 }]} numberOfLines={1}>
                 {sel ? '> ' : '  '}
                 {c ? c.name : tOs('contactsAddRow', L)}
               </Text>
-              <Text style={[styles.listMeta, { color: sel ? bg : fg, fontSize: 8.5 }]}>
+              <Text style={[styles.listMeta, { color: sel ? bg : fg, fontSize: isCards ? 8.5 : 8.5 }]}>
                 {c ? (c.isCustom ? tOs('contactsCustomTag', L) : c.tag) : '+NEW'}
               </Text>
             </View>
