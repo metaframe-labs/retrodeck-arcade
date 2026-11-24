@@ -820,7 +820,7 @@ const NOKIA_SMS_TONES: NokiaSmsTone[] = [
 
 const COMPOSER_KEYS: { label: string; token: string | 'PLAY' | 'SONG' | 'RING' | 'DEL' }[] = [
   { label: '▶ PLAY', token: 'PLAY' },
-  { label: '♫ TONE', token: 'SONG' },
+  { label: '♫ TUNES', token: 'SONG' },
   { label: '★ RING', token: 'RING' },
   { label: '1: C1', token: '8c1' },
   { label: '2: D1', token: '8d1' },
@@ -993,6 +993,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Nokia 3310 Composer / Music state
   private synthIdx = 0;
+  private synthMode: 'pad' | 'list' = 'pad';
+  private synthListIdx = 0;
+  private synthClearConfirm = false;
   private songIdx = 0;
   private songs: NokiaSong[] = [
     ...NOKIA_SONGS.map((s) => ({ ...s })),
@@ -2114,8 +2117,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
       }
     }
 
-    // Global B = return to desktop from any sub-app
+    // Global B = return to desktop from any sub-app (except synth list -> back to pad)
     if (this.app !== 'desktop' && pressB) {
+      if (this.app === 'synth' && this.synthMode === 'list') {
+        this.synthMode = 'pad';
+        this.synthClearConfirm = false;
+        return 'hit';
+      }
       if (this.melodyPlaying || this.cdAlarmActive) {
         this.melodyPlaying = false;
         this.cdAlarmActive = false;
@@ -2599,6 +2607,61 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'synth') {
+      if (this.synthMode === 'list') {
+        const total = this.songs.length;
+        if (dir === 'up') {
+          this.synthListIdx = (this.synthListIdx + total - 1) % total;
+          this.synthClearConfirm = false;
+          return 'hit';
+        }
+        if (dir === 'down') {
+          this.synthListIdx = (this.synthListIdx + 1) % total;
+          this.synthClearConfirm = false;
+          return 'hit';
+        }
+        if (dir === 'left') {
+          this.synthClearConfirm = false;
+          return 'hit';
+        }
+        if (dir === 'right') {
+          const isPro = this.cb.getIsPro?.() ?? false;
+          if (!this.isCustomTune(this.synthListIdx)) {
+            this.synthClearConfirm = false;
+            return 'hit';
+          }
+          if (!isPro) {
+            this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
+            return 'die';
+          }
+          if (!this.synthClearConfirm) {
+            this.synthClearConfirm = true;
+            return 'hit';
+          }
+          this.songs[this.synthListIdx].notes = '';
+          this.saveCustomTunes();
+          this.synthClearConfirm = false;
+          if (this.songIdx === this.synthListIdx && this.melodyPlaying) {
+            this.melodyPlaying = false;
+            RetroAudioEngine.stopNokiaMelody();
+          }
+          return 'explode';
+        }
+        if (pressA) {
+          const isPro = this.cb.getIsPro?.() ?? false;
+          if (this.isCustomTune(this.synthListIdx) && !isPro) {
+            this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
+            return 'die';
+          }
+          this.songIdx = this.synthListIdx;
+          this.synthMode = 'pad';
+          this.synthClearConfirm = false;
+          this.melodyPlaying = false;
+          RetroAudioEngine.stopNokiaMelody();
+          return 'score';
+        }
+        return null;
+      }
+
       const totalKeys = COMPOSER_KEYS.length;
       if (dir === 'left') this.synthIdx = (this.synthIdx + totalKeys - 1) % totalKeys;
       if (dir === 'right') this.synthIdx = (this.synthIdx + 1) % totalKeys;
@@ -2612,7 +2675,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
         if (key.token === 'SONG') {
           this.melodyPlaying = false;
           RetroAudioEngine.stopNokiaMelody();
-          this.songIdx = (this.songIdx + 1) % this.songs.length;
+          this.synthListIdx = this.songIdx;
+          this.synthClearConfirm = false;
+          this.synthMode = 'list';
           return 'score';
         }
         const isPro = this.cb.getIsPro?.() ?? false;
@@ -4333,8 +4398,67 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderSynth(fg: string, bg: string) {
-    const curSong = this.songs[this.songIdx];
     const isPro = this.cb.getIsPro?.() ?? false;
+
+    if (this.synthMode === 'list') {
+      const visibleCount = 6;
+      const start = Math.max(0, Math.min(this.songs.length - visibleCount, this.synthListIdx - 2));
+      const slice = this.songs.slice(start, start + visibleCount);
+      const selCustom = this.isCustomTune(this.synthListIdx);
+
+      return (
+        <View style={styles.listWrap}>
+          <View style={styles.compHeader}>
+            <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+              TUNES ({this.synthListIdx + 1}/{this.songs.length})
+            </Text>
+            <Text style={[styles.listMeta, { color: fg }]}>
+              {this.synthClearConfirm
+                ? 'PRESS [▶] CONFIRM'
+                : selCustom
+                ? '[▶]x2 CLEAR'
+                : '[A] SELECT'}
+            </Text>
+          </View>
+
+          <View style={{ flex: 1, justifyContent: 'flex-start', marginTop: 3 }}>
+            {slice.map((s, i) => {
+              const realIdx = start + i;
+              const sel = realIdx === this.synthListIdx;
+              const custom = this.isCustomTune(realIdx);
+              const locked = custom && !isPro;
+              const noteCount = s.notes.trim().split(/\s+/).filter(Boolean).length;
+              const isRing = realIdx === this.ringtoneIdx;
+              return (
+                <View
+                  key={`${s.title}-${realIdx}`}
+                  style={[
+                    styles.listRow,
+                    { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
+                  ]}
+                >
+                  <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                    {String(realIdx + 1).padStart(2, '0')}. {s.title.trim()}
+                    {isRing ? ' [RING]' : ''}
+                  </Text>
+                  <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
+                    {locked ? '[PRO]' : custom ? `${noteCount}N` : `${s.bpm}BPM`}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
+            {this.synthClearConfirm
+              ? 'PRESS [▶] AGAIN TO CLEAR ALL NOTES!'
+              : '[▲/▼] BROWSE • [A] LOAD • [▶]x2 CLEAR • [B] PAD'}
+          </Text>
+        </View>
+      );
+    }
+
+    const curSong = this.songs[this.songIdx];
     const isCustom = this.isCustomTune();
     const isLocked = isCustom && !isPro;
     const tokens = curSong.notes.trim().split(/\s+/).filter(Boolean);
