@@ -11,6 +11,22 @@ const MY_TUNES_STORAGE_KEY = '@retrodeck8_custom_tunes_v1';
 const SMS_TONE_STORAGE_KEY = '@retrodeck8_sms_tone_v1';
 const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
 const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
+const LIVE_SMS_HISTORY_STORAGE_KEY = '@retrodeck8_live_sms_history_v1';
+
+const DYNAMIC_MOODS = [
+  'NESELI VE ENERJIK',
+  'ACELECI VE TELAŞLI',
+  'UYKULU VE DALGIN',
+  'ALAYCI VE ESPRILI',
+  'DRAMATIK VE ABARTILI',
+  'SAMIMI VE MERAKLI',
+];
+
+const UNEXPECTED_TWISTS = [
+  'Konuyu aniden cok komik veya beklenmedik bir olaya bagla (ornek: yanlislikla baskasina atacakmis gibi, garip bir ruya, komsunun kedisi veya sacma bir iddia).',
+  'Mesajin icine kucuk, beklenmedik bir surpriz veya absurt bir detay sıkıştır.',
+  'Sanki az once tuhaf bir sey yasamissin gibi sasirmis ve komik bir tonda yaz.',
+];
 
 const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
   { title: 'MY TUNE 1', bpm: 140, notes: '' },
@@ -919,6 +935,8 @@ interface NokiaPicSms {
   stampLabel?: string;
   isLivePersona?: boolean;
   personaId?: string;
+  timestamp?: string;
+  mood?: string;
 }
 
 interface LiveSmsPersona {
@@ -1633,6 +1651,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private liveAiSmsEnabled = true;
   private liveSmsTimer = 80;
   private liveSmsFetching = false;
+  private personaHistories: Record<string, { role: 'user' | 'assistant'; content: string }[]> = {};
 
   private profRow = 0;
   private profileIdx = 0;
@@ -1745,6 +1764,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(LIVE_SMS_HISTORY_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object') {
+            this.personaHistories = parsed;
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  private savePersonaHistories() {
+    AsyncStorage.setItem(LIVE_SMS_HISTORY_STORAGE_KEY, JSON.stringify(this.personaHistories)).catch(() => {});
   }
 
   private toggleLiveAiSms() {
@@ -1765,11 +1798,33 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     this.liveSmsFetching = true;
     try {
-      const prompt = userReply
-        ? `${persona.instruction}\n\nKullanıcı sana az önce şu cevabı yazdı: "${userReply}". Karakterinden hiç çıkmadan buna çok doğal, eksiksiz, tek bir SMS cevabı yaz (en az 30, en fazla 120 karakter; sadece SMS metnini döndür, tırnak koyma).`
-        : `${persona.instruction}\n\nÖNEMLİ: Tek başına kod değil, en az 45 en fazla 120 karakterlik eksiksiz, tam bir SMS cümlesi yaz (başlık, tırnak veya açıklama ekleme).`;
+      const history = this.personaHistories[persona.id] || [];
+      const mood = DYNAMIC_MOODS[Math.floor(Math.random() * DYNAMIC_MOODS.length)];
+      const isUnexpected = !userReply && Math.random() < 0.3;
+      const twist = isUnexpected
+        ? `\nEKSTRA DURUM: ${UNEXPECTED_TWISTS[Math.floor(Math.random() * UNEXPECTED_TWISTS.length)]}`
+        : '';
 
-      const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
+      const systemContext =
+        `${persona.instruction}\n` +
+        `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
+        `SAAT: ${this.formatClock()}.\n` +
+        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`;
+
+      const messages: BYOKChatMessage[] = [
+        { role: 'user', content: systemContext },
+        ...history.slice(-6),
+        {
+          role: 'user',
+          content: userReply
+            ? `Kullanici sana su cevabi yazdi: "${userReply}". Karakterinle ve ruh halinle dogal bir SMS cevabi yaz.`
+            : history.length > 0
+            ? 'Onceki sohbetimize de bagli kalarak (veya yeni bir konuyla) bana simdi rastgele bir SMS at.'
+            : 'Bana simdi tam bir SMS mesaji gonder.',
+        },
+      ];
+
+      const raw = await callBYOKAIChat(messages, this.byokConfig);
       let cleaned = stripMarkdownForLcd(raw)
         .replace(/^["']|["']$/g, '')
         .replace(/\n+/g, ' ')
@@ -1780,6 +1835,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
         cleaned = persona.fallback;
       }
 
+      // Persist conversation memory per persona so future messages adapt to user replies
+      const nextHistory = [...history];
+      if (userReply) {
+        nextHistory.push({ role: 'user', content: userReply });
+      }
+      nextHistory.push({ role: 'assistant', content: cleaned });
+      this.personaHistories[persona.id] = nextHistory.slice(-6);
+      this.savePersonaHistories();
+
       this.smsList.unshift({
         sender: persona.sender,
         title: persona.tag,
@@ -1787,6 +1851,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
         artKey: 'SMILE',
         isLivePersona: true,
         personaId: persona.id,
+        timestamp: this.formatClock(),
+        mood: isUnexpected ? 'SURPRIZ' : mood.split(' ')[0],
       });
       if (this.smsList.length > 25) this.smsList.pop();
       this.smsIdx = 0;
@@ -5704,7 +5770,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             </View>
           </View>
         ) : msg.isLivePersona ? (
-          /* Authentic Plain-Text Real SMS Bubble */
+          /* Authentic Plain-Text Real SMS Bubble with Timestamp & Mood */
           <View
             style={[
               styles.compStaff,
@@ -5718,9 +5784,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
               },
             ]}
           >
-            <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
-              FROM: {msg.sender}
-            </Text>
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
+                FROM: {msg.sender}
+              </Text>
+              <Text style={[styles.listMeta, { color: fg, fontSize: 8, opacity: 0.75 }]}>
+                {msg.mood ? `${msg.mood} • ` : ''}{msg.timestamp || this.formatClock()}
+              </Text>
+            </View>
             <Text style={[styles.smsBodyTxt, { color: fg, textAlign: 'left', fontSize: 10.5, lineHeight: 14 }]} numberOfLines={5}>
               {msg.text}
             </Text>
