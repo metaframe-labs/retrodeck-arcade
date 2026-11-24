@@ -1,5 +1,9 @@
 # RetroDeck OS & Arcade
 
+<p align="center">
+  <img src="assets/retrodeck-showcase.jpg" alt="RetroDeck OS — Pocket Operating System Showcase" width="460" />
+</p>
+
 **100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • 100 Hardware & LCD Themes • Live SomaFM Radio • OS-Controlling BYOK AI • Live Persona SMS & Postcard Studio • Contacts • EN/TR i18n**
 
 Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebViews, pure TypeScript deterministic 60 FPS engine running inside a 4:3 monochrome / phosphor dot-matrix LCD screen, complete with a full **Nokia 3310 Operating System (`RetroDeck OS`)**, a 3-mode hot-swappable **Gamepad (`PAD`) ↔ Nokia 3×4 Numeric (`NUM`) ↔ Communicator QWERTY (`KBD`)** deck, **100 playable 60 FPS cartridges**, **100 persistent full-hardware themes**, **live SomaFM streaming radio**, **Open-Meteo weather**, **interactive Unix shell (`rdsh`)**, **★ Favorites**, and an in-app **Custom Game Studio** compiler.
