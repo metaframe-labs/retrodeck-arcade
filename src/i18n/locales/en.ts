@@ -10,6 +10,7 @@ export const enLocale = {
     wap: 'WAP',
     synth: 'MUSIC',
     phone: 'PHONE',
+    contacts: 'CONTACTS',
     sms: 'SMS',
     profiles: 'PROFILE',
     calc: 'CALC',
@@ -80,6 +81,7 @@ export const enLocale = {
     footerWeather: '[◀/▶] CITY   [▲/▼] REFRESH   [A] SEARCH   [B] DESKTOP',
     footerNotes: '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP',
     footerPaint: '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT',
+    footerContacts: '[A] CALL   [▶] SMS   [◀]x2 DEL   [KBD] +NEW   [B] EXIT',
     footerDefault: '[A] ACTION   [B] DESKTOP',
 
     // AI Chat
@@ -241,6 +243,20 @@ export const enLocale = {
     statsEmpty: 'NO HIGH SCORES YET. PLAY A GAME!',
     termPromptHint: '(PRESS [A]/[KBD] OR ◀/▶)_',
     termLangSet: 'OS LANGUAGE: {lang}',
+
+    // Contacts (Phonebook)
+    contactsTitle: 'CONTACTS ({total})',
+    contactsNewBtn: '[KBD] +NEW',
+    contactsConfirmDel: '[◀ AGAIN TO DEL]',
+    contactsBuiltIn: 'AI / SIM',
+    contactsCustomTag: 'SAVED',
+    contactsBtnCall: '[A] CALL',
+    contactsBtnSms: '[▶] TEXT',
+    contactsAddRow: '+ ADD NEW CONTACT...',
+    contactsAddSub: 'PRESS [A] OR [KBD] TO SAVE A NUMBER',
+    contactsAddedBanner: 'CONTACT SAVED: {name}',
+    contactsDeletedBanner: 'CONTACT DELETED!',
+    contactsBuiltInLocked: 'SIM/AI CONTACTS STAY SAVED!',
   },
   keyboard: {
     hintLockedStage: 'NOW PRESS [▲] (STAR *) TO UNLOCK KEYGUARD!',
@@ -256,6 +272,7 @@ export const enLocale = {
     hintClock: '[◀]/[▶]: Stopwatch/Timer • [A]: Start/Stop • [▲]/[▼]: Set/Reset',
     hintSynth: 'D-PAD: Select Note/Play • [A]: Play/Add Note • [B]: Exit',
     hintPhone: 'D-PAD: Keypad • [A]: Dial (*#0000# / LOCK) • [B]: Exit',
+    hintContacts: '[▲]/[▼]: Browse • [A]: Call • [▶]: Send SMS • [KBD]: Add Contact',
     hintSms: '[◀]/[▶]: Read • [▼]x2 or DEL: Delete • [A]: AI Reply',
     hintProfiles: '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit',
     hintPaint: 'D-PAD: Move Canvas / Bottom Toolbar • [A]: Draw Pixel or Run Button • [B]: Desktop',
@@ -282,6 +299,8 @@ export const enLocale = {
     phSmsReply: 'TYPE YOUR REPLY...',
     lblPostcard: 'POSTCARD MSG',
     phPostcard: 'WRITE POSTCARD MESSAGE...',
+    lblNewContact: 'ADD CONTACT',
+    phNewContact: 'NAME NUMBER (e.g. ALEX 555-0199)',
     lblKey: '{name} KEY',
     phKeyDefault: 'PASTE API KEY...',
     lblModel: '{name} MDL',

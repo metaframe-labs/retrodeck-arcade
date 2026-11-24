@@ -14,6 +14,7 @@ const APP_HINT_KEYS: Record<string, KeyboardStringKey> = {
   clock: 'hintClock',
   synth: 'hintSynth',
   phone: 'hintPhone',
+  contacts: 'hintContacts',
   sms: 'hintSms',
   profiles: 'hintProfiles',
   paint: 'hintPaint',
@@ -100,6 +101,22 @@ export function getKeyboardBindingImpl(os: RetroDeckOS): {
       secure: false,
     };
   }
+  if (os.app === 'contacts') {
+    if (os.smsContactTarget) {
+      return {
+        targetLabel: tKbd('lblSmsReply', { sender: os.smsContactTarget.name }, L).slice(0, 14),
+        value: os.smsDraftText,
+        placeholder: tKbd('phSmsReply', L),
+        secure: false,
+      };
+    }
+    return {
+      targetLabel: tKbd('lblNewContact', L),
+      value: os.contactDraft,
+      placeholder: tKbd('phNewContact', L),
+      secure: false,
+    };
+  }
   const pid = os.byokConfig.activeProvider;
   const meta = getProviderMeta(pid);
   if (os.app === 'ai' && os.aiTab === 'byok' && os.kbdTarget === 'key') {
@@ -155,6 +172,14 @@ export function setKeyboardTextImpl(os: RetroDeckOS, next: string) {
     }
     os.smsDraftText = next.toUpperCase().slice(0, 82);
     if (os.smsMode !== 'compose') os.smsMode = 'compose';
+    return;
+  }
+  if (os.app === 'contacts') {
+    if (os.smsContactTarget) {
+      os.smsDraftText = next.slice(0, 120);
+      return;
+    }
+    os.contactDraft = next.slice(0, 40);
     return;
   }
   const pid = os.byokConfig.activeProvider;
@@ -248,6 +273,56 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
       return;
     }
     os.smsMode = 'compose';
+    return;
+  }
+  if (os.app === 'contacts') {
+    os.cb.onRequestKeyboard?.(false);
+    if (os.smsContactTarget) {
+      const target = os.smsContactTarget;
+      const msgText = os.smsDraftText.trim();
+      os.smsDraftText = '';
+      os.smsContactTarget = null;
+      if (msgText) {
+        os.smsBanner = tOs('smsSentTo', { sender: target.name }, os.lang);
+        os.smsBannerTimer = 3.0;
+        os.cb.onPlaySound?.('score');
+        if (target.personaId) {
+          os.triggerLivePersonaSms(target.personaId, msgText);
+        } else {
+          os.triggerLivePersonaSms(`custom_${target.id}`, msgText, target);
+        }
+      }
+      return;
+    }
+    const raw = os.contactDraft.trim();
+    os.contactDraft = '';
+    if (raw.length > 0) {
+      const numMatch = raw.match(/([+*#\d][\d\s-]{2,})$/);
+      const number = numMatch
+        ? numMatch[1].trim()
+        : `555-${String(Math.floor(1000 + Math.random() * 9000))}`;
+      const name = (numMatch ? raw.slice(0, numMatch.index).trim() : raw)
+        .replace(/[,|]+$/, '')
+        .trim()
+        .toUpperCase()
+        .slice(0, 16) || 'NEW CONTACT';
+      os.customContacts = [
+        {
+          id: String(Date.now()),
+          name,
+          number,
+          tag: 'CUSTOM',
+          isCustom: true,
+        },
+        ...os.customContacts,
+      ];
+      os.contactIdx = 0;
+      os.contactDeleteConfirm = false;
+      os.saveCustomContacts();
+      os.smsBanner = tOs('contactsAddedBanner', { name }, os.lang);
+      os.smsBannerTimer = 2.5;
+      os.cb.onPlaySound?.('powerup');
+    }
     return;
   }
   if (os.app === 'ai' && os.aiTab === 'byok') {

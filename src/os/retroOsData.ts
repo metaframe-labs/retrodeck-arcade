@@ -9,6 +9,7 @@ export const SMS_TONE_STORAGE_KEY = '@retrodeck8_sms_tone_v1';
 export const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
 export const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
 export const LIVE_SMS_HISTORY_STORAGE_KEY = '@retrodeck8_live_sms_history_v1';
+export const CONTACTS_STORAGE_KEY = '@retrodeck8_contacts_v1';
 
 export const DYNAMIC_MOODS_BY_LANG: Record<RetroLang, string[]> = {
   en: [
@@ -60,6 +61,7 @@ export type OsAppId =
   | 'wap'
   | 'synth'
   | 'phone'
+  | 'contacts'
   | 'sms'
   | 'profiles'
   | 'calc'
@@ -150,6 +152,7 @@ export const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'wap', label: 'WAP', icon: 'globe' },
   { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
   { id: 'phone', label: 'PHONE', icon: 'call' },
+  { id: 'contacts', label: 'CONTACTS', icon: 'people' },
   { id: 'sms', label: 'SMS', icon: 'mail' },
   { id: 'profiles', label: 'PROFILE', icon: 'notifications' },
   { id: 'calc', label: 'CALC', icon: 'calculator' },
@@ -1048,6 +1051,42 @@ export const LIVE_SMS_PERSONAS_BY_LANG: Record<RetroLang, LiveSmsPersona[]> = {
 };
 
 export const LIVE_SMS_PERSONAS: LiveSmsPersona[] = LIVE_SMS_PERSONAS_BY_LANG.en;
+
+export interface RetroContact {
+  id: string;
+  name: string;
+  number: string;
+  tag: string;
+  personaId?: string;
+  isCustom?: boolean;
+}
+
+export const DEFAULT_CONTACTS_BY_LANG: Record<RetroLang, RetroContact[]> = {
+  en: [
+    { id: 'c_kanka', name: 'JAKE (BRO)', number: '+1 415-555-0142', tag: 'FRIEND', personaId: 'kanka' },
+    { id: 'c_anne', name: 'MOM', number: '+1 415-555-0101', tag: 'FAMILY', personaId: 'anne' },
+    { id: 'c_patron', name: 'MR. CARTER', number: '+1 415-555-0188', tag: 'WORK', personaId: 'patron' },
+    { id: 'c_flort', name: '+1 415 *** 18', number: '+1 415-555-0118', tag: 'VIP', personaId: 'flort' },
+    { id: 'c_kurye', name: 'JET-EXPRESS', number: '444-5380', tag: 'DELIVERY', personaId: 'kurye' },
+    { id: 'c_pizza', name: 'PIZZA-3310', number: '444-3310', tag: 'DEAL', personaId: 'pizza_ad' },
+    { id: 'c_cell', name: 'RD-CELL', number: '532-0000', tag: 'CARRIER', personaId: 'operator_ad' },
+    { id: 'c_bank', name: 'RD-BANK', number: '444-2265', tag: 'FINANCE', personaId: 'bank_ad' },
+    { id: 'c_mall', name: 'PIXEL-MALL', number: '444-7493', tag: 'SALE', personaId: 'market_ad' },
+    { id: 'c_vip', name: 'RETRODECK VIP', number: '*#3310#', tag: 'SERVICE' },
+  ],
+  tr: [
+    { id: 'c_kanka', name: 'MERT (KANKA)', number: '0532 555 01 42', tag: 'ARKADAS', personaId: 'kanka' },
+    { id: 'c_anne', name: 'ANNEM', number: '0532 555 01 01', tag: 'AILE', personaId: 'anne' },
+    { id: 'c_patron', name: 'SELIM BEY', number: '0532 555 01 88', tag: 'IS', personaId: 'patron' },
+    { id: 'c_flort', name: '+90 532 *** 18', number: '0532 555 01 18', tag: 'OZEL', personaId: 'flort' },
+    { id: 'c_kurye', name: 'JET-KARGO', number: '444 53 80', tag: 'KARGO', personaId: 'kurye' },
+    { id: 'c_pizza', name: 'PIZZA-3310', number: '444 33 10', tag: 'KAMPANYA', personaId: 'pizza_ad' },
+    { id: 'c_cell', name: 'RD-CELL', number: '532 00 00', tag: 'OPERATOR', personaId: 'operator_ad' },
+    { id: 'c_bank', name: 'RD-BANK', number: '444 22 65', tag: 'FINANS', personaId: 'bank_ad' },
+    { id: 'c_mall', name: 'PIXEL-MALL', number: '444 74 93', tag: 'INDIRIM', personaId: 'market_ad' },
+    { id: 'c_vip', name: 'RETRODECK VIP', number: '*#3310#', tag: 'SERVIS' },
+  ],
+};
 
 export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'istanbul', title: 'ISTANBUL', image: require('../../assets/postcards/istanbul.jpg') },

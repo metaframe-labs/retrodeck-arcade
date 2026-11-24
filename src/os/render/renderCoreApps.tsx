@@ -230,8 +230,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                   },
                 ]}
               >
-                <Ionicons name={item.icon} size={16} color={iconColor} />
-                <Text style={[styles.deskLbl, { color: iconColor }]}>
+                <Ionicons name={item.icon} size={DESKTOP_ICONS.length > 16 ? 13 : 16} color={iconColor} />
+                <Text style={[styles.deskLbl, { color: iconColor, fontSize: DESKTOP_ICONS.length > 16 ? 7 : 7.5 }]}>
                   {getDesktopLabel(item.id, item.label, os.lang)}
                 </Text>
               </View>

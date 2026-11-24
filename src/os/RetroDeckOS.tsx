@@ -79,6 +79,7 @@ import {
   renderWap,
   renderAiApp,
   renderPhone,
+  renderContacts,
   renderSms,
   renderProfiles,
 } from './render/renderCommsApps';
@@ -122,6 +123,9 @@ import {
   SMS_LIST_STORAGE_KEY,
   LIVE_AI_SMS_STORAGE_KEY,
   LIVE_SMS_HISTORY_STORAGE_KEY,
+  CONTACTS_STORAGE_KEY,
+  DEFAULT_CONTACTS_BY_LANG,
+  RetroContact,
   DYNAMIC_MOODS,
   UNEXPECTED_TWISTS,
   DEFAULT_CUSTOM_TUNES,
@@ -368,6 +372,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ smsStampIdx = 0;
   /** @internal */ smsDraftText = '';
   /** @internal */ smsReplyTargetIdx: number | null = null;
+  /** @internal */ smsContactTarget: RetroContact | null = null;
+  /** @internal */ customContacts: RetroContact[] = [];
+  /** @internal */ contactIdx = 0;
+  /** @internal */ contactDraft = '';
+  /** @internal */ contactDeleteConfirm = false;
   /** @internal */ liveAiSmsEnabled = true;
   /** @internal */ liveSmsTimer = 80;
   /** @internal */ liveSmsFetching = false;
@@ -504,6 +513,25 @@ export class RetroDeckOS implements ArcadeGameInstance {
         ];
       }
     });
+    AsyncStorage.getItem(CONTACTS_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            this.customContacts = parsed;
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ saveCustomContacts() {
+    AsyncStorage.setItem(CONTACTS_STORAGE_KEY, JSON.stringify(this.customContacts)).catch(() => {});
+  }
+
+  /** @internal */ getAllContacts(): RetroContact[] {
+    const builtIn = DEFAULT_CONTACTS_BY_LANG[this.lang] || DEFAULT_CONTACTS_BY_LANG.en;
+    return [...this.customContacts, ...builtIn];
   }
 
   /** @internal */ setLang(next: RetroLang) {
@@ -525,8 +553,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
     AsyncStorage.setItem(LIVE_AI_SMS_STORAGE_KEY, this.liveAiSmsEnabled ? '1' : '0').catch(() => {});
   }
 
-  /** @internal */ async triggerLivePersonaSms(forcedPersonaId?: string, userReply?: string): Promise<boolean> {
-    return triggerLivePersonaSmsImpl(this, forcedPersonaId, userReply);
+  /** @internal */ async triggerLivePersonaSms(
+    forcedPersonaId?: string,
+    userReply?: string,
+    customContact?: RetroContact
+  ): Promise<boolean> {
+    return triggerLivePersonaSmsImpl(this, forcedPersonaId, userReply, customContact);
   }
 
   /** @internal */ saveSmsList() {
@@ -967,6 +999,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'wap' && renderWap(this, fg, bg)}
           {this.app === 'synth' && renderSynth(this, fg, bg)}
           {this.app === 'phone' && renderPhone(this, fg, bg)}
+          {this.app === 'contacts' && renderContacts(this, fg, bg)}
           {this.app === 'sms' && renderSms(this, fg, bg)}
           {this.app === 'profiles' && renderProfiles(this, fg, bg)}
           {this.app === 'calc' && renderCalc(this, fg, bg)}
@@ -1037,6 +1070,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ? tOs('footerNotes', this.lang)
               : this.app === 'paint'
               ? tOs('footerPaint', this.lang)
+              : this.app === 'contacts'
+              ? tOs('footerContacts', this.lang)
               : tOs('footerDefault', this.lang)}
           </Text>
         </View>

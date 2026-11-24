@@ -47,9 +47,13 @@ export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | n
   }
   if (k === 'CALL') {
     const num = os.dialBuffer || '0532-3310';
+    const norm = num.replace(/\D/g, '');
+    const matched = os
+      .getAllContacts()
+      .find((c) => c.number === num || (norm.length >= 3 && c.number.replace(/\D/g, '') === norm));
     os.callState = 'connected';
-    os.callTitle = `CALLING ${num}`;
-    os.callSub = 'VOICE LINE ACTIVE';
+    os.callTitle = matched ? matched.name : `CALLING ${num}`;
+    os.callSub = matched ? matched.number : 'VOICE LINE ACTIVE';
     os.callTimer = 0;
     return 'powerup';
   }
@@ -315,6 +319,47 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
     }
   }
 
+  // Contacts keypad shortcuts
+  if (os.app === 'contacts') {
+    const contacts = os.getAllContacts();
+    const totalRows = contacts.length + 1;
+    if (key === '2') {
+      os.contactIdx = (os.contactIdx + totalRows - 1) % totalRows;
+      os.contactDeleteConfirm = false;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '8') {
+      os.contactIdx = (os.contactIdx + 1) % totalRows;
+      os.contactDeleteConfirm = false;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === 'DEL' || key === 'CLR') {
+      const sel = contacts[os.contactIdx];
+      if (sel?.isCustom) {
+        os.customContacts = os.customContacts.filter((c) => c.id !== sel.id);
+        os.contactIdx = Math.max(0, Math.min(os.contactIdx, os.getAllContacts().length - 1));
+        os.contactDeleteConfirm = false;
+        os.saveCustomContacts();
+        os.smsBanner = tOs('contactsDeletedBanner', os.lang);
+        os.smsBannerTimer = 2.0;
+        os.cb.onPlaySound?.('die');
+      }
+    } else if (key === 'OK') {
+      const sel = contacts[os.contactIdx];
+      if (!sel) {
+        os.smsContactTarget = null;
+        os.cb.onRequestKeyboard?.(true);
+        os.cb.onPlaySound?.('score');
+      } else {
+        os.app = 'phone';
+        os.callState = 'connected';
+        os.callTitle = sel.name;
+        os.callSub = sel.number;
+        os.callTimer = 0;
+        os.cb.onPlaySound?.('powerup');
+      }
+    }
+    return;
+  }
+
   // Paint keypad shortcuts: * / 4 prev art, # / 6 next art, CLR / DEL blank canvas, OK toggle/action
   if (os.app === 'paint') {
     if (key === '*' || key === '4') {
@@ -487,6 +532,8 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       RetroAudioEngine.stopNokiaMelody();
     }
     os.callState = 'idle';
+    os.smsContactTarget = null;
+    os.contactDeleteConfirm = false;
     os.app = 'desktop';
     os.cb.onRequestKeyboard?.(false);
     return 'hit';
@@ -656,6 +703,72 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
     if (pressA) {
       return os.executePhoneKey(DIAL_KEYS[os.dialR][os.dialC]);
+    }
+    return null;
+  }
+
+  if (os.app === 'contacts') {
+    const contacts = os.getAllContacts();
+    const totalRows = contacts.length + 1;
+    if (dir === 'up') {
+      os.contactIdx = (os.contactIdx + totalRows - 1) % totalRows;
+      os.contactDeleteConfirm = false;
+      return 'hit';
+    }
+    if (dir === 'down') {
+      os.contactIdx = (os.contactIdx + 1) % totalRows;
+      os.contactDeleteConfirm = false;
+      return 'hit';
+    }
+    if (dir === 'left') {
+      const sel = contacts[os.contactIdx];
+      if (!sel || !sel.isCustom) {
+        os.contactDeleteConfirm = false;
+        if (sel) {
+          os.smsBanner = tOs('contactsBuiltInLocked', os.lang);
+          os.smsBannerTimer = 2.0;
+        }
+        return 'hit';
+      }
+      if (!os.contactDeleteConfirm) {
+        os.contactDeleteConfirm = true;
+        return 'hit';
+      }
+      os.customContacts = os.customContacts.filter((c) => c.id !== sel.id);
+      os.contactIdx = Math.max(0, Math.min(os.contactIdx, os.getAllContacts().length - 1));
+      os.contactDeleteConfirm = false;
+      os.saveCustomContacts();
+      os.smsBanner = tOs('contactsDeletedBanner', os.lang);
+      os.smsBannerTimer = 2.0;
+      return 'explode';
+    }
+    if (dir === 'right') {
+      const sel = contacts[os.contactIdx];
+      os.contactDeleteConfirm = false;
+      if (!sel) {
+        os.smsContactTarget = null;
+        os.cb.onRequestKeyboard?.(true);
+        return 'score';
+      }
+      os.smsContactTarget = sel;
+      os.smsDraftText = '';
+      os.cb.onRequestKeyboard?.(true);
+      return 'score';
+    }
+    if (pressA) {
+      os.contactDeleteConfirm = false;
+      const sel = contacts[os.contactIdx];
+      if (!sel) {
+        os.smsContactTarget = null;
+        os.cb.onRequestKeyboard?.(true);
+        return 'score';
+      }
+      os.app = 'phone';
+      os.callState = 'connected';
+      os.callTitle = sel.name;
+      os.callSub = sel.number;
+      os.callTimer = 0;
+      return 'powerup';
     }
     return null;
   }

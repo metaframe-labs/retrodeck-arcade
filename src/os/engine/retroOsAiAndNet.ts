@@ -16,6 +16,7 @@ import {
   NOKIA_SMS_TONES,
   OsAppId,
   PicArtKey,
+  RetroContact,
   UNEXPECTED_TWISTS_BY_LANG,
   WEATHER_CITY_STORAGE_KEY,
   parseHtmlToWapLines,
@@ -60,7 +61,12 @@ function isSmsTooSimilar(candidate: string, previousTexts: string[]): boolean {
   return false;
 }
 
-export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId?: string, userReply?: string): Promise<boolean> {
+export async function triggerLivePersonaSmsImpl(
+  os: RetroDeckOS,
+  forcedPersonaId?: string,
+  userReply?: string,
+  customContact?: RetroContact
+): Promise<boolean> {
   if (os.liveSmsFetching) return false;
   const meta = getProviderMeta(os.byokConfig.activeProvider);
   const hasKey =
@@ -79,9 +85,24 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
       ? personas.filter((p) => p.id !== lastLivePersonaId)
       : personas;
 
-  const persona =
-    (forcedPersonaId ? personas.find((p) => p.id === forcedPersonaId) : null) ||
-    pool[Math.floor(Math.random() * pool.length)];
+  const persona = customContact
+    ? {
+        id: forcedPersonaId || `custom_${customContact.id}`,
+        sender: customContact.name,
+        tag: customContact.tag || 'SMS',
+        instruction: pickLang(
+          lang,
+          `You are "${customContact.name}" (phone ${customContact.number}), saved in the user's RetroDeck contacts. Reply naturally and warmly as this real contact in English.`,
+          `Sen kullanicinin telefon rehberinde kayitli "${customContact.name}" (${customContact.number}) isimli kisisin. Bu kisiye yakisan dogal ve samimi bir Turkce SMS cevabi yaz.`
+        ),
+        fallback: pickLang(
+          lang,
+          `hey just got your text! talk soon - ${customContact.name}`,
+          `selam mesajini simdi gordum, musait olunca donerim!`
+        ),
+      }
+    : (forcedPersonaId ? personas.find((p) => p.id === forcedPersonaId) : null) ||
+      pool[Math.floor(Math.random() * pool.length)];
 
   os.liveSmsFetching = true;
   try {
@@ -257,7 +278,7 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
     if (cmd === 'OPEN_APP') {
       const target = arg.toLowerCase() as OsAppId;
       const validApps: OsAppId[] = [
-        'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'sms',
+        'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'contacts', 'sms',
         'profiles', 'calc', 'clock', 'paint', 'weather', 'notes',
         'stats', 'term', 'setup', 'themes', 'pro',
       ];
@@ -427,7 +448,7 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
       `You are the built-in AI assistant of the RetroDeck OS handheld console. You can directly control the user's device.\n` +
         `Current state: Theme=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radio=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Lang=${os.lang.toUpperCase()}.\n` +
         `If the user asks to open an app, launch a game, change theme, toggle radio/music, add a note, check weather, change language, lock the screen, or trigger a live SMS, append the matching tag at the end of your reply:\n` +
-        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
         `[[ACTION:PLAY_GAME|<game e.g. snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
         `[[ACTION:SET_THEME|<theme e.g. gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
         `[[ACTION:CYCLE_THEME]]\n` +
@@ -446,7 +467,7 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
       `Sen RetroDeck OS el konsolunun dahili AI asistanisin. Kullanicinin cihazini dogrudan kontrol edebilirsin.\n` +
         `Mevcut durum: Tema=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Dil=${os.lang.toUpperCase()}.\n` +
         `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, dil degistirmek, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
-        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
         `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
         `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
         `[[ACTION:CYCLE_THEME]]\n` +

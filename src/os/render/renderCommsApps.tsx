@@ -290,6 +290,102 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
   );
 }
 
+export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
+  const contacts = os.getAllContacts();
+  const totalRows = contacts.length + 1; // +1 for "+ ADD NEW CONTACT" row at index contacts.length
+  const safeIdx = Math.max(0, Math.min(os.contactIdx, totalRows - 1));
+  const isAddRow = safeIdx === contacts.length;
+  const selected = !isAddRow ? contacts[safeIdx] : null;
+
+  const visibleCount = 3;
+  const start = Math.max(0, Math.min(safeIdx - 1, Math.max(0, totalRows - visibleCount)));
+  const windowIndices = Array.from(
+    { length: Math.min(visibleCount, totalRows - start) },
+    (_, i) => start + i
+  );
+
+  return (
+    <View style={styles.listWrap}>
+      <View style={[styles.compHeader, { marginBottom: 4 }]}>
+        <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+          {tOs('contactsTitle', { total: contacts.length }, L)}
+        </Text>
+        <Text style={[styles.listMeta, { color: fg }]}>
+          {os.contactDeleteConfirm ? tOs('contactsConfirmDel', L) : tOs('contactsNewBtn', L)}
+        </Text>
+      </View>
+
+      {/* Contact Detail Card */}
+      <View
+        style={[
+          styles.swBox,
+          {
+            borderColor: fg,
+            width: '100%',
+            alignItems: 'flex-start',
+            paddingHorizontal: 8,
+            paddingVertical: 5,
+            marginBottom: 4,
+            minHeight: 46,
+            justifyContent: 'center',
+          },
+        ]}
+      >
+        {selected ? (
+          <>
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.listTxt, { color: fg, flex: 1, fontSize: 10.5 }]} numberOfLines={1}>
+                {selected.name}
+              </Text>
+              <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: 0.8 }]}>
+                [{selected.isCustom ? tOs('contactsCustomTag', L) : selected.tag}]
+              </Text>
+            </View>
+            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }}>
+              <Text style={[styles.miniHint, { color: fg, marginTop: 0, fontSize: 9 }]}>
+                {selected.number}
+              </Text>
+              <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
+                {tOs('contactsBtnCall', L)} • {tOs('contactsBtnSms', L)}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={[styles.listTxt, { color: fg, flex: 0, fontSize: 10 }]}>
+              {tOs('contactsAddRow', L)}
+            </Text>
+            <Text style={[styles.miniHint, { color: fg, marginTop: 3, opacity: 0.85 }]}>
+              {tOs('contactsAddSub', L)}
+            </Text>
+          </>
+        )}
+      </View>
+
+      {/* Scrollable Phonebook Index */}
+      {windowIndices.map((absIdx) => {
+        const sel = absIdx === safeIdx;
+        const c = absIdx < contacts.length ? contacts[absIdx] : null;
+        return (
+          <View
+            key={c ? c.id : '__add_contact__'}
+            style={[styles.listRow, { backgroundColor: sel ? fg : 'transparent' }]}
+          >
+            <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+              {sel ? '> ' : '  '}
+              {c ? c.name : tOs('contactsAddRow', L)}
+            </Text>
+            <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
+              {c ? (c.isCustom ? tOs('contactsCustomTag', L) : c.tag) : '+NEW'}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
   if (os.smsMode === 'compose') {
     const isArtTab = os.smsStudioTab === 'art';

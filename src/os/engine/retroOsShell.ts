@@ -340,6 +340,12 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
     return 'powerup';
   }
 
+  if (bin === 'contacts' || bin === 'phonebook') {
+    os.app = 'contacts';
+    os.cb.onRequestKeyboard?.(false);
+    return 'score';
+  }
+
   if (bin === 'wap' || bin === 'curl') {
     const targetUrl = arg.trim() || 'https://www.metaframelabs.space/';
     os.app = 'wap';

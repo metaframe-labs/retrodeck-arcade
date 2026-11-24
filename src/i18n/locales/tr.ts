@@ -12,6 +12,7 @@ export const trLocale: LocaleBundle = {
     wap: 'WAP',
     synth: 'MUZIK',
     phone: 'TELEFON',
+    contacts: 'REHBER',
     sms: 'SMS',
     profiles: 'PROFIL',
     calc: 'HESAP',
@@ -82,6 +83,7 @@ export const trLocale: LocaleBundle = {
     footerWeather: '[◀/▶] SEHIR   [▲/▼] YENILE   [A] ARA   [B] ANA EKRAN',
     footerNotes: '[A] YENI NOT   [▲/▼] SEC   [▶]x2 SIL   [B] ANA EKRAN',
     footerPaint: '[A] CIZ / SEC   [YON] TUVAL & ARAC   [B] CIKIS',
+    footerContacts: '[A] ARA   [▶] SMS AT   [◀]x2 SIL   [KBD] +YENI   [B] CIKIS',
     footerDefault: '[A] ISLEM   [B] ANA EKRAN',
 
     // AI Chat
@@ -243,6 +245,20 @@ export const trLocale: LocaleBundle = {
     statsEmpty: 'HENUZ SKOR YOK. BIR OYUN AC!',
     termPromptHint: '([A]/[KBD] BAS VEYA ◀/▶)_',
     termLangSet: 'SISTEM DILI: {lang}',
+
+    // Contacts (Rehber)
+    contactsTitle: 'REHBER ({total})',
+    contactsNewBtn: '[KBD] +EKLE',
+    contactsConfirmDel: '[SILMEK ICIN TEKRAR ◀]',
+    contactsBuiltIn: 'AI / SIM',
+    contactsCustomTag: 'KAYITLI',
+    contactsBtnCall: '[A] ARA',
+    contactsBtnSms: '[▶] SMS',
+    contactsAddRow: '+ YENI KISI EKLE...',
+    contactsAddSub: 'KAYDETMEK ICIN [A] VEYA [KBD] BAS',
+    contactsAddedBanner: 'KISI KAYDEDILDI: {name}',
+    contactsDeletedBanner: 'KISI SILINDI!',
+    contactsBuiltInLocked: 'SIM/AI KISILERI SILINEMEZ!',
   },
   keyboard: {
     hintLockedStage: 'ACMAK ICIN SIMDI [▲] (YILDIZ *) TUSUNA BAS!',
@@ -258,6 +274,7 @@ export const trLocale: LocaleBundle = {
     hintClock: '[◀]/[▶]: Kronometre/Sayac • [A]: Baslat/Dur • [▲]/[▼]: Ayar',
     hintSynth: 'YON: Nota/Tus Sec • [A]: Cal/Ekle • [B]: Cikis',
     hintPhone: 'YON: Tus Takimi • [A]: Ara (*#0000# / LOCK) • [B]: Cikis',
+    hintContacts: '[▲]/[▼]: Kisi Gez • [A]: Ara • [▶]: SMS At • [KBD]: Kisi Ekle',
     hintSms: '[◀]/[▶]: Oku • [▼]x2 veya DEL: Sil • [A]: AI Cevap',
     hintProfiles: '[▲]/[▼]: Sec • [A]: Profil / Kilit / Isik • [B]: Cikis',
     hintPaint: 'YON: Tuval & Alt Araclar • [A]: Ciz veya Buton • [B]: Ana Ekran',
@@ -284,6 +301,8 @@ export const trLocale: LocaleBundle = {
     phSmsReply: 'CEVABINI YAZ...',
     lblPostcard: 'KARTPOSTAL',
     phPostcard: 'KARTPOSTAL MESAJI YAZ...',
+    lblNewContact: 'KISI EKLE',
+    phNewContact: 'ISIM NUMARA (orn: AHMET 0532 123)',
     lblKey: '{name} KEY',
     phKeyDefault: 'API ANAHTARI YAPISTIR...',
     lblModel: '{name} MDL',
