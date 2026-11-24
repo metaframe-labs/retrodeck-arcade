@@ -379,7 +379,8 @@ export type PicArtKey =
   | 'SKULL'
   | 'MUSIC'
   | 'CAKE'
-  | 'SNAKE';
+  | 'SNAKE'
+  | 'VIP_CROWN';
 
 const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
   COFFEE: buildPixelSpans(
@@ -411,6 +412,23 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '.........##...########...##.........',
       '...........##############...........',
       '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  VIP_CROWN: buildPixelSpans(
+    [
+      '....#............##............#....',
+      '...###...#......####......#...###...',
+      '....#...###....######....###...#....',
+      '........####..########..####........',
+      '........####################........',
+      '........###..###....###..###........',
+      '........####################........',
+      '........####################........',
+      '........####################........',
+      '.......######################.......',
     ],
     2,
     72,
@@ -951,7 +969,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       sender: 'RETRODECK-VIP',
       title: 'PRO ACTIVATED!',
       text: `CONGRATS! RETRODECK PRO (${planName.toUpperCase()}) IS NOW ACTIVE! ALL 100 CARTS, DEV VAULT & PRO THEMES UNLOCKED!`,
-      artKey: 'COOL',
+      artKey: 'VIP_CROWN',
     });
     if (this.smsList.length > 10) this.smsList.pop();
     this.smsIdx = 0;
