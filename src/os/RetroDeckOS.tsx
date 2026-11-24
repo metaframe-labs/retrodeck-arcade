@@ -4580,15 +4580,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
       'REBOOT RETRODECK OS',
     ];
 
-    // Virtual windowed scroll: show exactly 4 items at a time so rows never cram or overflow LCD
-    const PAGE_SIZE = 4;
+    // Virtual windowed scroll: show 5 items tightly and naturally stacked
+    const PAGE_SIZE = 5;
     const maxStart = Math.max(0, items.length - PAGE_SIZE);
-    const startIdx = Math.max(0, Math.min(this.setupIdx - 1, maxStart));
+    const startIdx = Math.max(0, Math.min(this.setupIdx - 2, maxStart));
     const visibleItems = items.slice(startIdx, startIdx + PAGE_SIZE);
 
     return (
       <View style={styles.listWrap}>
-        <View style={styles.compHeader}>
+        <View style={[styles.compHeader, { marginBottom: 3 }]}>
           <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
             SYSTEM SETUP
           </Text>
@@ -4597,7 +4597,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </Text>
         </View>
 
-        <View style={{ flex: 1, justifyContent: 'space-around', marginVertical: 2 }}>
+        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
           {visibleItems.map((label, i) => {
             const actualIdx = startIdx + i;
             const sel = actualIdx === this.setupIdx;
@@ -4610,8 +4610,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   {
                     borderColor: fg,
                     backgroundColor: sel ? fg : 'transparent',
-                    marginVertical: 1,
-                    paddingVertical: 5,
+                    marginBottom: 3,
+                    paddingVertical: 3.5,
                   },
                 ]}
               >
@@ -4631,11 +4631,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
           })}
         </View>
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
-          <Text style={[styles.miniHint, { color: fg, opacity: startIdx > 0 ? 0.9 : 0.25 }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, height: 12 }}>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx > 0 ? 0.9 : 0.2 }]}>
             ▲ PREV
           </Text>
-          <Text style={[styles.miniHint, { color: fg, opacity: startIdx < maxStart ? 0.9 : 0.25 }]}>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx < maxStart ? 0.9 : 0.2 }]}>
             ▼ MORE
           </Text>
         </View>
