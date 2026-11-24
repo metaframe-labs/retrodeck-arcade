@@ -14,6 +14,7 @@ import {
   NOKIA_PROFILES,
   NOKIA_SMS_TONES,
   NOKIA_SONGS,
+  PAINT_ARTWORKS,
   POSTCARD_STAMPS,
   REAL_POSTCARDS,
   SMS_TONE_STORAGE_KEY,
@@ -311,6 +312,27 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
       os.sendPictureSmsToAi();
       return;
     }
+  }
+
+  // Paint keypad shortcuts: * / 4 prev art, # / 6 next art, CLR / DEL blank canvas, OK toggle pixel
+  if (os.app === 'paint') {
+    if (key === '*' || key === '4') {
+      os.paintArtIdx = (os.paintArtIdx + PAINT_ARTWORKS.length - 1) % PAINT_ARTWORKS.length;
+      os.clearCanvas(false);
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '#' || key === '6') {
+      os.paintArtIdx = (os.paintArtIdx + 1) % PAINT_ARTWORKS.length;
+      os.clearCanvas(false);
+      os.cb.onPlaySound?.('hit');
+    } else if (key === 'CLR' || key === 'DEL') {
+      os.clearCanvas(true);
+      os.cb.onPlaySound?.('die');
+    } else if (key === 'OK') {
+      os.paintGrid[os.paintR][os.paintC] = !os.paintGrid[os.paintR][os.paintC];
+      if (os.paintTitle === 'BLANK CANVAS') os.paintTitle = 'CUSTOM ART';
+      os.cb.onPlaySound?.('hit');
+    }
+    return;
   }
 }
 
@@ -1137,6 +1159,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (dir === 'right') os.paintC = (os.paintC + 1) % os.paintW;
     if (pressA) {
       os.paintGrid[os.paintR][os.paintC] = !os.paintGrid[os.paintR][os.paintC];
+      if (os.paintTitle === 'BLANK CANVAS') os.paintTitle = 'CUSTOM ART';
       return 'hit';
     }
     return null;

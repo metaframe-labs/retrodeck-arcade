@@ -8,6 +8,7 @@ import {
   CALC_KEYS,
   COMPOSER_KEYS,
   NOKIA_SONGS,
+  PAINT_ARTWORKS,
   TERM_PRESETS,
   WEATHER_SPRITES,
   WeatherSpriteKey,
@@ -591,9 +592,48 @@ export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         ))}
       </View>
-      <Text style={[styles.miniHint, { color: fg }]}>
-        POS ({os.paintC},{os.paintR}) • [A] TOGGLE PIXEL
-      </Text>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          marginTop: 2,
+        }}
+      >
+        <Pressable
+          onPress={() => {
+            os.paintArtIdx = (os.paintArtIdx + PAINT_ARTWORKS.length - 1) % PAINT_ARTWORKS.length;
+            os.clearCanvas(false);
+            os.cb.onPlaySound?.('hit');
+          }}
+          hitSlop={6}
+        >
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>◀</Text>
+        </Pressable>
+        <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
+          {os.paintTitle} • ({os.paintC},{os.paintR})
+        </Text>
+        <Pressable
+          onPress={() => {
+            os.paintArtIdx = (os.paintArtIdx + 1) % PAINT_ARTWORKS.length;
+            os.clearCanvas(false);
+            os.cb.onPlaySound?.('hit');
+          }}
+          hitSlop={6}
+        >
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>▶</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => {
+            os.clearCanvas(true);
+            os.cb.onPlaySound?.('die');
+          }}
+          hitSlop={6}
+        >
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>[CLR]</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }

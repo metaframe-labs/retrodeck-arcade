@@ -37,7 +37,7 @@ export function getControlsHintImpl(os: RetroDeckOS): string {
     case 'profiles':
       return '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit';
     case 'paint':
-      return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
+      return 'D-PAD: Cursor • [A]: Draw/Erase • [* / #]: Art Presets • [B]: Desktop';
     case 'weather':
       return '[◀]/[▶]: City • [▲]/[▼]: Refresh • [A]: Search City • [B]: Desktop';
     case 'notes':

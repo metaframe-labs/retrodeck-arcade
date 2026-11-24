@@ -154,6 +154,7 @@ import {
   COMPOSER_KEYS,
   CALC_KEYS,
   TERM_PRESETS,
+  PAINT_ARTWORKS,
   stripEmojis,
   stripMarkdownForLcd,
   wrapTextLines,
@@ -280,6 +281,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Pixel Paint 16x10
   /** @internal */ paintW = 16;
   /** @internal */ paintH = 10;
+  /** @internal */ paintArtIdx = 0;
+  /** @internal */ paintTitle = PAINT_ARTWORKS[0].title;
   /** @internal */ paintGrid: boolean[][] = [];
   /** @internal */ paintR = 4;
   /** @internal */ paintC = 7;
@@ -532,18 +535,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
   }
 
-  /** @internal */ clearCanvas() {
-    this.paintGrid = Array.from({ length: this.paintH }, () =>
-      Array(this.paintW).fill(false)
+  /** @internal */ clearCanvas(blank = false) {
+    if (blank) {
+      this.paintTitle = 'BLANK CANVAS';
+      this.paintGrid = Array.from({ length: this.paintH }, () =>
+        Array(this.paintW).fill(false)
+      );
+      return;
+    }
+    const art = PAINT_ARTWORKS[this.paintArtIdx] || PAINT_ARTWORKS[0];
+    this.paintTitle = art.title;
+    this.paintGrid = Array.from({ length: this.paintH }, (_, r) =>
+      Array.from({ length: this.paintW }, (_, c) => art.rows[r]?.[c] === '#')
     );
-    this.paintGrid[2][5] = true;
-    this.paintGrid[2][10] = true;
-    this.paintGrid[6][5] = true;
-    this.paintGrid[7][6] = true;
-    this.paintGrid[7][7] = true;
-    this.paintGrid[7][8] = true;
-    this.paintGrid[7][9] = true;
-    this.paintGrid[6][10] = true;
   }
 
   public init() {
@@ -1002,6 +1006,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ? '[◀/▶] CITY   [▲/▼] REFRESH   [A] SEARCH   [B] DESKTOP'
               : this.app === 'notes'
               ? '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP'
+              : this.app === 'paint'
+              ? '[A] PIXEL   [* / #] ART PRESETS   [CLR] BLANK   [B] EXIT'
               : '[A] ACTION   [B] DESKTOP'}
           </Text>
         </View>
