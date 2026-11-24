@@ -88,7 +88,7 @@ export const enLocale = {
     footerNotes: '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP',
     footerPaint: '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT',
     footerContacts: '[A] CALL   [▶] SMS   [◀]x2 DEL   [KBD] +NEW   [B] EXIT',
-    footerWallpapers: '[◀/▶] 24 SCENES   [▲/▼] TINT   [A] SET/FULL   [B] EXIT',
+    footerWallpapers: '[◀/▶] 31 SCENES   [▲/▼] TINT   [A] SET/FULL   [B] EXIT',
     footerFormat: '[▲/▼] MODE   [◀/▶] D: SAVE   [A] NEXT/SMACK   [B] BACK',
     footerDefault: '[A] ACTION   [B] DESKTOP',
 
@@ -290,7 +290,7 @@ export const enLocale = {
     hintStats: 'Viewing Arcade High Scores & Rank • [B]: Desktop',
     hintTerm: '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit',
     hintSetup: '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop',
-    hintWallpapers: '[◀]/[▶]: Browse 24 Pixel Scenes • [▲]/[▼]: Contrast Dim • [A]: Apply • [B]: Back',
+    hintWallpapers: '[◀]/[▶]: Browse 31 Pixel Scenes • [▲]/[▼]: Contrast Dim • [A]: Apply • [B]: Back',
     hintFormat: '[▲]/[▼]: Mode • [◀]/[▶]: Backup D: • [A]: Start / Smack Case • [B]: Back',
     hintThemes: '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back',
     hintPro: '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back',

@@ -1521,6 +1521,13 @@ export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'train_coast', title: 'OCEAN RAILWAY', image: require('../../assets/postcards/train_coast.jpg') },
   { id: 'neon_ramen', title: 'RAMEN ALLEY', image: require('../../assets/postcards/neon_ramen.jpg') },
   { id: 'fantasy_castle', title: 'MOONLIT CASTLE', image: require('../../assets/postcards/fantasy_castle.jpg') },
+  { id: 'winter_cabin', title: 'WINTER CABIN', image: require('../../assets/postcards/winter_cabin.jpg') },
+  { id: 'space_station', title: 'ORBITAL STATION', image: require('../../assets/postcards/space_station.png') },
+  { id: 'volcano_lava', title: 'VOLCANO NIGHT', image: require('../../assets/postcards/volcano_lava.png') },
+  { id: 'retro_diner', title: 'NEON DINER', image: require('../../assets/postcards/retro_diner.png') },
+  { id: 'retro_diner_2', title: 'ROUTE 66 DINER', image: require('../../assets/postcards/retro_diner_2.jpg') },
+  { id: 'desert_oasis', title: 'DESERT OASIS', image: require('../../assets/postcards/desert_oasis.jpg') },
+  { id: 'seoul_rain', title: 'SEOUL RAIN', image: require('../../assets/postcards/seoul_rain.jpg') },
 ];
 
 export const POSTCARD_STAMPS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [

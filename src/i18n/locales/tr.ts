@@ -90,7 +90,7 @@ export const trLocale: LocaleBundle = {
     footerNotes: '[A] YENI NOT   [▲/▼] SEC   [▶]x2 SIL   [B] ANA EKRAN',
     footerPaint: '[A] CIZ / SEC   [YON] TUVAL & ARAC   [B] CIKIS',
     footerContacts: '[A] ARA   [▶] SMS AT   [◀]x2 SIL   [KBD] +YENI   [B] CIKIS',
-    footerWallpapers: '[◀/▶] 24 SAHNE   [▲/▼] UYUM   [A] SEC/TAM EKRAN   [B] CIKIS',
+    footerWallpapers: '[◀/▶] 31 SAHNE   [▲/▼] UYUM   [A] SEC/TAM EKRAN   [B] CIKIS',
     footerFormat: '[▲/▼] MOD   [◀/▶] D: YEDEK   [A] ILERI/TOKAT   [B] GERI',
     footerDefault: '[A] ISLEM   [B] ANA EKRAN',
 
@@ -292,7 +292,7 @@ export const trLocale: LocaleBundle = {
     hintStats: 'Arcade Rekorlari & Istatistik • [B]: Ana Ekran',
     hintTerm: '[A]: Calistir / KBD • [◀]/[▶]: Gecmis • [▲]/[▼]: Kaydir • [B]: Cikis',
     hintSetup: '[▲]/[▼]: Ayar • [A]: Ac/Degistir • [B]: Ana Ekran',
-    hintWallpapers: '[◀]/[▶]: 24 Piksel Sahne Gez • [▲]/[▼]: Karartma • [A]: Uygula • [B]: Geri',
+    hintWallpapers: '[◀]/[▶]: 31 Piksel Sahne Gez • [▲]/[▼]: Karartma • [A]: Uygula • [B]: Geri',
     hintFormat: '[▲]/[▼]: Mod • [◀]/[▶]: D: Yedek • [A]: Baslat / Kasaya Vur • [B]: Geri',
     hintThemes: '[▲]/[▼]: Temalar • [◀]/[▶]: ±5 • [A]: Uygula • [B]: Geri',
     hintPro: '[▲]/[▼]: Plan Sec • [A]: Satin Al / Geri Yukle • [B]: Geri',
