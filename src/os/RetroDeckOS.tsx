@@ -919,8 +919,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.smsList.length > 10) this.smsList.pop();
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
-    this.smsBannerTimer = 4.0;
+    this.smsBannerTimer = 5.0;
     RetroAudioEngine.playNokiaSmsTone();
+    this.cb.onPlaySound?.('die');
   }
 
   // AI & BYOK state
@@ -3275,6 +3276,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     return (
       <View style={styles.osBarRight}>
+        {this.smsBannerTimer > 0 && (
+          <Ionicons name="mail" size={10} color={ink} style={{ marginRight: 2 }} />
+        )}
         {isPro && (
           <Text style={[styles.osBarTxt, { color: ink, fontSize: 8 }]}>PRO</Text>
         )}
@@ -3432,6 +3436,45 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'term' && this.renderTerm(fg, bg)}
           {this.app === 'setup' && this.renderSetup(fg, bg)}
           {this.app === 'pro' && this.renderPro(fg, bg)}
+
+          {/* Global Nokia 3310 SMS Notification Overlay Banner */}
+          {this.smsBannerTimer > 0 && (
+            <View
+              style={{
+                position: 'absolute',
+                top: 4,
+                left: 6,
+                right: 6,
+                backgroundColor: fg,
+                borderWidth: 1,
+                borderColor: bg,
+                paddingVertical: 3,
+                paddingHorizontal: 6,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 999,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 2,
+                elevation: 5,
+              }}
+            >
+              <Text
+                style={{
+                  color: bg,
+                  fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                  fontSize: 8.5,
+                  fontWeight: '900',
+                  textAlign: 'center',
+                }}
+                numberOfLines={1}
+              >
+                {this.smsBanner}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* OS Footer Taskbar */}
