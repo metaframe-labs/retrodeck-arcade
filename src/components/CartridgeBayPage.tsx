@@ -220,8 +220,9 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
               <Text style={[styles.studioTitle, { color: accentColor }]}>
                 CUSTOM GAME STUDIO
               </Text>
-              <View style={styles.studioBadge}>
-                <Text style={styles.studioBadgeText}>{isPro ? 'CREATOR' : '🔒 PRO'}</Text>
+              <View style={[styles.studioBadge, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+                {!isPro && <Ionicons name="lock-closed" size={9} color="#F59E0B" />}
+                <Text style={styles.studioBadgeText}>{isPro ? 'CREATOR' : 'PRO'}</Text>
               </View>
             </View>
             <Text style={styles.studioSub}>

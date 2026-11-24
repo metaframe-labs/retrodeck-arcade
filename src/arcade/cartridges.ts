@@ -2603,12 +2603,21 @@ export const ARCADE_CARTRIDGES: ArcadeCartridgeDef[] = [
   },
 ];
 
-export const FREE_CARTRIDGE_LIMIT = 10;
+export const FREE_CARTRIDGE_IDS = new Set<string>([
+  'snake-3310',
+  'tetris-brick',
+  'pong-dx',
+  'cyber-breakout',
+  'space-impact',
+  'pac-boy',
+  'space-invaders',
+  'bounce-retro',
+  'minesweeper-dx',
+  'dino-runner',
+]);
 
 export function isCartridgeProLocked(cartId: string, isPro: boolean): boolean {
   if (isPro) return false;
   if (cartId.startsWith('dev-cart-')) return false;
-  const idx = ARCADE_CARTRIDGES.findIndex((c) => c.id === cartId);
-  if (idx === -1) return false;
-  return idx >= FREE_CARTRIDGE_LIMIT;
+  return !FREE_CARTRIDGE_IDS.has(cartId);
 }

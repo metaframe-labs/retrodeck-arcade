@@ -3993,11 +3993,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ]}
             >
               <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                {String(realIdx + 1).padStart(3, '0')}. {locked ? '🔒 ' : ''}{c.title}
+                {String(realIdx + 1).padStart(3, '0')}. {c.title}
               </Text>
-              <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-                {locked ? 'PRO' : (hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6))}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                {locked && (
+                  <Ionicons name="lock-closed" size={9} color={sel ? bg : fg} />
+                )}
+                <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
+                  {locked ? 'PRO' : (hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6))}
+                </Text>
+              </View>
             </View>
           );
         })}
