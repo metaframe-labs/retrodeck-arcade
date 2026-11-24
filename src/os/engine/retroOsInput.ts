@@ -314,26 +314,52 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
     }
   }
 
-  // Paint keypad shortcuts: * / 4 prev art, # / 6 next art, CLR / DEL blank canvas, OK toggle pixel
+  // Paint keypad shortcuts: * / 4 prev art, # / 6 next art, CLR / DEL blank canvas, OK toggle/action
   if (os.app === 'paint') {
     if (key === '*' || key === '4') {
-      os.paintArtIdx = (os.paintArtIdx + PAINT_ARTWORKS.length - 1) % PAINT_ARTWORKS.length;
-      os.clearCanvas(false);
-      os.cb.onPlaySound?.('hit');
+      const s = execPaintBarAction(os, 0);
+      os.cb.onPlaySound?.(s);
     } else if (key === '#' || key === '6') {
-      os.paintArtIdx = (os.paintArtIdx + 1) % PAINT_ARTWORKS.length;
-      os.clearCanvas(false);
-      os.cb.onPlaySound?.('hit');
+      const s = execPaintBarAction(os, 1);
+      os.cb.onPlaySound?.(s);
     } else if (key === 'CLR' || key === 'DEL') {
-      os.clearCanvas(true);
-      os.cb.onPlaySound?.('die');
+      const s = execPaintBarAction(os, 3);
+      os.cb.onPlaySound?.(s);
     } else if (key === 'OK') {
-      os.paintGrid[os.paintR][os.paintC] = !os.paintGrid[os.paintR][os.paintC];
-      if (os.paintTitle === 'BLANK CANVAS') os.paintTitle = 'CUSTOM ART';
-      os.cb.onPlaySound?.('hit');
+      if (os.paintOnBar) {
+        const s = execPaintBarAction(os, os.paintBarIdx);
+        os.cb.onPlaySound?.(s);
+      } else {
+        os.paintGrid[os.paintR][os.paintC] = !os.paintGrid[os.paintR][os.paintC];
+        if (os.paintTitle === 'BLANK CANVAS') os.paintTitle = 'CUSTOM ART';
+        os.cb.onPlaySound?.('hit');
+      }
     }
     return;
   }
+}
+
+export function execPaintBarAction(os: RetroDeckOS, barIdx: number): ArcadeSound {
+  if (barIdx === 0) {
+    os.paintArtIdx = (os.paintArtIdx + PAINT_ARTWORKS.length - 1) % PAINT_ARTWORKS.length;
+    os.clearCanvas(false);
+    return 'score';
+  }
+  if (barIdx === 1) {
+    os.paintArtIdx = (os.paintArtIdx + 1) % PAINT_ARTWORKS.length;
+    os.clearCanvas(false);
+    return 'score';
+  }
+  if (barIdx === 2) {
+    for (let r = 0; r < os.paintH; r++) {
+      for (let c = 0; c < os.paintW; c++) {
+        os.paintGrid[r][c] = !os.paintGrid[r][c];
+      }
+    }
+    return 'hit';
+  }
+  os.clearCanvas(true);
+  return 'die';
 }
 
 export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: number): ArcadeSound | null {
@@ -1153,8 +1179,31 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'paint') {
-    if (dir === 'up') os.paintR = (os.paintR + os.paintH - 1) % os.paintH;
-    if (dir === 'down') os.paintR = (os.paintR + 1) % os.paintH;
+    if (os.paintOnBar) {
+      if (dir === 'left') os.paintBarIdx = (os.paintBarIdx + 3) % 4;
+      else if (dir === 'right') os.paintBarIdx = (os.paintBarIdx + 1) % 4;
+      else if (dir === 'up') {
+        os.paintOnBar = false;
+        os.paintR = os.paintH - 1;
+      } else if (dir === 'down') {
+        os.paintOnBar = false;
+        os.paintR = 0;
+      }
+      if (dir) return 'hit';
+      if (pressA) {
+        return execPaintBarAction(os, os.paintBarIdx);
+      }
+      return null;
+    }
+
+    if (dir === 'up') {
+      if (os.paintR > 0) os.paintR--;
+      else os.paintOnBar = true;
+    }
+    if (dir === 'down') {
+      if (os.paintR < os.paintH - 1) os.paintR++;
+      else os.paintOnBar = true;
+    }
     if (dir === 'left') os.paintC = (os.paintC + os.paintW - 1) % os.paintW;
     if (dir === 'right') os.paintC = (os.paintC + 1) % os.paintW;
     if (pressA) {

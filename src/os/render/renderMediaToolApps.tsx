@@ -15,6 +15,7 @@ import {
   decodeWmoWeather,
 } from '../retroOsData';
 import { renderAnalogDial } from './renderCoreApps';
+import { execPaintBarAction } from '../engine/retroOsInput';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
@@ -569,19 +570,40 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
 }
 
 export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
+  const barBtns = ['◀ ART', 'ART ▶', 'INV', 'CLR'];
+  const headerTag =
+    os.paintTitle === 'BLANK CANVAS' || os.paintTitle === 'CUSTOM ART'
+      ? os.paintTitle
+      : `${os.paintTitle} (${os.paintArtIdx + 1}/${PAINT_ARTWORKS.length})`;
+
   return (
     <View style={styles.centerBox}>
+      <View
+        style={{
+          width: 212,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 2,
+        }}
+      >
+        <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>{headerTag}</Text>
+        <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
+          {os.paintOnBar ? 'TOOLBAR' : `(${os.paintC},${os.paintR})`}
+        </Text>
+      </View>
+
       <View style={[styles.paintBoard, { borderColor: fg }]}>
         {os.paintGrid.map((row, r) => (
           <View key={r} style={{ flexDirection: 'row' }}>
             {row.map((on, c) => {
-              const isCur = r === os.paintR && c === os.paintC;
+              const isCur = !os.paintOnBar && r === os.paintR && c === os.paintC;
               return (
                 <View
                   key={c}
                   style={{
-                    width: 15,
-                    height: 15,
+                    width: 13,
+                    height: 13,
                     backgroundColor: on ? fg : bg,
                     borderWidth: isCur ? 2 : 0.3,
                     borderColor: isCur ? (on ? bg : fg) : fg,
@@ -592,47 +614,42 @@ export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         ))}
       </View>
+
       <View
         style={{
+          width: 212,
           flexDirection: 'row',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-          marginTop: 2,
+          justifyContent: 'space-between',
+          gap: 4,
+          marginTop: 3,
         }}
       >
-        <Pressable
-          onPress={() => {
-            os.paintArtIdx = (os.paintArtIdx + PAINT_ARTWORKS.length - 1) % PAINT_ARTWORKS.length;
-            os.clearCanvas(false);
-            os.cb.onPlaySound?.('hit');
-          }}
-          hitSlop={6}
-        >
-          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>◀</Text>
-        </Pressable>
-        <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
-          {os.paintTitle} • ({os.paintC},{os.paintR})
-        </Text>
-        <Pressable
-          onPress={() => {
-            os.paintArtIdx = (os.paintArtIdx + 1) % PAINT_ARTWORKS.length;
-            os.clearCanvas(false);
-            os.cb.onPlaySound?.('hit');
-          }}
-          hitSlop={6}
-        >
-          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>▶</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            os.clearCanvas(true);
-            os.cb.onPlaySound?.('die');
-          }}
-          hitSlop={6}
-        >
-          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>[CLR]</Text>
-        </Pressable>
+        {barBtns.map((label, idx) => {
+          const sel = os.paintOnBar && os.paintBarIdx === idx;
+          return (
+            <Pressable
+              key={label}
+              onPress={() => {
+                os.paintOnBar = true;
+                os.paintBarIdx = idx;
+                const s = execPaintBarAction(os, idx);
+                os.cb.onPlaySound?.(s);
+              }}
+              style={{
+                flex: 1,
+                borderWidth: 1,
+                borderColor: fg,
+                backgroundColor: sel ? fg : 'transparent',
+                paddingVertical: 1.5,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={[styles.miniHint, { color: sel ? bg : fg, marginTop: 0 }]}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );

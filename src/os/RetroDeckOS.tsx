@@ -286,6 +286,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ paintGrid: boolean[][] = [];
   /** @internal */ paintR = 4;
   /** @internal */ paintC = 7;
+  /** @internal */ paintOnBar = false;
+  /** @internal */ paintBarIdx = 1; // 0: ◀ ART, 1: ART ▶, 2: INV, 3: CLR
 
   // Nokia WAP 1.1 Browser state
   /** @internal */ wapUrl = 'https://www.metaframelabs.space/';
@@ -1007,7 +1009,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               : this.app === 'notes'
               ? '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP'
               : this.app === 'paint'
-              ? '[A] PIXEL   [* / #] ART PRESETS   [CLR] BLANK   [B] EXIT'
+              ? '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT'
               : '[A] ACTION   [B] DESKTOP'}
           </Text>
         </View>
