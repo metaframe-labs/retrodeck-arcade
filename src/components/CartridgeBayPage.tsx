@@ -117,7 +117,6 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
           </View>
         ) : isLocked ? (
           <View style={[styles.loadAction, { borderColor: '#F59E0B', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F59E0B18' }]}>
-            <Ionicons name="lock-closed" size={11} color="#F59E0B" />
             <Text style={[styles.loadActionText, { color: '#F59E0B' }]}>
               PRO REQUIRED
             </Text>
@@ -220,8 +219,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
               <Text style={[styles.studioTitle, { color: accentColor }]}>
                 CUSTOM GAME STUDIO
               </Text>
-              <View style={[styles.studioBadge, { flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
-                {!isPro && <Ionicons name="lock-closed" size={9} color="#F59E0B" />}
+              <View style={styles.studioBadge}>
                 <Text style={styles.studioBadgeText}>{isPro ? 'CREATOR' : 'PRO'}</Text>
               </View>
             </View>

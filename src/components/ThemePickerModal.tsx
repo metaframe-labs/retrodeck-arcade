@@ -87,8 +87,7 @@ const ThemeCard = React.memo<ThemeCardProps>(
               </Text>
             </View>
           ) : isLocked ? (
-            <View style={[styles.activeTag, { backgroundColor: '#F59E0B22', borderWidth: 1, borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
-              <Ionicons name="lock-closed" size={9} color="#F59E0B" />
+            <View style={[styles.activeTag, { backgroundColor: '#F59E0B22', borderWidth: 1, borderColor: '#F59E0B' }]}>
               <Text style={[styles.activeTagTxt, { color: '#F59E0B' }]}>PRO</Text>
             </View>
           ) : null}
