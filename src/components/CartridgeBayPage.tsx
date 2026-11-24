@@ -1,16 +1,20 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ListRenderItem,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeCartridgeDef } from '../arcade/types';
 import { getAccentInk } from '../theme/palettes';
+
+const FAV_CARTS_STORAGE_KEY = '@retrodeck8_fav_carts_v1';
 
 interface CartridgeBayPageProps {
   cartridges: ArcadeCartridgeDef[];
@@ -22,19 +26,21 @@ interface CartridgeBayPageProps {
   onBack: () => void;
 }
 
-type FilterCategory = 'ALL' | 'NOKIA' | 'ARCADE';
+type FilterCategory = 'ALL' | 'FAVS' | 'NOKIA' | 'ARCADE';
 
 interface CartridgeCardProps {
   cart: ArcadeCartridgeDef;
   isInserted: boolean;
+  isFav: boolean;
   accentColor: string;
   accentInk: string;
   bestScore: number;
   onSelect: (cartridge: ArcadeCartridgeDef) => void;
+  onToggleFav: (id: string) => void;
 }
 
 const CartridgeCard = React.memo<CartridgeCardProps>(
-  ({ cart, isInserted, accentColor, accentInk, bestScore, onSelect }) => (
+  ({ cart, isInserted, isFav, accentColor, accentInk, bestScore, onSelect, onToggleFav }) => (
     <Pressable
       onPress={() => onSelect(cart)}
       style={[
@@ -61,6 +67,17 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
             <Text style={[styles.genreTagText, { color: accentColor }]}>{cart.genre}</Text>
           </View>
           <Text style={styles.yearText}>{cart.year}</Text>
+          <Pressable
+            hitSlop={8}
+            onPress={() => onToggleFav(cart.id)}
+            style={styles.favBtn}
+          >
+            <Ionicons
+              name={isFav ? 'star' : 'star-outline'}
+              size={15}
+              color={isFav ? '#FBBF24' : '#64748B'}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -119,7 +136,30 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<FilterCategory>('ALL');
+  const [favIds, setFavIds] = useState<string[]>([]);
   const accentInk = useMemo(() => getAccentInk(accentColor), [accentColor]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FAV_CARTS_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setFavIds(parsed);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const favSet = useMemo(() => new Set(favIds), [favIds]);
+
+  const toggleFav = useCallback((id: string) => {
+    setFavIds((prev) => {
+      const exists = prev.includes(id);
+      const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
+      AsyncStorage.setItem(FAV_CARTS_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   const nokiaCount = useMemo(
     () => cartridges.filter((c) => c.genre.includes('NOKIA')).length,
@@ -128,23 +168,26 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   const arcadeCount = cartridges.length - nokiaCount;
 
   const filteredCartridges = useMemo(() => {
+    if (filter === 'FAVS') return cartridges.filter((cart) => favSet.has(cart.id));
     if (filter === 'NOKIA') return cartridges.filter((cart) => cart.genre.includes('NOKIA'));
     if (filter === 'ARCADE') return cartridges.filter((cart) => !cart.genre.includes('NOKIA'));
     return cartridges;
-  }, [cartridges, filter]);
+  }, [cartridges, filter, favSet]);
 
   const renderItem: ListRenderItem<ArcadeCartridgeDef> = useCallback(
     ({ item }) => (
       <CartridgeCard
         cart={item}
         isInserted={item.id === activeCartridgeId}
+        isFav={favSet.has(item.id)}
         accentColor={accentColor}
         accentInk={accentInk}
         bestScore={highScores[item.id] || 0}
         onSelect={onSelectCartridge}
+        onToggleFav={toggleFav}
       />
     ),
-    [activeCartridgeId, accentColor, accentInk, highScores, onSelectCartridge]
+    [activeCartridgeId, favSet, accentColor, accentInk, highScores, onSelectCartridge, toggleFav]
   );
 
   const keyExtractor = useCallback((item: ArcadeCartridgeDef) => item.id, []);
@@ -203,31 +246,40 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
       </View>
 
       {/* Category Filter Pills */}
-      <View style={styles.filterRow}>
-        {(['ALL', 'NOKIA', 'ARCADE'] as FilterCategory[]).map((cat) => {
-          const isSelected = filter === cat;
-          return (
-            <Pressable
-              key={cat}
-              onPress={() => setFilter(cat)}
-              style={[
-                styles.filterChip,
-                isSelected && {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}18`,
-                },
-              ]}
-            >
-              <Text style={[styles.filterChipText, isSelected && { color: accentColor }]}>
-                {cat === 'ALL'
-                  ? `ALL (${cartridges.length})`
-                  : cat === 'NOKIA'
-                  ? `NOKIA CLASSICS (${nokiaCount})`
-                  : `ARCADE (${arcadeCount})`}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View style={styles.filterWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+          style={styles.filterScroll}
+        >
+          {(['ALL', 'FAVS', 'NOKIA', 'ARCADE'] as FilterCategory[]).map((cat) => {
+            const isSelected = filter === cat;
+            return (
+              <Pressable
+                key={cat}
+                onPress={() => setFilter(cat)}
+                style={[
+                  styles.filterChip,
+                  isSelected && {
+                    borderColor: accentColor,
+                    backgroundColor: `${accentColor}18`,
+                  },
+                ]}
+              >
+                <Text style={[styles.filterChipText, isSelected && { color: accentColor }]}>
+                  {cat === 'ALL'
+                    ? `ALL (${cartridges.length})`
+                    : cat === 'FAVS'
+                    ? `★ FAVS (${favIds.length})`
+                    : cat === 'NOKIA'
+                    ? `NOKIA (${nokiaCount})`
+                    : `ARCADE (${arcadeCount})`}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
       {/* Virtualized Cartridge Shelf (60 FPS smooth even with 100+ cartridges) */}
@@ -240,11 +292,20 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         maxToRenderPerBatch={8}
         windowSize={5}
         removeClippedSubviews
+        showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyWrap}>
+            <Ionicons name="star-outline" size={28} color="#64748B" />
+            <Text style={styles.emptyTitle}>NO FAVORITE GAMES YET</Text>
+            <Text style={styles.emptySub}>
+              Tap the ★ icon on any cartridge to save it here.
+            </Text>
+          </View>
+        }
         contentContainerStyle={[
           styles.list,
           { paddingBottom: Math.max(insets.bottom, 20) + 16 },
         ]}
-        showsVerticalScrollIndicator={false}
       />
     </View>
   );
@@ -310,27 +371,37 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontFamily: 'monospace',
   },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
+  filterWrap: {
+    height: 48,
+    justifyContent: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#121D2C',
     backgroundColor: '#060B12',
   },
+  filterScroll: {
+    flexGrow: 0,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 8,
+  },
   filterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 6,
+    height: 30,
+    paddingHorizontal: 11,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#1D2D40',
     backgroundColor: '#0D1522',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipText: {
     color: '#94A3B8',
     fontSize: 10,
+    lineHeight: 13,
+    includeFontPadding: false,
     fontWeight: '800',
     fontFamily: 'monospace',
   },
@@ -545,5 +616,28 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     fontFamily: 'monospace',
+  },
+  favBtn: {
+    padding: 3,
+    marginLeft: 2,
+  },
+  emptyWrap: {
+    paddingVertical: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  emptyTitle: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    letterSpacing: 0.6,
+  },
+  emptySub: {
+    color: '#64748B',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    textAlign: 'center',
   },
 });

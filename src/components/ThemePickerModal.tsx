@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
   ListRenderItem,
@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   PALETTE_ORDER,
   RETRO_PALETTES,
@@ -19,6 +20,8 @@ import {
   RetroThemeCategory,
   getAccentInk,
 } from '../theme/palettes';
+
+const FAV_THEMES_STORAGE_KEY = '@retrodeck8_fav_themes_v1';
 
 interface ThemePickerModalProps {
   visible: boolean;
@@ -29,8 +32,11 @@ interface ThemePickerModalProps {
   onClose: () => void;
 }
 
-const CATEGORIES: ('ALL' | RetroThemeCategory)[] = [
+type FilterTab = 'ALL' | 'FAVS' | RetroThemeCategory;
+
+const CATEGORIES: FilterTab[] = [
   'ALL',
+  'FAVS',
   'HANDHELD',
   'CRT',
   'NEON',
@@ -41,89 +47,106 @@ const CATEGORIES: ('ALL' | RetroThemeCategory)[] = [
 interface ThemeCardProps {
   theme: RetroPalette;
   isSelected: boolean;
+  isFav: boolean;
   onSelect: (id: RetroPaletteId) => void;
+  onToggleFav: (id: RetroPaletteId) => void;
 }
 
-const ThemeCard = React.memo<ThemeCardProps>(({ theme, isSelected, onSelect }) => (
-  <Pressable
-    onPress={() => onSelect(theme.id)}
-    style={[
-      styles.card,
-      {
-        backgroundColor: theme.deckBg,
-        borderColor: isSelected ? theme.bezelAccent : theme.surfaceBorder,
-        borderWidth: isSelected ? 2 : 1.5,
-      },
-    ]}
-  >
-    {/* Mini Handheld Bezel Header */}
-    <View style={styles.cardTop}>
-      <View style={styles.ledGroup}>
-        <View
-          style={[
-            styles.miniLed,
-            { backgroundColor: theme.ledColor || theme.bezelAccent },
-          ]}
-        />
-        <Text style={styles.catBadge}>{theme.category}</Text>
-      </View>
-      {isSelected && (
-        <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
-          <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
-            ACTIVE
-          </Text>
-        </View>
-      )}
-    </View>
-
-    {/* Live Mini LCD Screen Preview */}
-    <View
+const ThemeCard = React.memo<ThemeCardProps>(
+  ({ theme, isSelected, isFav, onSelect, onToggleFav }) => (
+    <Pressable
+      onPress={() => onSelect(theme.id)}
       style={[
-        styles.previewScreen,
+        styles.card,
         {
-          backgroundColor: theme.screenBg,
-          borderColor: `${theme.bezelAccent}66`,
+          backgroundColor: theme.deckBg,
+          borderColor: isSelected ? theme.bezelAccent : theme.surfaceBorder,
+          borderWidth: isSelected ? 2 : 1.5,
         },
       ]}
     >
-      <View style={styles.pixelSpriteRow}>
-        <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
-        <View style={[styles.pxBlockWide, { backgroundColor: theme.pixelOn }]} />
-        <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
+      {/* Mini Handheld Bezel Header */}
+      <View style={styles.cardTop}>
+        <View style={styles.ledGroup}>
+          <View
+            style={[
+              styles.miniLed,
+              { backgroundColor: theme.ledColor || theme.bezelAccent },
+            ]}
+          />
+          <Text style={styles.catBadge}>{theme.category}</Text>
+        </View>
+        <View style={styles.cardTopRight}>
+          {isSelected && (
+            <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
+              <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
+                ACTIVE
+              </Text>
+            </View>
+          )}
+          <Pressable
+            hitSlop={8}
+            onPress={() => onToggleFav(theme.id)}
+            style={styles.favIconBtn}
+          >
+            <Ionicons
+              name={isFav ? 'star' : 'star-outline'}
+              size={14}
+              color={isFav ? '#FBBF24' : '#64748B'}
+            />
+          </Pressable>
+        </View>
       </View>
-      <Text
+
+      {/* Live Mini LCD Screen Preview */}
+      <View
         style={[
-          styles.previewLcdTxt,
+          styles.previewScreen,
           {
-            color: theme.pixelOn,
-            textShadowColor: theme.pixelGlow,
+            backgroundColor: theme.screenBg,
+            borderColor: `${theme.bezelAccent}66`,
           },
         ]}
-        numberOfLines={1}
       >
-        84x48 OS
-      </Text>
-      <View style={styles.swatchBar}>
-        <View style={[styles.swatchChip, { backgroundColor: theme.chassisBg }]} />
-        <View
+        <View style={styles.pixelSpriteRow}>
+          <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
+          <View style={[styles.pxBlockWide, { backgroundColor: theme.pixelOn }]} />
+          <View style={[styles.pxBlock, { backgroundColor: theme.pixelOn }]} />
+        </View>
+        <Text
           style={[
-            styles.swatchChip,
-            { backgroundColor: theme.ledColor || theme.bezelAccent },
+            styles.previewLcdTxt,
+            {
+              color: theme.pixelOn,
+              textShadowColor: theme.pixelGlow,
+            },
           ]}
-        />
-        <View style={[styles.swatchChip, { backgroundColor: theme.pixelOn }]} />
+          numberOfLines={1}
+        >
+          84x48 OS
+        </Text>
+        <View style={styles.swatchBar}>
+          <View style={[styles.swatchChip, { backgroundColor: theme.chassisBg }]} />
+          <View
+            style={[
+              styles.swatchChip,
+              { backgroundColor: theme.ledColor || theme.bezelAccent },
+            ]}
+          />
+          <View style={[styles.swatchChip, { backgroundColor: theme.pixelOn }]} />
+        </View>
       </View>
-    </View>
 
-    {/* Theme Name & Tagline */}
-    <Text style={styles.cardTitle} numberOfLines={1}>
-      {theme.name}
-    </Text>
-    <Text style={styles.cardSub} numberOfLines={1}>
-      {theme.tagline}
-    </Text>
-  </Pressable>
-));
+      {/* Theme Name & Tagline */}
+      <Text style={styles.cardTitle} numberOfLines={1}>
+        {theme.name}
+      </Text>
+      <Text style={styles.cardSub} numberOfLines={1}>
+        {theme.tagline}
+      </Text>
+    </Pressable>
+  )
+);
 
 export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   visible,
@@ -134,23 +157,49 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
-  const [category, setCategory] = useState<'ALL' | RetroThemeCategory>('ALL');
+  const [category, setCategory] = useState<FilterTab>('ALL');
+  const [favIds, setFavIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    AsyncStorage.getItem(FAV_THEMES_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) setFavIds(parsed);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const favSet = useMemo(() => new Set(favIds), [favIds]);
+
+  const toggleFav = useCallback((id: RetroPaletteId) => {
+    setFavIds((prev) => {
+      const exists = prev.includes(id);
+      const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
+      AsyncStorage.setItem(FAV_THEMES_STORAGE_KEY, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   const items = useMemo(() => {
     const all = PALETTE_ORDER.map((id) => RETRO_PALETTES[id]);
     if (category === 'ALL') return all;
+    if (category === 'FAVS') return all.filter((p) => favSet.has(p.id));
     return all.filter((p) => p.category === category);
-  }, [category]);
+  }, [category, favSet]);
 
   const renderItem: ListRenderItem<RetroPalette> = useCallback(
     ({ item }) => (
       <ThemeCard
         theme={item}
         isSelected={item.id === activePaletteId}
+        isFav={favSet.has(item.id)}
         onSelect={onSelectPalette}
+        onToggleFav={toggleFav}
       />
     ),
-    [activePaletteId, onSelectPalette]
+    [activePaletteId, favSet, onSelectPalette, toggleFav]
   );
 
   const keyExtractor = useCallback((item: RetroPalette) => item.id, []);
@@ -248,7 +297,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                       },
                     ]}
                   >
-                    {cat}
+                    {cat === 'FAVS' ? `★ FAVS (${favIds.length})` : cat}
                   </Text>
                 </Pressable>
               );
@@ -269,6 +318,15 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
           windowSize={5}
           removeClippedSubviews
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Ionicons name="star-outline" size={28} color="#64748B" />
+              <Text style={styles.emptyTitle}>NO FAVORITE THEMES YET</Text>
+              <Text style={styles.emptySub}>
+                Tap the ★ icon on any theme card to pin it here.
+              </Text>
+            </View>
+          }
         />
       </View>
     </Modal>
@@ -400,6 +458,33 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: '800',
     fontFamily: 'monospace',
+  },
+  cardTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  favIconBtn: {
+    padding: 2,
+  },
+  emptyWrap: {
+    paddingVertical: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  emptyTitle: {
+    color: '#E2E8F0',
+    fontSize: 12,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+    letterSpacing: 0.6,
+  },
+  emptySub: {
+    color: '#64748B',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    textAlign: 'center',
   },
   activeTag: {
     paddingHorizontal: 5,
