@@ -7,6 +7,7 @@ import { RetroAudioEngine, KEYPAD_SOUND_STYLES } from '../../audio/RetroAudioEng
 import { somaRadioService } from '../../services/somaRadioService';
 import { styles } from '../retroOsStyles';
 import { DESKTOP_ICONS, NOKIA_OPERATORS, NOKIA_PROFILES } from '../retroOsData';
+import { getDesktopLabel, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderAnalogDial(fg: string, dialSize = 84) {
@@ -230,7 +231,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 ]}
               >
                 <Ionicons name={item.icon} size={16} color={iconColor} />
-                <Text style={[styles.deskLbl, { color: iconColor }]}>{item.label}</Text>
+                <Text style={[styles.deskLbl, { color: iconColor }]}>
+                  {getDesktopLabel(item.id, item.label, os.lang)}
+                </Text>
               </View>
             );
           })}
@@ -281,14 +284,16 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
 
 export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
   const isPro = os.cb.getIsPro?.() ?? false;
+  const L = os.lang;
   const items = [
-    isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE: RETRODECK PRO',
-    `PALETTE: ${os.cb.getPaletteName()}`,
-    `CRT SCANLINES: ${os.cb.getScanlines() ? 'ON' : 'OFF'}`,
-    `CLOCK FACE: ${os.clockFace.toUpperCase()}`,
-    `LIVE AI SMS: ${os.liveAiSmsEnabled ? 'ON' : 'OFF'}`,
-    'OPEN FULL CARTRIDGE VAULT',
-    'REBOOT RETRODECK OS',
+    isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
+    `${tOs('setupPalette', L)}: ${os.cb.getPaletteName()}`,
+    `${tOs('setupScanlines', L)}: ${os.cb.getScanlines() ? tOs('on', L) : tOs('off', L)}`,
+    `${tOs('setupClockFace', L)}: ${os.clockFace === 'analog' ? tOs('analog', L) : tOs('digital', L)}`,
+    `${tOs('setupLiveSms', L)}: ${os.liveAiSmsEnabled ? tOs('on', L) : tOs('off', L)}`,
+    tOs('setupLanguage', L),
+    tOs('setupVault', L),
+    tOs('setupReboot', L),
   ];
 
   // Virtual windowed scroll: show 5 items tightly and naturally stacked
@@ -301,7 +306,7 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     <View style={styles.listWrap}>
       <View style={[styles.compHeader, { marginBottom: 3 }]}>
         <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-          SYSTEM SETUP
+          {tOs('setupTitle', L)}
         </Text>
         <Text style={[styles.listMeta, { color: fg }]}>
           {os.setupIdx + 1}/{items.length}
@@ -344,10 +349,10 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
 
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, height: 12 }}>
         <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx > 0 ? 0.9 : 0.2 }]}>
-          ▲ PREV
+          {tOs('prev', L)}
         </Text>
         <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx < maxStart ? 0.9 : 0.2 }]}>
-          ▼ MORE
+          {tOs('more', L)}
         </Text>
       </View>
     </View>

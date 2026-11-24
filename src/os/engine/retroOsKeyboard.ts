@@ -1,6 +1,7 @@
 import { getProviderMeta, saveBYOKConfig } from '../../services/byokAiService';
 import { RetroAudioEngine } from '../../audio/RetroAudioEngine';
 import { DEFAULT_CUSTOM_TUNES, NOKIA_SONGS, REAL_POSTCARDS, POSTCARD_STAMPS } from '../retroOsData';
+import { pickLang } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function getControlsHintImpl(os: RetroDeckOS): string {
@@ -260,7 +261,7 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
       os.smsDraftText = '';
       os.smsReplyTargetIdx = null;
       if (replyText && target?.personaId) {
-        os.smsBanner = `SENT TO ${target.sender}!`;
+        os.smsBanner = pickLang(os.lang, `SENT TO ${target.sender}!`, `${target.sender} GONDERILDI!`);
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
         os.triggerLivePersonaSms(target.personaId, replyText);

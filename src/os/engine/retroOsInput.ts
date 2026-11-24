@@ -22,6 +22,7 @@ import {
   WAP_BOOKMARKS,
   WEATHER_CITIES,
 } from '../retroOsData';
+import { tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | null {
@@ -285,7 +286,7 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
         os.smsList = os.smsList.filter((_, idx) => idx !== os.smsIdx);
         os.smsIdx = Math.min(os.smsIdx, Math.max(0, os.smsList.length - 1));
         os.smsDeleteConfirm = false;
-        os.smsBanner = 'SMS DELETED!';
+        os.smsBanner = tOs('smsDeleted', os.lang);
         os.smsBannerTimer = 2.0;
         os.saveSmsList();
         os.cb.onPlaySound?.('die');
@@ -1312,8 +1313,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'setup') {
-    const isPro = os.cb.getIsPro?.() ?? false;
-    const totalSetupItems = 7;
+    const totalSetupItems = 8;
     if (dir === 'up') os.setupIdx = (os.setupIdx + totalSetupItems - 1) % totalSetupItems;
     if (dir === 'down') os.setupIdx = (os.setupIdx + 1) % totalSetupItems;
     if (dir === 'left' || dir === 'right') {
@@ -1331,6 +1331,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       }
       if (os.setupIdx === 4) {
         os.toggleLiveAiSms();
+        return 'score';
+      }
+      if (os.setupIdx === 5) {
+        os.toggleLang();
         return 'score';
       }
     }
@@ -1352,8 +1356,9 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       else if (os.setupIdx === 2) os.cb.onToggleScanlines();
       else if (os.setupIdx === 3) os.toggleClockFace();
       else if (os.setupIdx === 4) os.toggleLiveAiSms();
-      else if (os.setupIdx === 5) os.cb.onOpenCartVault();
-      else if (os.setupIdx === 6) {
+      else if (os.setupIdx === 5) os.toggleLang();
+      else if (os.setupIdx === 6) os.cb.onOpenCartVault();
+      else if (os.setupIdx === 7) {
         os.app = 'boot';
         os.bootTimer = 0;
       }

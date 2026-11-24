@@ -65,8 +65,16 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
       'CMDS: ls, cd, pwd, cat, clear, top,',
       'neofetch, uname, free, date, whoami,',
       'open <game>, randgame, play <song>,',
-      'stop, ai <msg>, theme, lock, reboot',
+      'stop, ai <msg>, lang, theme, reboot',
     ]);
+    return 'score';
+  }
+
+  if (bin === 'lang') {
+    const req = arg.trim().toLowerCase();
+    if (req === 'en' || req === 'tr') os.setLang(req);
+    else os.toggleLang();
+    os.pushTermLines([`OS LANGUAGE: ${os.lang.toUpperCase()}`]);
     return 'score';
   }
 

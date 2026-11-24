@@ -159,6 +159,13 @@ import {
   stripMarkdownForLcd,
   wrapTextLines,
 } from './retroOsData';
+import {
+  LANG_STORAGE_KEY,
+  RetroLang,
+  setRetroLang,
+  tOs,
+  pickLang,
+} from '../i18n/retroI18n';
 
 export type { PicArtKey } from './retroOsData';
 
@@ -167,6 +174,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ app: OsAppId = 'boot';
   /** @internal */ bootTimer = 0;
   /** @internal */ uptime = 0;
+  /** @internal */ lang: RetroLang = 'en';
 
   // Keyguard & Screensaver state
   /** @internal */ keyLocked = false;
@@ -487,6 +495,31 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(LANG_STORAGE_KEY)
+      .then((val) => {
+        if (val === 'en' || val === 'tr') {
+          this.lang = val;
+          setRetroLang(val);
+          if (this.chatHistory.length === 0 && this.chatLines.length <= 3) {
+            this.chatLines = [
+              tOs('aiWelcome1', val),
+              tOs('aiWelcome2', val),
+              tOs('aiWelcome3', val),
+            ];
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ setLang(next: RetroLang) {
+    this.lang = next === 'tr' ? 'tr' : 'en';
+    setRetroLang(this.lang);
+    AsyncStorage.setItem(LANG_STORAGE_KEY, this.lang).catch(() => {});
+  }
+
+  /** @internal */ toggleLang() {
+    this.setLang(this.lang === 'en' ? 'tr' : 'en');
   }
 
   /** @internal */ savePersonaHistories() {
@@ -680,8 +713,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ clearAiChat() {
     this.chatHistory = [];
     this.chatLines = [
-      'AI> CHAT CLEARED! READY.',
-      'AI> PRESS [A] TO TYPE OR [▶] FOR BYOK.',
+      pickLang(this.lang, 'AI> CHAT CLEARED! READY.', 'AI> SOHBET TEMIZLENDI! HAZIR.'),
+      pickLang(this.lang, 'AI> PRESS [A] TO TYPE OR [▶] FOR BYOK.', 'AI> YAZMAK ICIN [A] YA DA BYOK ICIN [▶] BAS.'),
     ];
     this.chatScroll = 0;
     this.aiStatus = 'CLEARED';
@@ -901,7 +934,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 >
                   {this.smsBannerTimer > 0
                     ? this.smsBanner.replace('✉ ', '')
-                    : `${this.unreadSmsCount} NEW MESSAGE${this.unreadSmsCount > 1 ? 'S' : ''}`}
+                    : `${this.unreadSmsCount} ${tOs(this.unreadSmsCount > 1 ? 'newMsgPlural' : 'newMsgSingle', this.lang)}`}
                 </Text>
               </View>
             )}
@@ -910,8 +943,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <View style={[styles.osFooter, { borderTopColor: fg, backgroundColor: this.unlockStage ? fg : 'transparent' }]}>
             <Text style={[styles.footerTxt, { color: this.unlockStage ? bg : fg }]}>
               {this.unlockStage
-                ? 'NOW PRESS [▲] (*) TO UNLOCK!'
-                : 'UNLOCK: PRESS [A] THEN [▲] (*)'}
+                ? tOs('unlockNow', this.lang)
+                : tOs('unlockPrompt', this.lang)}
             </Text>
           </View>
         </View>
@@ -997,20 +1030,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <View style={[styles.osFooter, { borderTopColor: fg }]}>
           <Text style={[styles.footerTxt, { color: fg }]} numberOfLines={1}>
             {this.app === 'desktop'
-              ? '[A] OPEN   [D-PAD] MOVE   [KBD] KEYBOARD'
+              ? tOs('footerDesktop', this.lang)
               : this.app === 'radio'
-              ? '[A] PLAY/STOP   [◀/▶] STATION   [▲/▼] VOL   [B] DESKTOP'
+              ? tOs('footerRadio', this.lang)
               : this.app === 'ai'
-              ? '[A] KBD/SEND   [◀/▶] TAB   [B] DESKTOP'
+              ? tOs('footerAi', this.lang)
               : this.app === 'sms'
-              ? '[◀/▶] READ   [▼]x2/DEL DELETE   [A] AI REPLY   [B] DESKTOP'
+              ? tOs('footerSms', this.lang)
               : this.app === 'weather'
-              ? '[◀/▶] CITY   [▲/▼] REFRESH   [A] SEARCH   [B] DESKTOP'
+              ? tOs('footerWeather', this.lang)
               : this.app === 'notes'
-              ? '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP'
+              ? tOs('footerNotes', this.lang)
               : this.app === 'paint'
-              ? '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT'
-              : '[A] ACTION   [B] DESKTOP'}
+              ? tOs('footerPaint', this.lang)
+              : tOs('footerDefault', this.lang)}
           </Text>
         </View>
       </View>

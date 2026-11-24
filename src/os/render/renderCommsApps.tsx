@@ -14,6 +14,7 @@ import {
   REAL_POSTCARDS,
   wrapTextLines,
 } from '../retroOsData';
+import { pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderWap(os: RetroDeckOS, fg: string, bg: string) {
@@ -417,8 +418,10 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
   if (os.smsList.length === 0) {
     return (
       <View style={[styles.listWrap, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={[styles.subHeader, { color: fg }]}>INBOX EMPTY</Text>
-        <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>PRESS [▲] TO CREATE A POSTCARD</Text>
+        <Text style={[styles.subHeader, { color: fg }]}>{tOs('inboxEmpty', os.lang)}</Text>
+        <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>
+          {pickLang(os.lang, 'PRESS [▲] TO CREATE A POSTCARD', 'KARTPOSTAL OLUSTURMAK ICIN [▲] BAS')}
+        </Text>
       </View>
     );
   }
@@ -435,7 +438,7 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
           ✉ {os.smsIdx + 1}/{os.smsList.length} {msg.sender}
         </Text>
         <Text style={[styles.compBpm, { color: fg }]}>
-          {os.smsDeleteConfirm ? '[CONFIRM DEL]' : `[${msg.title}]`}
+          {os.smsDeleteConfirm ? `[${tOs('confirmDel', os.lang)}]` : `[${msg.title}]`}
         </Text>
       </View>
 
@@ -501,7 +504,7 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
         >
           <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
             <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
-              FROM: {msg.sender}
+              {tOs('from', os.lang)}: {msg.sender}
             </Text>
             <Text style={[styles.listMeta, { color: fg, fontSize: 8, opacity: 0.75 }]}>
               {msg.mood ? `${msg.mood} • ` : ''}{msg.timestamp || os.formatClock()}

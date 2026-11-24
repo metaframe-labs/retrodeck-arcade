@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import type { RetroLang } from '../i18n/retroI18n';
 
 export const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
 export const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v2';
@@ -9,20 +10,40 @@ export const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
 export const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
 export const LIVE_SMS_HISTORY_STORAGE_KEY = '@retrodeck8_live_sms_history_v1';
 
-export const DYNAMIC_MOODS = [
-  'NESELI VE ENERJIK',
-  'ACELECI VE TELAŞLI',
-  'UYKULU VE DALGIN',
-  'ALAYCI VE ESPRILI',
-  'DRAMATIK VE ABARTILI',
-  'SAMIMI VE MERAKLI',
-];
+export const DYNAMIC_MOODS_BY_LANG: Record<RetroLang, string[]> = {
+  en: [
+    'CHEERFUL & UPBEAT',
+    'RUSHED & PANICKED',
+    'SLEEPY & ZONING OUT',
+    'SARCASTIC & WITTY',
+    'DRAMATIC & EXTRA',
+    'WARM & CURIOUS',
+  ],
+  tr: [
+    'NESELI VE ENERJIK',
+    'ACELECI VE TELASLI',
+    'UYKULU VE DALGIN',
+    'ALAYCI VE ESPRILI',
+    'DRAMATIK VE ABARTILI',
+    'SAMIMI VE MERAKLI',
+  ],
+};
 
-export const UNEXPECTED_TWISTS = [
-  'Konuyu aniden cok komik veya beklenmedik bir olaya bagla (ornek: yanlislikla baskasina atacakmis gibi, garip bir ruya, komsunun kedisi veya sacma bir iddia).',
-  'Mesajin icine kucuk, beklenmedik bir surpriz veya absurt bir detay sıkıştır.',
-  'Sanki az once tuhaf bir sey yasamissin gibi sasirmis ve komik bir tonda yaz.',
-];
+export const UNEXPECTED_TWISTS_BY_LANG: Record<RetroLang, string[]> = {
+  en: [
+    'Suddenly tie the message to something hilarious or unexpected (e.g., texted the wrong person, weird dream, neighbor cat drama, or an absurd claim).',
+    'Slip a small, unexpected surprise or absurd detail naturally into the SMS.',
+    'Write in a funny, genuinely shocked tone as if something bizarre just happened 10 seconds ago.',
+  ],
+  tr: [
+    'Konuyu aniden cok komik veya beklenmedik bir olaya bagla (ornek: yanlislikla baskasina atacakmis gibi, garip bir ruya, komsunun kedisi veya sacma bir iddia).',
+    'Mesajin icine kucuk, beklenmedik bir surpriz veya absurt bir detay sikistir.',
+    'Sanki az once tuhaf bir sey yasamissin gibi sasirmis ve komik bir tonda yaz.',
+  ],
+};
+
+export const DYNAMIC_MOODS = DYNAMIC_MOODS_BY_LANG.en;
+export const UNEXPECTED_TWISTS = UNEXPECTED_TWISTS_BY_LANG.en;
 
 export const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
   { title: 'MY TUNE 1', bpm: 140, notes: '' },
@@ -884,71 +905,149 @@ export interface LiveSmsPersona {
   fallback: string;
 }
 
-export const LIVE_SMS_PERSONAS: LiveSmsPersona[] = [
-  {
-    id: 'kanka',
-    sender: 'MERT (KANKA)',
-    tag: 'SMS',
-    instruction: 'Sen kullanicinin yakin Turk arkadasisin (Mert). Halisaha, aksam bulusma, kahve veya oyun hakkinda cok dogal, samimi, sokak agziyla tam bir cumlelik SMS yaz.',
-    fallback: 'kanka aksam 8de halisaha var unutmadin di mi? adam lazim acil don',
-  },
-  {
-    id: 'anne',
-    sender: 'ANNEM',
-    tag: 'AILE',
-    instruction: 'Sen kullanicinin Turk annesisin. Aksam kacta gelecegini sor, yemek yaptigini soyle veya ustunu siki giy gibi cok dogal, samimi tam bir anne SMSi yaz.',
-    fallback: 'oglum aksam kacta geliyosun? sevdigin yemegi yaptim sogumasin haber ver',
-  },
-  {
-    id: 'kurye',
-    sender: 'JET-KARGO',
-    tag: 'KARGO',
-    instruction: 'Sen kargo kuryesisin. Kapida oldugunu, zili caldigini ve 4 haneli teslimat kodunu paylasan cok gercekci tam bir kargo SMSi yaz.',
-    fallback: 'JET-KARGO: Gonderiniz dagitimda, kapinizdayiz! Teslimat kodunuz: 4821',
-  },
-  {
-    id: 'patron',
-    sender: 'SELIM BEY',
-    tag: 'IS',
-    instruction: 'Sen is yerindeki mudursun. Toplantinin saati degistigini veya sunum dosyasini soran gercekci, kibar ama aceleci tam bir is SMSi yaz.',
-    fallback: 'Selam, musteri toplantisini 15:00e cektiler. Sunum dosyasini birazdan atabilir misin?',
-  },
-  {
-    id: 'flort',
-    sender: '+90 532 *** 18',
-    tag: 'SMS',
-    instruction: 'Sen eski bir flort veya uzun zamandir yazmayan gizemli bir tanidiksin. Merak uyandiran cok dogal, samimi bir SMS yaz.',
-    fallback: 'gecen gun o sarkiyi duydum aklima sen geldin, nasilsin hala ayni yerde misin?',
-  },
-  {
-    id: 'operator_ad',
-    sender: 'RD-CELL',
-    tag: 'REKLAM',
-    instruction: 'Sen bir GSM operatorusun. Kullaniciya ozel 10GB internet paketi firsati sunan, sonunda Ret:B001 yazan eksiksiz bir reklam SMSi yaz.',
-    fallback: 'RD-CELL: Hattiniza ozel 10GB internet sadece 129TL! EVET yaz gonder. Ret:B001',
-  },
-  {
-    id: 'pizza_ad',
-    sender: 'PIZZA-3310',
-    tag: 'KAMPANYA',
-    instruction: 'Sen bir pizzacisin. Bugune ozel 1 orta boy pizza alana ikincisinin bedava oldugunu ve indirim kodunu soyleyen eksiksiz bir kampanya SMSi yaz.',
-    fallback: 'PIZZA-3310: Bugune ozel 1 orta boy pizza alana 2.si BEDAVA! Kod: RETRO26 Ret:B014',
-  },
-  {
-    id: 'bank_ad',
-    sender: 'RD-BANK',
-    tag: 'FINANS',
-    instruction: 'Sen bir bankasin. Size ozel faizsiz taksitli nakit firsatiniz hazir diyen eksiksiz gercekci bir banka SMSi yaz.',
-    fallback: 'RD-BANK: Size ozel 50.000 TL %0 faizli hos geldin kredisi hazir! Ret:B002',
-  },
-  {
-    id: 'market_ad',
-    sender: 'PIXEL-MALL',
-    tag: 'INDIRIM',
-    instruction: 'Sen bir magazasın. Hafta sonuna ozel secili urunlerde %40 indirim veya 3 AL 2 ODE firsatini duyuran eksiksiz bir reklam SMSi yaz.',
-    fallback: 'PIXEL-MALL: Hafta sonuna ozel tum urunlerde 3 AL 2 ODE basladi! Ret:B042',
-  },
-];
+export const LIVE_SMS_PERSONAS_BY_LANG: Record<RetroLang, LiveSmsPersona[]> = {
+  en: [
+    {
+      id: 'kanka',
+      sender: 'JAKE (BRO)',
+      tag: 'SMS',
+      instruction:
+        'You are Jake, the user\'s close friend. Write a super natural, casual 1-sentence English SMS about pickup soccer, gaming tonight, grabbing coffee, or hanging out.',
+      fallback: 'yo 5-a-side tonight at 8 dont bail on us, we need one more player hmu',
+    },
+    {
+      id: 'anne',
+      sender: 'MOM',
+      tag: 'FAMILY',
+      instruction:
+        'You are the user\'s mom. Write a warm, funny, realistic 1-sentence English SMS asking what time they are coming home, saying dinner is ready, or reminding them to grab a jacket.',
+      fallback: 'honey what time are u coming home? made your favorite pasta dont let it get cold',
+    },
+    {
+      id: 'kurye',
+      sender: 'JET-EXPRESS',
+      tag: 'DELIVERY',
+      instruction:
+        'You are a parcel delivery courier. Write a realistic English SMS saying you are at the front door ringing the bell and include a 4-digit delivery PIN.',
+      fallback: 'JET-EXPRESS: Courier is at your door! Your 4-digit delivery PIN: 4821',
+    },
+    {
+      id: 'patron',
+      sender: 'MR. CARTER',
+      tag: 'WORK',
+      instruction:
+        'You are a busy but polite manager at work. Write a realistic English work SMS asking about a moved meeting time or needing the slide deck.',
+      fallback: 'Hey, they moved the client sync up to 3:00 PM. Can you send the deck shortly?',
+    },
+    {
+      id: 'flort',
+      sender: '+1 415 *** 18',
+      tag: 'SMS',
+      instruction:
+        'You are an old crush or mysterious acquaintance who hasn\'t texted in a while. Write an intriguing, natural, warm English SMS.',
+      fallback: 'heard that song earlier and thought of you, how have you been lately?',
+    },
+    {
+      id: 'operator_ad',
+      sender: 'RD-CELL',
+      tag: 'PROMO',
+      instruction:
+        'You are a wireless carrier. Write a complete English promo SMS offering an exclusive 10GB 5G data pack and ending with Stop:B001.',
+      fallback: 'RD-CELL: Exclusive 10GB 5G data pack for $9.99! Reply YES to claim. Stop:B001',
+    },
+    {
+      id: 'pizza_ad',
+      sender: 'PIZZA-3310',
+      tag: 'DEAL',
+      instruction:
+        'You are a retro pizza shop. Write a complete English promo SMS for a Buy 1 Medium Pizza Get 1 Free deal today with a promo code and ending with Stop:B014.',
+      fallback: 'PIZZA-3310: Today only BUY 1 medium pizza GET 1 FREE! Code: RETRO26 Stop:B014',
+    },
+    {
+      id: 'bank_ad',
+      sender: 'RD-BANK',
+      tag: 'FINANCE',
+      instruction:
+        'You are a bank. Write a realistic complete English SMS announcing a pre-approved 0% APR installment offer ending with Stop:B002.',
+      fallback: 'RD-BANK: Your pre-approved $5,000 0% APR welcome offer is ready! Stop:B002',
+    },
+    {
+      id: 'market_ad',
+      sender: 'PIXEL-MALL',
+      tag: 'SALE',
+      instruction:
+        'You are a tech/fashion store. Write a complete English promo SMS announcing a weekend 40% OFF or Buy 2 Get 1 Free deal ending with Stop:B042.',
+      fallback: 'PIXEL-MALL: Weekend flash sale! Buy 2 Get 1 Free on all gear today! Stop:B042',
+    },
+  ],
+  tr: [
+    {
+      id: 'kanka',
+      sender: 'MERT (KANKA)',
+      tag: 'SMS',
+      instruction: 'Sen kullanicinin yakin Turk arkadasisin (Mert). Halisaha, aksam bulusma, kahve veya oyun hakkinda cok dogal, samimi, sokak agziyla tam bir cumlelik SMS yaz.',
+      fallback: 'kanka aksam 8de halisaha var unutmadin di mi? adam lazim acil don',
+    },
+    {
+      id: 'anne',
+      sender: 'ANNEM',
+      tag: 'AILE',
+      instruction: 'Sen kullanicinin Turk annesisin. Aksam kacta gelecegini sor, yemek yaptigini soyle veya ustunu siki giy gibi cok dogal, samimi tam bir anne SMSi yaz.',
+      fallback: 'oglum aksam kacta geliyosun? sevdigin yemegi yaptim sogumasin haber ver',
+    },
+    {
+      id: 'kurye',
+      sender: 'JET-KARGO',
+      tag: 'KARGO',
+      instruction: 'Sen kargo kuryesisin. Kapida oldugunu, zili caldigini ve 4 haneli teslimat kodunu paylasan cok gercekci tam bir kargo SMSi yaz.',
+      fallback: 'JET-KARGO: Gonderiniz dagitimda, kapinizdayiz! Teslimat kodunuz: 4821',
+    },
+    {
+      id: 'patron',
+      sender: 'SELIM BEY',
+      tag: 'IS',
+      instruction: 'Sen is yerindeki mudursun. Toplantinin saati degistigini veya sunum dosyasini soran gercekci, kibar ama aceleci tam bir is SMSi yaz.',
+      fallback: 'Selam, musteri toplantisini 15:00e cektiler. Sunum dosyasini birazdan atabilir misin?',
+    },
+    {
+      id: 'flort',
+      sender: '+90 532 *** 18',
+      tag: 'SMS',
+      instruction: 'Sen eski bir flort veya uzun zamandir yazmayan gizemli bir tanidiksin. Merak uyandiran cok dogal, samimi bir SMS yaz.',
+      fallback: 'gecen gun o sarkiyi duydum aklima sen geldin, nasilsin hala ayni yerde misin?',
+    },
+    {
+      id: 'operator_ad',
+      sender: 'RD-CELL',
+      tag: 'REKLAM',
+      instruction: 'Sen bir GSM operatorusun. Kullaniciya ozel 10GB internet paketi firsati sunan, sonunda Ret:B001 yazan eksiksiz bir reklam SMSi yaz.',
+      fallback: 'RD-CELL: Hattiniza ozel 10GB internet sadece 129TL! EVET yaz gonder. Ret:B001',
+    },
+    {
+      id: 'pizza_ad',
+      sender: 'PIZZA-3310',
+      tag: 'KAMPANYA',
+      instruction: 'Sen bir pizzacisin. Bugune ozel 1 orta boy pizza alana ikincisinin bedava oldugunu ve indirim kodunu soyleyen eksiksiz bir kampanya SMSi yaz.',
+      fallback: 'PIZZA-3310: Bugune ozel 1 orta boy pizza alana 2.si BEDAVA! Kod: RETRO26 Ret:B014',
+    },
+    {
+      id: 'bank_ad',
+      sender: 'RD-BANK',
+      tag: 'FINANS',
+      instruction: 'Sen bir bankasin. Size ozel faizsiz taksitli nakit firsatiniz hazir diyen eksiksiz gercekci bir banka SMSi yaz.',
+      fallback: 'RD-BANK: Size ozel 50.000 TL %0 faizli hos geldin kredisi hazir! Ret:B002',
+    },
+    {
+      id: 'market_ad',
+      sender: 'PIXEL-MALL',
+      tag: 'INDIRIM',
+      instruction: 'Sen bir magazasın. Hafta sonuna ozel secili urunlerde %40 indirim veya 3 AL 2 ODE firsatini duyuran eksiksiz bir reklam SMSi yaz.',
+      fallback: 'PIXEL-MALL: Hafta sonuna ozel tum urunlerde 3 AL 2 ODE basladi! Ret:B042',
+    },
+  ],
+};
+
+export const LIVE_SMS_PERSONAS: LiveSmsPersona[] = LIVE_SMS_PERSONAS_BY_LANG.en;
 
 export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'istanbul', title: 'ISTANBUL', image: require('../../assets/postcards/istanbul.jpg') },

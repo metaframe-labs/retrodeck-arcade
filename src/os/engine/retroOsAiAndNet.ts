@@ -11,17 +11,18 @@ import {
 } from '../../services/byokAiService';
 import {
   ALL_PIC_ART_KEYS,
-  DYNAMIC_MOODS,
-  LIVE_SMS_PERSONAS,
+  DYNAMIC_MOODS_BY_LANG,
+  LIVE_SMS_PERSONAS_BY_LANG,
   NOKIA_SMS_TONES,
   OsAppId,
   PicArtKey,
-  UNEXPECTED_TWISTS,
+  UNEXPECTED_TWISTS_BY_LANG,
   WEATHER_CITY_STORAGE_KEY,
   parseHtmlToWapLines,
   stripEmojis,
   stripMarkdownForLcd,
 } from '../retroOsData';
+import { pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId?: string, userReply?: string): Promise<boolean> {
@@ -31,24 +32,39 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
     !meta.requiresKey || Boolean(os.byokConfig.keys[os.byokConfig.activeProvider]?.trim());
   if (!hasKey) return false;
 
+  const lang = os.lang;
+  const personas = LIVE_SMS_PERSONAS_BY_LANG[lang] || LIVE_SMS_PERSONAS_BY_LANG.en;
+  const moods = DYNAMIC_MOODS_BY_LANG[lang] || DYNAMIC_MOODS_BY_LANG.en;
+  const twists = UNEXPECTED_TWISTS_BY_LANG[lang] || UNEXPECTED_TWISTS_BY_LANG.en;
+
   const persona =
-    (forcedPersonaId ? LIVE_SMS_PERSONAS.find((p) => p.id === forcedPersonaId) : null) ||
-    LIVE_SMS_PERSONAS[Math.floor(Math.random() * LIVE_SMS_PERSONAS.length)];
+    (forcedPersonaId ? personas.find((p) => p.id === forcedPersonaId) : null) ||
+    personas[Math.floor(Math.random() * personas.length)];
 
   os.liveSmsFetching = true;
   try {
     const history = os.personaHistories[persona.id] || [];
-    const mood = DYNAMIC_MOODS[Math.floor(Math.random() * DYNAMIC_MOODS.length)];
+    const mood = moods[Math.floor(Math.random() * moods.length)];
     const isUnexpected = !userReply && Math.random() < 0.3;
     const twist = isUnexpected
-      ? `\nEKSTRA DURUM: ${UNEXPECTED_TWISTS[Math.floor(Math.random() * UNEXPECTED_TWISTS.length)]}`
+      ? pickLang(
+          lang,
+          `\nEXTRA SITUATION: ${twists[Math.floor(Math.random() * twists.length)]}`,
+          `\nEKSTRA DURUM: ${twists[Math.floor(Math.random() * twists.length)]}`
+        )
       : '';
 
-    const systemContext =
+    const systemContext = pickLang(
+      lang,
       `${persona.instruction}\n` +
-      `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
-      `SAAT: ${os.formatClock()}.\n` +
-      `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla emoji kullanma, asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`;
+        `CURRENT MOOD / VIBE: ${mood}.${twist}\n` +
+        `TIME: ${os.formatClock()}.\n` +
+        `RULE: Write ONE realistic SMS strictly in English (40 to 120 chars). Continue naturally if there is prior conversation history. Never use emojis, never reveal you are an AI, no quotes or titles.`,
+      `${persona.instruction}\n` +
+        `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
+        `SAAT: ${os.formatClock()}.\n` +
+        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci Turkce SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla emoji kullanma, asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`
+    );
 
     const messages: BYOKChatMessage[] = [
       { role: 'user', content: systemContext },
@@ -56,10 +72,22 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
       {
         role: 'user',
         content: userReply
-          ? `Kullanici sana su cevabi yazdi: "${userReply}". Karakterinle ve ruh halinle dogal bir SMS cevabi yaz.`
+          ? pickLang(
+              lang,
+              `The user replied to you: "${userReply}". Reply naturally in character matching your current mood in English.`,
+              `Kullanici sana su cevabi yazdi: "${userReply}". Karakterinle ve ruh halinle dogal bir SMS cevabi yaz.`
+            )
           : history.length > 0
-          ? 'Onceki sohbetimize de bagli kalarak (veya yeni bir konuyla) bana simdi rastgele bir SMS at.'
-          : 'Bana simdi tam bir SMS mesaji gonder.',
+          ? pickLang(
+              lang,
+              'Following up on our earlier chat (or starting a fresh topic), send me a random SMS right now.',
+              'Onceki sohbetimize de bagli kalarak (veya yeni bir konuyla) bana simdi rastgele bir SMS at.'
+            )
+          : pickLang(
+              lang,
+              'Send me a realistic SMS message right now.',
+              'Bana simdi tam bir SMS mesaji gonder.'
+            ),
       },
     ];
 
@@ -91,11 +119,11 @@ export async function triggerLivePersonaSmsImpl(os: RetroDeckOS, forcedPersonaId
       isLivePersona: true,
       personaId: persona.id,
       timestamp: os.formatClock(),
-      mood: isUnexpected ? 'SURPRIZ' : mood.split(' ')[0],
+      mood: isUnexpected ? pickLang(lang, 'SURPRISE', 'SURPRIZ') : mood.split(' ')[0],
     });
     if (os.smsList.length > 25) os.smsList.pop();
     os.smsIdx = 0;
-    os.smsBanner = `✉ NEW SMS: ${persona.sender}`;
+    os.smsBanner = `✉ ${tOs('smsNewBanner', lang)}: ${persona.sender}`;
     os.smsBannerTimer = 4.5;
     if (os.app !== 'sms' || os.keyLocked) os.unreadSmsCount += 1;
     os.saveSmsList();
@@ -251,6 +279,10 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
         os.unlockStage = false;
         os.cb.onRequestKeyboard?.(false);
       }, 550);
+    } else if (cmd === 'SET_LANG') {
+      const nextLang = arg.toLowerCase() === 'tr' ? 'tr' : 'en';
+      os.setLang(nextLang);
+      actionLogs.push(`LANGUAGE: ${nextLang.toUpperCase()}`);
     } else if (cmd === 'REBOOT') {
       actionLogs.push('REBOOTING OS...');
       setTimeout(() => {
@@ -285,25 +317,47 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
   os.cb.onPlaySound?.('shoot');
 
   try {
-    const sysGuide =
+    const sysGuide = pickLang(
+      os.lang,
+      `You are the built-in AI assistant of the RetroDeck OS handheld console. You can directly control the user's device.\n` +
+        `Current state: Theme=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radio=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Lang=${os.lang.toUpperCase()}.\n` +
+        `If the user asks to open an app, launch a game, change theme, toggle radio/music, add a note, check weather, change language, lock the screen, or trigger a live SMS, append the matching tag at the end of your reply:\n` +
+        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:PLAY_GAME|<game e.g. snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
+        `[[ACTION:SET_THEME|<theme e.g. gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
+        `[[ACTION:CYCLE_THEME]]\n` +
+        `[[ACTION:RADIO|PLAY|STOP|NEXT|PREV]]\n` +
+        `[[ACTION:WEATHER|<city>]]\n` +
+        `[[ACTION:ADD_NOTE|<note text>]]\n` +
+        `[[ACTION:SCANLINES|ON|OFF|TOGGLE]]\n` +
+        `[[ACTION:MUTE|ON|OFF]]\n` +
+        `[[ACTION:PLAY_SONG|<song name>]]\n` +
+        `[[ACTION:STOP_AUDIO]]\n` +
+        `[[ACTION:LIVE_SMS]]\n` +
+        `[[ACTION:SET_LANG|en|tr]]\n` +
+        `[[ACTION:LOCK]]\n` +
+        `[[ACTION:REBOOT]]\n` +
+        `Keep answers short, clear, and helpful in English. Never use emojis, plain text only. Omit ACTION tags when no control action is needed.`,
       `Sen RetroDeck OS el konsolunun dahili AI asistanisin. Kullanicinin cihazini dogrudan kontrol edebilirsin.\n` +
-      `Mevcut durum: Tema=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}.\n` +
-      `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
-      `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
-      `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
-      `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
-      `[[ACTION:CYCLE_THEME]]\n` +
-      `[[ACTION:RADIO|PLAY|STOP|NEXT|PREV]]\n` +
-      `[[ACTION:WEATHER|<sehir>]]\n` +
-      `[[ACTION:ADD_NOTE|<not metni>]]\n` +
-      `[[ACTION:SCANLINES|ON|OFF|TOGGLE]]\n` +
-      `[[ACTION:MUTE|ON|OFF]]\n` +
-      `[[ACTION:PLAY_SONG|<melodi adi>]]\n` +
-      `[[ACTION:STOP_AUDIO]]\n` +
-      `[[ACTION:LIVE_SMS]]\n` +
-      `[[ACTION:LOCK]]\n` +
-      `[[ACTION:REBOOT]]\n` +
-      `Kisa, net ve yardimsever cevap ver. Asla emoji kullanma, sadece duz metin yaz. Islem gerekmiyorsa hic ACTION etiketi ekleme.`;
+        `Mevcut durum: Tema=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Dil=${os.lang.toUpperCase()}.\n` +
+        `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, dil degistirmek, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
+        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
+        `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
+        `[[ACTION:CYCLE_THEME]]\n` +
+        `[[ACTION:RADIO|PLAY|STOP|NEXT|PREV]]\n` +
+        `[[ACTION:WEATHER|<sehir>]]\n` +
+        `[[ACTION:ADD_NOTE|<not metni>]]\n` +
+        `[[ACTION:SCANLINES|ON|OFF|TOGGLE]]\n` +
+        `[[ACTION:MUTE|ON|OFF]]\n` +
+        `[[ACTION:PLAY_SONG|<melodi adi>]]\n` +
+        `[[ACTION:STOP_AUDIO]]\n` +
+        `[[ACTION:LIVE_SMS]]\n` +
+        `[[ACTION:SET_LANG|en|tr]]\n` +
+        `[[ACTION:LOCK]]\n` +
+        `[[ACTION:REBOOT]]\n` +
+        `Kisa, net ve yardimsever Turkce cevap ver. Asla emoji kullanma, sadece duz metin yaz. Islem gerekmiyorsa hic ACTION etiketi ekleme.`
+    );
 
     const payload: BYOKChatMessage[] = [
       { role: 'user', content: sysGuide },
@@ -358,7 +412,11 @@ export async function sendPictureSmsToAiImpl(os: RetroDeckOS) {
   os.smsBannerTimer = 10;
 
   try {
-    const prompt = `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only). Start your reply with one tag: [COFFEE], [SMILE], [COOL], [WINK], [HEART], [SAD], [CAT], [ALIEN], [SKULL], [MUSIC], [CAKE], or [SNAKE].`;
+    const prompt = pickLang(
+      os.lang,
+      `You received a Nokia 3310 Picture SMS: [${cur.title}] "${cur.text}". Reply like a witty 2000s Nokia 3310 user in English (max 75 chars, plain text only, no emojis). Start your reply with one tag: [COFFEE], [SMILE], [COOL], [WINK], [HEART], [SAD], [CAT], [ALIEN], [SKULL], [MUSIC], [CAKE], or [SNAKE].`,
+      `Bir Nokia 3310 Picture SMS aldin: [${cur.title}] "${cur.text}". 2000ler Nokia 3310 kullanicisi gibi esprili bir Turkce cevap yaz (en fazla 75 karakter, sadece duz metin, emoji yasak). Cevabinin basina su etiketlerden birini koy: [COFFEE], [SMILE], [COOL], [WINK], [HEART], [SAD], [CAT], [ALIEN], [SKULL], [MUSIC], [CAKE], or [SNAKE].`
+    );
     const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], os.byokConfig);
     const cleaned = stripMarkdownForLcd(raw).toUpperCase();
 
