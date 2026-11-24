@@ -1,10 +1,27 @@
+<div align="center">
+
 # RetroDeck OS & Arcade
 
-<p align="center">
-  <img src="assets/retrodeck-showcase.jpg" alt="RetroDeck OS — Pocket Operating System Showcase" width="460" />
-</p>
-
 **100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • 100 Hardware & LCD Themes • Live SomaFM Radio • OS-Controlling BYOK AI • Live Persona SMS & Postcard Studio • Contacts • EN/TR i18n**
+
+[![Expo](https://img.shields.io/badge/Expo-SDK_58-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React_Native-0.88-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+![Platforms](https://img.shields.io/badge/Platforms-iOS_%7C_Android_%7C_Web-0B1117?style=for-the-badge&logo=android&logoColor=9BBC0F)
+[![MetaFrame Labs](https://img.shields.io/badge/MetaFrame_Labs-v1.0.0-E5B869?style=for-the-badge&labelColor=0B1117)](https://www.metaframelabs.space/)
+
+![Cartridges](https://img.shields.io/badge/Cartridges-100_%40_60_FPS-9BBC0F?style=flat-square&labelColor=0B1117)
+![Nokia 3310 OS](https://img.shields.io/badge/Nokia_3310_OS-17_Apps-9BBC0F?style=flat-square&labelColor=0B1117)
+![AI Orchestration](https://img.shields.io/badge/AI_Orchestration-9_Providers-B7FF00?style=flat-square&labelColor=0B1117)
+![Themes](https://img.shields.io/badge/Themes-100_Palettes-9BBC0F?style=flat-square&labelColor=0B1117)
+![i18n](https://img.shields.io/badge/i18n-EN_%7C_TR-38BDF8?style=flat-square&labelColor=0B1117)
+![Zero WebView](https://img.shields.io/badge/Zero_WebView-Pure_TS_Engine-22C55E?style=flat-square&labelColor=0B1117)
+
+<br />
+
+<img src="assets/retrodeck-showcase.jpg" alt="RetroDeck OS — Pocket Operating System Showcase" width="460" />
+
+</div>
 
 Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebViews, pure TypeScript deterministic 60 FPS engine running inside a 4:3 monochrome / phosphor dot-matrix LCD screen, complete with a full **Nokia 3310 Operating System (`RetroDeck OS`)**, a 3-mode hot-swappable **Gamepad (`PAD`) ↔ Nokia 3×4 Numeric (`NUM`) ↔ Communicator QWERTY (`KBD`)** deck, **100 playable 60 FPS cartridges**, **100 persistent full-hardware themes**, **live SomaFM streaming radio**, **Open-Meteo weather**, **interactive Unix shell (`rdsh`)**, **★ Favorites**, and an in-app **Custom Game Studio** compiler.
 
