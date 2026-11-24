@@ -1074,6 +1074,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private callTitle = '';
   private callSub = '';
   private callTimer = 0;
+  private ringRepeatTimer = 0;
+  private ringDuration = 0;
 
   private smsList: NokiaPicSms[] = INITIAL_PIC_MESSAGES.map((m) => ({ ...m }));
   private smsIdx = 0;
@@ -1532,7 +1534,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.callState = 'ringing';
       this.callTitle = 'RETRODECK CALLING';
       this.callSub = `♪ ${activeRing.title.trim()}`;
-      RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
+      const res = RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
+      this.ringRepeatTimer = 0;
+      this.ringDuration = res.totalSec > 0 ? res.totalSec : 2.5;
       return null;
     }
     if (k === 'CALL') {
@@ -2089,6 +2093,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
       }
     }
 
+    if (this.callState === 'ringing') {
+      this.ringRepeatTimer += dt;
+      if (this.ringRepeatTimer >= this.ringDuration + 0.45) {
+        this.ringRepeatTimer = 0;
+        const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
+        const res = RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
+        this.ringDuration = res.totalSec > 0 ? res.totalSec : 2.5;
+      }
+    }
     if (this.callState === 'connected') {
       this.callTimer += dt;
     }
@@ -2161,7 +2174,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.synthClearConfirm = false;
         return 'hit';
       }
-      if (this.melodyPlaying || this.cdAlarmActive) {
+      if (this.melodyPlaying || this.cdAlarmActive || this.callState === 'ringing') {
         this.melodyPlaying = false;
         this.cdAlarmActive = false;
         RetroAudioEngine.stopNokiaMelody();
