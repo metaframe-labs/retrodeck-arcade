@@ -2653,7 +2653,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={[styles.container, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={[styles.bootLogo, { color: fg }]}>RETRODECK OS</Text>
-          <Text style={[styles.bootSub, { color: fg }]}>NOKIA 3310 AI KERNEL v1.2</Text>
+          <Text style={[styles.bootSub, { color: fg }]}>RETRODECK OS KERNEL v1.2</Text>
           <View style={[styles.bootBar, { borderColor: fg }]}>
             <View style={{ width: `${pct}%`, height: '100%', backgroundColor: fg }} />
           </View>
