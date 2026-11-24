@@ -28,7 +28,7 @@ export const trLocale: LocaleBundle = {
     // Boot & Titles
     bootSub: 'RETRODECK OS CEKIRDEK v1.2',
     bootMemCheck: 'BELLEK TESTI: 64KB OK',
-    bootMounting: '{count} KARTUS + BYOK YUKLENIYOR...',
+    bootMounting: '{count} OYUN + AKILLI AI YUKLENIYOR...',
     bootStarting: 'MASAUSTU BASLATILIYOR...',
     titleKeyguard: 'RD-OS TUS KILIDI',
     titleBoot: 'BIOS BASLANGIC',

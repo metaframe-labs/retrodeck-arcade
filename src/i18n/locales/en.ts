@@ -26,7 +26,7 @@ export const enLocale = {
     // Boot & Titles
     bootSub: 'RETRODECK OS KERNEL v1.2',
     bootMemCheck: 'MEM CHECK: 64KB OK',
-    bootMounting: 'MOUNTING {count} CARTS + BYOK...',
+    bootMounting: 'LOADING {count} GAMES + SMART AI...',
     bootStarting: 'STARTING DESKTOP...',
     titleKeyguard: 'RD-OS KEYGUARD',
     titleBoot: 'BIOS BOOT',

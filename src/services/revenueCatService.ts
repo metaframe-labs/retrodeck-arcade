@@ -11,6 +11,8 @@ import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 export const REVENUECAT_API_KEY = 'test_sIXFfTgPfDmQXGqlTkwVLEBbVWJ';
 export const ENTITLEMENT_ID = 'retrodeck_os_pro';
 const DEBUG_REVOKED_STORAGE_KEY = '@retrodeck8_debug_pro_revoked_v1';
+/** Set to `false` before App Store / Play Store release to enforce real IAP gating */
+export const UNLOCK_ALL_PRO_FOR_BUILD = true;
 
 export interface SubscriptionStatus {
   isPro: boolean;
@@ -35,8 +37,8 @@ class RevenueCatService {
   private debugRevoked = false;
   private listeners: ((status: SubscriptionStatus) => void)[] = [];
   private currentStatus: SubscriptionStatus = {
-    isPro: false,
-    activeSubscriptions: [],
+    isPro: UNLOCK_ALL_PRO_FOR_BUILD,
+    activeSubscriptions: UNLOCK_ALL_PRO_FOR_BUILD ? ['retrodeck_pro_build_unlock'] : [],
     expirationDate: null,
     customerInfo: null,
   };
@@ -75,10 +77,19 @@ class RevenueCatService {
     if (this.isConfigured) return;
 
     try {
-      // Load persisted debug revoke flag
-      const savedRevoked = await AsyncStorage.getItem(DEBUG_REVOKED_STORAGE_KEY);
-      if (savedRevoked === '1') {
-        this.debugRevoked = true;
+      // Load persisted debug revoke flag only when not forced-unlocked for build testing
+      if (!UNLOCK_ALL_PRO_FOR_BUILD) {
+        const savedRevoked = await AsyncStorage.getItem(DEBUG_REVOKED_STORAGE_KEY);
+        if (savedRevoked === '1') {
+          this.debugRevoked = true;
+          this.currentStatus = {
+            isPro: false,
+            activeSubscriptions: [],
+            expirationDate: null,
+            customerInfo: null,
+          };
+          this.listeners.forEach((listener) => listener(this.currentStatus));
+        }
       }
 
       // Don't crash on web or unsupported simulators without billing
@@ -108,9 +119,15 @@ class RevenueCatService {
    * Updates internal state and notifies subscribers
    */
   private updateCustomerInfo(customerInfo: CustomerInfo): void {
-    const rawPro = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+    const rawPro = !!customerInfo.entitlements.active[ENTITLEMENT_ID] || UNLOCK_ALL_PRO_FOR_BUILD;
     const isPro = this.debugRevoked ? false : rawPro;
-    const activeSubscriptions = this.debugRevoked ? [] : (customerInfo.activeSubscriptions || []);
+    const activeSubscriptions = this.debugRevoked
+      ? []
+      : customerInfo.activeSubscriptions?.length
+      ? customerInfo.activeSubscriptions
+      : UNLOCK_ALL_PRO_FOR_BUILD
+      ? ['retrodeck_pro_build_unlock']
+      : [];
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
     const expirationDate = this.debugRevoked ? null : (entitlement?.expirationDate || null);
 
@@ -128,14 +145,14 @@ class RevenueCatService {
    * Check if user has active Pro entitlement
    */
   public async checkProEntitlement(): Promise<boolean> {
-    if (!this.isConfigured) return false;
+    if (!this.isConfigured) return UNLOCK_ALL_PRO_FOR_BUILD && !this.debugRevoked;
     try {
       const customerInfo = await Purchases.getCustomerInfo();
       this.updateCustomerInfo(customerInfo);
-      return !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+      return this.currentStatus.isPro;
     } catch (error) {
       console.warn('[RevenueCat] Error checking entitlement:', error);
-      return false;
+      return UNLOCK_ALL_PRO_FOR_BUILD && !this.debugRevoked;
     }
   }
 

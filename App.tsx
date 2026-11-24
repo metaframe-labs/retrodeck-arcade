@@ -79,8 +79,8 @@ function RetroDeckConsole() {
   const [stats, setStats] = useState<ArcadeStats>(() => gameRef.current.getStats());
   const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
   const [scanlines, setScanlines] = useState(false);
-  const [isPro, setIsPro] = useState(false);
-  const isProRef = useRef(false);
+  const [isPro, setIsPro] = useState(() => revenueCatService.getStatus().isPro);
+  const isProRef = useRef(isPro);
   isProRef.current = isPro;
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(() => RetroAudioEngine.getMuted());
