@@ -7,13 +7,15 @@
 [![Expo](https://img.shields.io/badge/Expo-SDK_58-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.88-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![MetaFrame Labs](https://img.shields.io/badge/MetaFrame_Labs-v1.0-E5B869?style=for-the-badge&labelColor=0B1117)](https://www.metaframelabs.space/)
+![Platforms](assets/badges/platforms.svg)
+[![MetaFrame Labs](assets/badges/metaframe.svg)](https://www.metaframelabs.space/)
 
-![Arcade](https://img.shields.io/badge/Arcade-100_Games_60_FPS-9BBC0F?style=flat-square&labelColor=0B1117)
-![Pocket OS](https://img.shields.io/badge/Pocket_OS-17_Nokia_Apps-9BBC0F?style=flat-square&labelColor=0B1117)
-![BYOK AI](https://img.shields.io/badge/BYOK_AI-9_Providers-B7FF00?style=flat-square&labelColor=0B1117)
-![i18n](https://img.shields.io/badge/Bilingual-EN_TR-38BDF8?style=flat-square&labelColor=0B1117)
-![Zero WebView](https://img.shields.io/badge/Zero_WebView-Pure_TS_Engine-22C55E?style=flat-square&labelColor=0B1117)
+![Cartridges](assets/badges/arcade.svg)
+![Nokia 3310 OS](assets/badges/nokia-os.svg)
+![AI Orchestration](assets/badges/ai-providers.svg)
+![Themes](assets/badges/themes.svg)
+![i18n](assets/badges/i18n.svg)
+![Zero WebView](assets/badges/zero-webview.svg)
 
 <br />
 
