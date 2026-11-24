@@ -924,6 +924,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.cb.onPlaySound?.('die');
   }
 
+  private triggerPurchaseSuccessSms(planName: string) {
+    this.smsList.unshift({
+      sender: 'RETRODECK-VIP',
+      title: 'PRO ACTIVATED!',
+      text: `CONGRATS! RETRODECK PRO (${planName.toUpperCase()}) IS NOW ACTIVE! ALL 100 CARTS, DEV VAULT & UNLIMITED AI UNLOCKED!`,
+      artKey: 'COOL',
+    });
+    if (this.smsList.length > 10) this.smsList.pop();
+    this.smsIdx = 0;
+    this.smsBanner = '✉ NEW SMS: WELCOME TO PRO!';
+    this.smsBannerTimer = 5.0;
+    RetroAudioEngine.playNokiaSmsTone();
+    this.cb.onPlaySound?.('powerup');
+  }
+
   // AI & BYOK state
   private byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
   private aiTab: 'chat' | 'byok' = 'chat';
@@ -2764,6 +2779,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             this.proBusy = false;
             if (res.success || res.isPro) {
               this.proStatusMsg = 'WELCOME TO PRO!';
+              this.triggerPurchaseSuccessSms(targetType);
             } else if (res.userCancelled) {
               this.proStatusMsg = 'TRANSACTION CANCELLED.';
               this.triggerPurchaseFailedSms('USER CANCELLED');
@@ -3115,6 +3131,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.triggerPurchaseFailedSms('TEST ERROR: INSUFFICIENT FUNDS');
       this.pushTermLines(['SENT TEST FAILED PURCHASE SMS TO 3310!']);
       return 'die';
+    }
+
+    if (bin === 'prosms' || bin === 'winsms') {
+      this.triggerPurchaseSuccessSms('LIFETIME');
+      this.pushTermLines(['SENT WELCOME PRO SMS TO 3310!']);
+      return 'powerup';
     }
 
     if (bin === 'lock') {
