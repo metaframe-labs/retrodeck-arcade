@@ -268,7 +268,12 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
         os.smsBanner = tOs('smsSentTo', { sender: target.sender }, os.lang);
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
-        os.triggerLivePersonaSms(target.personaId, replyText);
+        os.triggerLivePersonaSms(target.personaId, replyText, undefined, target.text).then((ok) => {
+          if (!ok) {
+            os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
+            os.smsBannerTimer = 3.0;
+          }
+        });
       }
       return;
     }
@@ -287,9 +292,19 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
         if (target.personaId) {
-          os.triggerLivePersonaSms(target.personaId, msgText);
+          os.triggerLivePersonaSms(target.personaId, msgText, undefined, undefined).then((ok) => {
+            if (!ok) {
+              os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
+              os.smsBannerTimer = 3.0;
+            }
+          });
         } else {
-          os.triggerLivePersonaSms(`custom_${target.id}`, msgText, target);
+          os.triggerLivePersonaSms(`custom_${target.id}`, msgText, target, undefined).then((ok) => {
+            if (!ok) {
+              os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
+              os.smsBannerTimer = 3.0;
+            }
+          });
         }
       }
       return;

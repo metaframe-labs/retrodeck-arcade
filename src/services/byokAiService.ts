@@ -234,6 +234,10 @@ export async function callBYOKAIChat(
       sanitized.push({ role: m.role, content: m.content });
     }
   }
+  // Ensure strict providers (Gemini, Claude) always receive a 'user' turn first
+  if (sanitized.length > 0 && sanitized[0].role === 'assistant') {
+    sanitized.unshift({ role: 'user', content: '[Conversation context]' });
+  }
 
   switch (provider) {
     case 'gemini': {

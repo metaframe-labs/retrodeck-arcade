@@ -65,7 +65,8 @@ export async function triggerLivePersonaSmsImpl(
   os: RetroDeckOS,
   forcedPersonaId?: string,
   userReply?: string,
-  customContact?: RetroContact
+  customContact?: RetroContact,
+  replyingToText?: string
 ): Promise<boolean> {
   if (os.liveSmsFetching) return false;
   const meta = getProviderMeta(os.byokConfig.activeProvider);
@@ -115,11 +116,21 @@ export async function triggerLivePersonaSmsImpl(
         .reverse();
       history = inboxForPersona.map((m) => ({ role: 'assistant' as const, content: m.text }));
     }
+    if (
+      replyingToText &&
+      !history.some((h) => h.role === 'assistant' && h.content.trim() === replyingToText.trim())
+    ) {
+      history.push({ role: 'assistant', content: replyingToText.trim() });
+    }
 
-    const previousBotTexts = history
-      .filter((h) => h.role === 'assistant')
-      .map((h) => h.content)
-      .slice(-6);
+    const previousBotTexts = Array.from(
+      new Set(
+        [
+          ...(replyingToText ? [replyingToText.trim()] : []),
+          ...history.filter((h) => h.role === 'assistant').map((h) => h.content),
+        ].filter(Boolean)
+      )
+    ).slice(-6);
 
     const mood = moods[Math.floor(Math.random() * moods.length)];
     const isUnexpected = !userReply && Math.random() < 0.35;
@@ -161,35 +172,41 @@ export async function triggerLivePersonaSmsImpl(
     );
 
     const buildUserTurn = (extraGuard = ''): BYOKChatMessage[] => {
-      const chatTurns: BYOKChatMessage[] = history.slice(-10).map((h) => ({
-        role: h.role,
-        content: h.content,
-      }));
+      const threadLog = history
+        .slice(-10)
+        .map((h) => `${h.role === 'assistant' ? persona.sender : 'USER'}: "${h.content}"`)
+        .join('\n');
+      const logSection = threadLog
+        ? `[RECENT SMS THREAD]\n${threadLog}\n\n`
+        : '';
+
       const promptText = userReply
         ? pickLang(
             lang,
-            `The user just replied to your previous SMS: "${userReply}". React specifically to what they said and continue naturally.${extraGuard}`,
-            `Kullanici az onceki mesajina su cevabi yazdi: "${userReply}". Tam olarak yazdigina gore dogal bir SMS cevabi yaz.${extraGuard}`
+            `${logSection}TASK: The user just replied to ${replyingToText ? `your message "${replyingToText}"` : 'you'} with: "${userReply}".\n` +
+              `Write your direct NEXT SMS response reacting specifically to "${userReply}". Never repeat or copy your earlier SMS above.${extraGuard}`,
+            `${logSection}GOREV: Kullanici az once ${replyingToText ? `"${replyingToText}" mesajina` : 'sana'} su cevabi yazdi: "${userReply}".\n` +
+              `Kullanicinin yazdigi "${userReply}" cevabina dogrudan karsilik veren YENI bir SMS yaz. Yukaridaki eski mesajini asla tekrar etme.${extraGuard}`
           )
         : history.length > 0
         ? pickLang(
             lang,
-            `Based on the previous SMS messages you already sent above, send the NEXT logical or surprising follow-up text now (do NOT repeat old lines).${extraGuard}`,
-            `Yukarida daha once attigin mesajlara bakarak simdi SIRADAKI mantikli veya surpriz takip SMSini at (eski mesajlari sakin tekrarlama).${extraGuard}`
+            `${logSection}TASK: Based on your previous messages above, write the NEXT follow-up or a fresh topic SMS right now (completely different from previous lines).${extraGuard}`,
+            `${logSection}GOREV: Yukarida daha once attigin mesajlara gore simdi SIRADAKI devam mesajini ya da tamamen yeni bir konuyu yaz (eski mesajlari tekrarlama).${extraGuard}`
           )
         : pickLang(
             lang,
-            `Send a spontaneous, natural first SMS message right now.${extraGuard}`,
-            `Bana simdi dogal, samimi ilk SMS mesajini gonder.${extraGuard}`
+            `TASK: Send a spontaneous, natural first SMS message right now.${extraGuard}`,
+            `GOREV: Bana simdi dogal, samimi ilk SMS mesajini gonder.${extraGuard}`
           );
 
-      chatTurns.push({ role: 'user', content: promptText });
-      return chatTurns;
+      return [{ role: 'user', content: promptText }];
     };
 
     const parseReply = (raw: string) =>
       stripMarkdownForLcd(raw)
         .replace(/^["']|["']$/g, '')
+        .replace(/^(?:USER|ME|ASSISTANT|BOT):\s*/i, '')
         .replace(/\n+/g, ' ')
         .trim()
         .slice(0, 130);
@@ -201,17 +218,17 @@ export async function triggerLivePersonaSmsImpl(
 
     let cleaned = parseReply(
       await callBYOKAIChat(buildUserTurn(), os.byokConfig, systemPrompt, {
-        temperature: 0.95,
+        temperature: 0.9,
         maxTokens: 140,
       })
     );
 
     // Retry once if empty or too similar to previously sent SMS
-    if (!cleaned || cleaned.length < 10 || isSmsTooSimilar(cleaned, recentGlobalTexts)) {
+    if (!cleaned || cleaned.length < 8 || isSmsTooSimilar(cleaned, recentGlobalTexts)) {
       const retryGuard = pickLang(
         lang,
-        ' IMPORTANT: Your previous draft repeated earlier text! Write something 100% NEW with a completely different event or detail.',
-        ' ONEMLI: Onceki taslagin eski mesajla ayni cikti! Tamamen FARKLI bir olay veya detayla yepyeni bir SMS yaz.'
+        ' IMPORTANT: Your previous draft was TOO SIMILAR to what you already sent! Acknowledge the conversation naturally with 100% NEW words and details.',
+        ' ONEMLI: Onceki taslagin az onceki mesajla AYNI cikti! Tamamen YENI kelimeler ve farkli bir cumleyle cevap ver.'
       );
       const retried = parseReply(
         await callBYOKAIChat(buildUserTurn(retryGuard), os.byokConfig, systemPrompt, {
@@ -219,13 +236,30 @@ export async function triggerLivePersonaSmsImpl(
           maxTokens: 140,
         })
       );
-      if (retried && retried.length >= 10 && !isSmsTooSimilar(retried, previousBotTexts)) {
+      if (retried && retried.length >= 8 && !isSmsTooSimilar(retried, previousBotTexts)) {
+        cleaned = retried;
+      } else if (retried && retried.length >= 8 && isSmsTooSimilar(cleaned, previousBotTexts)) {
         cleaned = retried;
       }
     }
 
-    if (!cleaned || cleaned.length < 10) {
-      cleaned = persona.fallback;
+    if (!cleaned || cleaned.length < 8 || isSmsTooSimilar(cleaned, previousBotTexts)) {
+      if (userReply) {
+        const snippet = userReply.slice(0, 32);
+        cleaned = pickLang(
+          lang,
+          `Got your text ("${snippet}")! Catching up on that now, talk in a bit.`,
+          `Tamamdir mesajini aldim ("${snippet}"), ona gore hallediyorum!`
+        );
+      } else {
+        cleaned = !isSmsTooSimilar(persona.fallback, previousBotTexts)
+          ? persona.fallback
+          : pickLang(
+              lang,
+              `Quick update from ${persona.sender} at ${os.formatClock()} - still around?`,
+              `${persona.sender} saat ${os.formatClock()} itibariyla tekrar yaziyor, musait misin?`
+            );
+      }
     }
 
     // Persist expanded conversation memory per persona (up to 12 turns)

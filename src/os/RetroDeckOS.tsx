@@ -556,9 +556,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ async triggerLivePersonaSms(
     forcedPersonaId?: string,
     userReply?: string,
-    customContact?: RetroContact
+    customContact?: RetroContact,
+    replyingToText?: string
   ): Promise<boolean> {
-    return triggerLivePersonaSmsImpl(this, forcedPersonaId, userReply, customContact);
+    return triggerLivePersonaSmsImpl(this, forcedPersonaId, userReply, customContact, replyingToText);
   }
 
   /** @internal */ saveSmsList() {
