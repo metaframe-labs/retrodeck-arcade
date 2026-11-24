@@ -931,7 +931,7 @@ interface NokiaPicSms {
   text: string;
   artKey: PicArtKey;
   postcardId?: string;
-  stampEmoji?: string;
+  stampIcon?: keyof typeof Ionicons.glyphMap;
   stampLabel?: string;
   isLivePersona?: boolean;
   personaId?: string;
@@ -1029,127 +1029,138 @@ const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'campfire', title: 'NIGHT CAMP', image: require('../../assets/postcards/campfire.jpg') },
 ];
 
-const POSTCARD_EMOJIS: { emoji: string; label: string }[] = [
-  { emoji: '❤️', label: 'LOVE' },
-  { emoji: '🔥', label: 'FIRE' },
-  { emoji: '✨', label: 'MAGIC' },
-  { emoji: '🎉', label: 'PARTY' },
-  { emoji: '🥳', label: 'CHEERS' },
-  { emoji: '😎', label: 'COOL' },
-  { emoji: '😍', label: 'CRUSH' },
-  { emoji: '😂', label: 'LOL' },
-  { emoji: '🥺', label: 'MISS U' },
-  { emoji: '😜', label: 'WINK' },
-  { emoji: '🤖', label: 'BOT' },
-  { emoji: '👽', label: 'ALIEN' },
-  { emoji: '👾', label: 'RETRO' },
-  { emoji: '👻', label: 'GHOST' },
-  { emoji: '💀', label: 'SKULL' },
-  { emoji: '👑', label: 'CROWN' },
-  { emoji: '💎', label: 'GEM' },
-  { emoji: '🏆', label: 'TROPHY' },
-  { emoji: '🎮', label: 'GAMER' },
-  { emoji: '🕹️', label: 'ARCADE' },
-  { emoji: '🚀', label: 'ROCKET' },
-  { emoji: '🛸', label: 'UFO' },
-  { emoji: '🌍', label: 'EARTH' },
-  { emoji: '🪐', label: 'PLANET' },
-  { emoji: '🌙', label: 'MOON' },
-  { emoji: '☀️', label: 'SUN' },
-  { emoji: '⭐', label: 'STAR' },
-  { emoji: '⚡', label: 'BOLT' },
-  { emoji: '🌈', label: 'RAINBOW' },
-  { emoji: '❄️', label: 'SNOW' },
-  { emoji: '🌊', label: 'WAVE' },
-  { emoji: '⛈️', label: 'STORM' },
-  { emoji: '🌴', label: 'BEACH' },
-  { emoji: '🏔️', label: 'ALPINE' },
-  { emoji: '🏕️', label: 'CAMP' },
-  { emoji: '🗼', label: 'PARIS' },
-  { emoji: '🗽', label: 'NYC' },
-  { emoji: '🏰', label: 'CASTLE' },
-  { emoji: '🏯', label: 'TOKYO' },
-  { emoji: '🎡', label: 'FERRIS' },
-  { emoji: '🌅', label: 'SUNSET' },
-  { emoji: '🌃', label: 'CITY' },
-  { emoji: '🎆', label: 'SHOW' },
-  { emoji: '🎇', label: 'SPARK' },
-  { emoji: '✈️', label: 'FLIGHT' },
-  { emoji: '🚂', label: 'TRAIN' },
-  { emoji: '⛵', label: 'SAIL' },
-  { emoji: '🏎️', label: 'TURBO' },
-  { emoji: '🚲', label: 'BIKE' },
-  { emoji: '🛵', label: 'SCOOT' },
-  { emoji: '☕', label: 'COFFEE' },
-  { emoji: '🍵', label: 'MATCHA' },
-  { emoji: '🍕', label: 'PIZZA' },
-  { emoji: '🍔', label: 'BURGER' },
-  { emoji: '🍟', label: 'FRIES' },
-  { emoji: '🌮', label: 'TACO' },
-  { emoji: '🍣', label: 'SUSHI' },
-  { emoji: '🍩', label: 'DONUT' },
-  { emoji: '🍰', label: 'CAKE' },
-  { emoji: '🎂', label: 'BDAY' },
-  { emoji: '🍦', label: 'GELATO' },
-  { emoji: '🍓', label: 'BERRY' },
-  { emoji: '🍒', label: 'CHERRY' },
-  { emoji: '🍉', label: 'MELON' },
-  { emoji: '🍺', label: 'BEER' },
-  { emoji: '🥂', label: 'TOAST' },
-  { emoji: '🎵', label: 'MUSIC' },
-  { emoji: '🎶', label: 'NOTES' },
-  { emoji: '🎸', label: 'GUITAR' },
-  { emoji: '🎹', label: 'PIANO' },
-  { emoji: '🎧', label: 'AUDIO' },
-  { emoji: '📻', label: 'RADIO' },
-  { emoji: '📼', label: 'TAPE' },
-  { emoji: '📷', label: 'PHOTO' },
-  { emoji: '🎬', label: 'CINEMA' },
-  { emoji: '🎨', label: 'ART' },
-  { emoji: '🐱', label: 'CAT' },
-  { emoji: '🐶', label: 'DOG' },
-  { emoji: '🦊', label: 'FOX' },
-  { emoji: '🐼', label: 'PANDA' },
-  { emoji: '🐸', label: 'FROG' },
-  { emoji: '🦉', label: 'OWL' },
-  { emoji: '🦋', label: 'FLY' },
-  { emoji: '🐝', label: 'BEE' },
-  { emoji: '🐢', label: 'TURTLE' },
-  { emoji: '🐙', label: 'OCTO' },
-  { emoji: '🦖', label: 'DINO' },
-  { emoji: '🐉', label: 'DRAGON' },
-  { emoji: '🌸', label: 'SAKURA' },
-  { emoji: '🌹', label: 'ROSE' },
-  { emoji: '🌻', label: 'FLOWER' },
-  { emoji: '🍀', label: 'LUCKY' },
-  { emoji: '🍁', label: 'MAPLE' },
-  { emoji: '🌵', label: 'DESERT' },
-  { emoji: '🎁', label: 'GIFT' },
-  { emoji: '🎈', label: 'BALLOON' },
-  { emoji: '💌', label: 'LETTER' },
-  { emoji: '🔑', label: 'KEY' },
-  { emoji: '🔮', label: 'ORACLE' },
-  { emoji: '🧲', label: 'MAGNET' },
-  { emoji: '💡', label: 'IDEA' },
-  { emoji: '⏰', label: 'ALARM' },
-  { emoji: '⌛', label: 'TIME' },
-  { emoji: '🧭', label: 'COMPASS' },
-  { emoji: '🗺️', label: 'MAP' },
-  { emoji: '⚽', label: 'SOCCER' },
-  { emoji: '🏀', label: 'HOOPS' },
-  { emoji: '🎾', label: 'TENNIS' },
-  { emoji: '🎳', label: 'BOWL' },
-  { emoji: '🎯', label: 'TARGET' },
-  { emoji: '🎲', label: 'DICE' },
-  { emoji: '🧩', label: 'PUZZLE' },
-  { emoji: '💻', label: 'LAPTOP' },
-  { emoji: '📱', label: 'PHONE' },
-  { emoji: '🔋', label: 'POWER' },
-  { emoji: '💰', label: 'GOLD' },
-  { emoji: '💳', label: 'CARD' },
-  { emoji: '🛡️', label: 'SHIELD' },
-  { emoji: '⚔️', label: 'SWORD' },
-  { emoji: '🏅', label: 'MEDAL' },
+const POSTCARD_STAMPS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+  { icon: 'heart', label: 'LOVE' },
+  { icon: 'star', label: 'STAR' },
+  { icon: 'sparkles', label: 'MAGIC' },
+  { icon: 'flame', label: 'FIRE' },
+  { icon: 'flash', label: 'BOLT' },
+  { icon: 'happy', label: 'HAPPY' },
+  { icon: 'sad', label: 'SAD' },
+  { icon: 'skull', label: 'SKULL' },
+  { icon: 'glasses', label: 'COOL' },
+  { icon: 'eye', label: 'LOOK' },
+  { icon: 'thumbs-up', label: 'LIKE' },
+  { icon: 'thumbs-down', label: 'NOPE' },
+  { icon: 'hand-left', label: 'HI5' },
+  { icon: 'ribbon', label: 'RIBBON' },
+  { icon: 'rose', label: 'ROSE' },
+  { icon: 'flower', label: 'FLOWER' },
+  { icon: 'leaf', label: 'LEAF' },
+  { icon: 'paw', label: 'PAW' },
+  { icon: 'fish', label: 'FISH' },
+  { icon: 'bug', label: 'BUG' },
+  { icon: 'planet', label: 'PLANET' },
+  { icon: 'rocket', label: 'ROCKET' },
+  { icon: 'earth', label: 'EARTH' },
+  { icon: 'moon', label: 'MOON' },
+  { icon: 'sunny', label: 'SUN' },
+  { icon: 'partly-sunny', label: 'CLOUDY' },
+  { icon: 'cloudy', label: 'CLOUD' },
+  { icon: 'rainy', label: 'RAIN' },
+  { icon: 'thunderstorm', label: 'STORM' },
+  { icon: 'snow', label: 'SNOW' },
+  { icon: 'umbrella', label: 'UMBR' },
+  { icon: 'thermometer', label: 'TEMP' },
+  { icon: 'game-controller', label: 'GAME' },
+  { icon: 'trophy', label: 'TROPHY' },
+  { icon: 'medal', label: 'MEDAL' },
+  { icon: 'diamond', label: 'GEM' },
+  { icon: 'dice', label: 'DICE' },
+  { icon: 'extension-puzzle', label: 'PUZZLE' },
+  { icon: 'hardware-chip', label: 'CHIP' },
+  { icon: 'terminal', label: 'SHELL' },
+  { icon: 'code-slash', label: 'CODE' },
+  { icon: 'desktop', label: 'PC' },
+  { icon: 'tv', label: 'TV' },
+  { icon: 'radio', label: 'RADIO' },
+  { icon: 'disc', label: 'DISC' },
+  { icon: 'headset', label: 'AUDIO' },
+  { icon: 'musical-note', label: 'NOTE' },
+  { icon: 'musical-notes', label: 'MUSIC' },
+  { icon: 'mic', label: 'MIC' },
+  { icon: 'volume-high', label: 'LOUD' },
+  { icon: 'brush', label: 'PAINT' },
+  { icon: 'color-palette', label: 'ART' },
+  { icon: 'camera', label: 'PHOTO' },
+  { icon: 'image', label: 'PIC' },
+  { icon: 'film', label: 'FILM' },
+  { icon: 'easel', label: 'CANVAS' },
+  { icon: 'pencil', label: 'DRAW' },
+  { icon: 'create', label: 'WRITE' },
+  { icon: 'cafe', label: 'COFFEE' },
+  { icon: 'beer', label: 'BEER' },
+  { icon: 'wine', label: 'WINE' },
+  { icon: 'pizza', label: 'PIZZA' },
+  { icon: 'fast-food', label: 'BURGER' },
+  { icon: 'ice-cream', label: 'GELATO' },
+  { icon: 'nutrition', label: 'FRUIT' },
+  { icon: 'egg', label: 'EGG' },
+  { icon: 'restaurant', label: 'DINER' },
+  { icon: 'water', label: 'WATER' },
+  { icon: 'bonfire', label: 'CAMP' },
+  { icon: 'airplane', label: 'FLIGHT' },
+  { icon: 'car', label: 'CAR' },
+  { icon: 'car-sport', label: 'TURBO' },
+  { icon: 'bicycle', label: 'BIKE' },
+  { icon: 'boat', label: 'BOAT' },
+  { icon: 'bus', label: 'BUS' },
+  { icon: 'train', label: 'TRAIN' },
+  { icon: 'subway', label: 'METRO' },
+  { icon: 'walk', label: 'WALK' },
+  { icon: 'footsteps', label: 'STEPS' },
+  { icon: 'trail-sign', label: 'TRAIL' },
+  { icon: 'map', label: 'MAP' },
+  { icon: 'compass', label: 'COMPASS' },
+  { icon: 'navigate', label: 'GPS' },
+  { icon: 'pin', label: 'PIN' },
+  { icon: 'location', label: 'PLACE' },
+  { icon: 'flag', label: 'FLAG' },
+  { icon: 'gift', label: 'GIFT' },
+  { icon: 'balloon', label: 'PARTY' },
+  { icon: 'key', label: 'KEY' },
+  { icon: 'lock-open', label: 'UNLOCK' },
+  { icon: 'shield', label: 'SHIELD' },
+  { icon: 'hammer', label: 'HAMMER' },
+  { icon: 'build', label: 'TOOLS' },
+  { icon: 'construct', label: 'CRAFT' },
+  { icon: 'flashlight', label: 'TORCH' },
+  { icon: 'bulb', label: 'IDEA' },
+  { icon: 'alarm', label: 'ALARM' },
+  { icon: 'notifications', label: 'BELL' },
+  { icon: 'time', label: 'TIME' },
+  { icon: 'hourglass', label: 'SAND' },
+  { icon: 'book', label: 'BOOK' },
+  { icon: 'newspaper', label: 'NEWS' },
+  { icon: 'mail', label: 'MAIL' },
+  { icon: 'chatbubble', label: 'CHAT' },
+  { icon: 'call', label: 'CALL' },
+  { icon: 'megaphone', label: 'ALERT' },
+  { icon: 'briefcase', label: 'WORK' },
+  { icon: 'cart', label: 'SHOP' },
+  { icon: 'bag', label: 'BAG' },
+  { icon: 'card', label: 'CARD' },
+  { icon: 'cash', label: 'CASH' },
+  { icon: 'wallet', label: 'WALLET' },
+  { icon: 'watch', label: 'WATCH' },
+  { icon: 'shirt', label: 'SHIRT' },
+  { icon: 'bed', label: 'SLEEP' },
+  { icon: 'home', label: 'HOME' },
+  { icon: 'school', label: 'SCHOOL' },
+  { icon: 'library', label: 'LIB' },
+  { icon: 'fitness', label: 'HEART+' },
+  { icon: 'barbell', label: 'GYM' },
+  { icon: 'basketball', label: 'HOOPS' },
+  { icon: 'football', label: 'SOCCER' },
+  { icon: 'baseball', label: 'BASE' },
+  { icon: 'tennisball', label: 'TENNIS' },
+  { icon: 'golf', label: 'GOLF' },
+  { icon: 'telescope', label: 'SPACE' },
+  { icon: 'nuclear', label: 'NUKE' },
+  { icon: 'magnet', label: 'MAGNET' },
+  { icon: 'flask', label: 'LAB' },
+  { icon: 'prism', label: 'PRISM' },
+  { icon: 'aperture', label: 'LENS' },
 ];
 
 const INITIAL_PIC_MESSAGES: NokiaPicSms[] = [
@@ -3341,7 +3352,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             return 'hit';
           }
         } else {
-          const totalStamps = POSTCARD_EMOJIS.length;
+          const totalStamps = POSTCARD_STAMPS.length;
           if (dir === 'left') {
             this.smsStampIdx = (this.smsStampIdx + totalStamps - 1) % totalStamps;
             return 'hit';
@@ -3362,15 +3373,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
             return 'score';
           }
           const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
-          const stamp = POSTCARD_EMOJIS[this.smsStampIdx] || POSTCARD_EMOJIS[0];
+          const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
           this.smsList.unshift({
-            sender: 'AIR-MAIL',
+            sender: 'MY-POSTCARD',
             title: scene.title,
             text,
             artKey: 'SMILE',
             postcardId: scene.id,
-            stampEmoji: stamp.emoji,
+            stampIcon: stamp.icon,
             stampLabel: stamp.label,
+            timestamp: this.formatClock(),
           });
           if (this.smsList.length > 20) this.smsList.pop();
           this.smsIdx = 0;
@@ -5842,15 +5854,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.smsMode === 'compose') {
       const isArtTab = this.smsStudioTab === 'art';
       const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
-      const stamp = POSTCARD_EMOJIS[this.smsStampIdx] || POSTCARD_EMOJIS[0];
-      const totalStamps = POSTCARD_EMOJIS.length;
+      const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
+      const totalStamps = POSTCARD_STAMPS.length;
       const stripOffsets = [-3, -2, -1, 0, 1, 2, 3];
 
       return (
         <View style={styles.listWrap}>
           <View style={styles.compHeader}>
             <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-              {isArtTab ? 'POSTCARD P1/2: SCENE' : 'POSTCARD P2/2: STAMP'}
+              {isArtTab ? 'POSTCARD P1/2: SCENE' : 'POSTCARD P2/2: ICON'}
             </Text>
             <Text style={[styles.compBpm, { color: fg }]}>
               {isArtTab
@@ -5907,11 +5919,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
             >
               {stripOffsets.map((off) => {
                 const idx = (this.smsStampIdx + off + totalStamps) % totalStamps;
-                const item = POSTCARD_EMOJIS[idx];
+                const item = POSTCARD_STAMPS[idx];
                 const isCenter = off === 0;
                 return (
                   <View
-                    key={`${off}-${item.label}-${idx}`}
+                    key={`${off}-${item.icon}-${idx}`}
                     style={{
                       width: isCenter ? 26 : 18,
                       height: isCenter ? 22 : 18,
@@ -5923,9 +5935,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
                       opacity: isCenter ? 1 : 0.7,
                     }}
                   >
-                    <Text style={{ fontSize: isCenter ? 13 : 10 }}>
-                      {item.emoji}
-                    </Text>
+                    <Ionicons
+                      name={item.icon}
+                      size={isCenter ? 14 : 11}
+                      color={isCenter ? bg : fg}
+                    />
                   </View>
                 );
               })}
@@ -5940,21 +5954,23 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 borderColor: fg,
                 width: '100%',
                 flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
                 justifyContent: 'center',
+                gap: 6,
                 paddingHorizontal: 6,
                 paddingVertical: 2,
               },
             ]}
           >
-            <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
-              {this.smsDraftText
-                ? `${stamp.emoji} ${this.smsDraftText}`
-                : `${stamp.emoji} (PRESS [▲] OR [KBD] TO WRITE MESSAGE)`}
+            <Ionicons name={stamp.icon} size={13} color={fg} />
+            <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5, flex: 1, textAlign: 'left' }]} numberOfLines={2}>
+              {this.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
             </Text>
           </View>
 
           <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
-            [◀/▶] PICK • [▼] {isArtTab ? 'STAMPS (P2)' : 'SCENE (P1)'} • [▲] MSG • [A] SEND
+            [◀/▶] PICK • [▼] {isArtTab ? 'ICONS (P2)' : 'SCENE (P1)'} • [▲] MSG • [A] SEND
           </Text>
         </View>
       );
@@ -6021,11 +6037,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
             <View
               style={[
                 styles.swBox,
-                { borderColor: fg, width: '100%', paddingVertical: 3, paddingHorizontal: 6, marginTop: 3, flex: 1, justifyContent: 'center' },
+                { borderColor: fg, width: '100%', paddingVertical: 3, paddingHorizontal: 6, marginTop: 3, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
               ]}
             >
-              <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
-                {msg.stampEmoji ? `${msg.stampEmoji} ${msg.text}` : msg.text}
+              {msg.stampIcon && <Ionicons name={msg.stampIcon} size={13} color={fg} />}
+              <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5, flex: 1, textAlign: msg.stampIcon ? 'left' : 'center' }]} numberOfLines={2}>
+                {msg.text}
               </Text>
             </View>
           </View>
@@ -6069,7 +6086,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               },
             ]}
           >
-            {msg.stampEmoji ? (
+            {msg.stampIcon ? (
               <View
                 style={[
                   styles.picBannerBox,
@@ -6082,7 +6099,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   },
                 ]}
               >
-                <Text style={{ fontSize: 16 }}>{msg.stampEmoji}</Text>
+                <Ionicons name={msg.stampIcon} size={18} color={fg} />
                 {msg.stampLabel ? (
                   <Text style={[styles.compBpm, { color: fg, fontSize: 9 }]}>
                     {msg.stampLabel}
