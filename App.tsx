@@ -33,6 +33,7 @@ import {
 import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
 import { RetroDeckOS } from './src/os/RetroDeckOS';
+import { revenueCatService, SubscriptionStatus } from './src/services/revenueCatService';
 
 const OS_GAMEPAD_LABELS = {
   left: '◀',
@@ -67,6 +68,7 @@ function RetroDeckConsole() {
   const [stats, setStats] = useState<ArcadeStats>(() => gameRef.current.getStats());
   const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
   const [scanlines, setScanlines] = useState(false);
+  const [isPro, setIsPro] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(() => RetroAudioEngine.getMuted());
   const [isBeeping, setIsBeeping] = useState(false);
@@ -127,7 +129,12 @@ function RetroDeckConsole() {
   // Initialize Retro Synthesizer & Subscribe to High Scores
   useEffect(() => {
     RetroAudioEngine.init().catch(() => {});
-    return HighScoreService.subscribe((scores) => {
+    revenueCatService.initialize().catch(() => {});
+    const unsubscribeRC = revenueCatService.subscribe((status: SubscriptionStatus) => {
+      setIsPro(status.isPro);
+    });
+
+    const unsubscribeHS = HighScoreService.subscribe((scores) => {
       console.log('HIGH_SCORES_UPDATED:', JSON.stringify(scores));
       setHighScores(scores);
       const hs = scores[activeCart.id] || 0;
@@ -136,6 +143,11 @@ function RetroDeckConsole() {
         setStats(gameRef.current.getStats());
       }
     });
+
+    return () => {
+      unsubscribeRC();
+      unsubscribeHS();
+    };
   }, [activeCart.id]);
 
   // Sound & Haptic dispatch
@@ -501,6 +513,43 @@ function RetroDeckConsole() {
           </View>
 
           <View style={styles.topActions}>
+            {/* PRO / Paywall Badge Button */}
+            <Pressable
+              onPress={async () => {
+                handleSoundEvent('score');
+                if (isPro) {
+                  await revenueCatService.presentCustomerCenter();
+                } else {
+                  await revenueCatService.presentPaywall();
+                }
+              }}
+              style={[
+                styles.paletteBtn,
+                {
+                  backgroundColor: isPro ? `${palette.bezelAccent}33` : palette.surfaceBg,
+                  borderColor: isPro ? palette.bezelAccent : `${palette.bezelAccent}66`,
+                  paddingHorizontal: 7,
+                },
+              ]}
+            >
+              <Ionicons
+                name={isPro ? 'shield-checkmark' : 'sparkles'}
+                size={13}
+                color={isPro ? '#34D399' : palette.bezelAccent}
+              />
+              <Text
+                style={{
+                  fontSize: 8.5,
+                  fontWeight: '900',
+                  fontFamily: 'monospace',
+                  color: isPro ? '#34D399' : palette.bezelAccent,
+                  marginLeft: 3,
+                }}
+              >
+                {isPro ? 'PRO' : 'GET PRO'}
+              </Text>
+            </Pressable>
+
             <Pressable
               onPress={() => {
                 setThemeModalVisible(true);
