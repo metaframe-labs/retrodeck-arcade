@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
+  FlatList,
+  ListRenderItem,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -9,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { ArcadeCartridgeDef } from '../arcade/types';
+import { getAccentInk } from '../theme/palettes';
 
 interface CartridgeBayPageProps {
   cartridges: ArcadeCartridgeDef[];
@@ -22,6 +24,90 @@ interface CartridgeBayPageProps {
 
 type FilterCategory = 'ALL' | 'NOKIA' | 'ARCADE';
 
+interface CartridgeCardProps {
+  cart: ArcadeCartridgeDef;
+  isInserted: boolean;
+  accentColor: string;
+  accentInk: string;
+  bestScore: number;
+  onSelect: (cartridge: ArcadeCartridgeDef) => void;
+}
+
+const CartridgeCard = React.memo<CartridgeCardProps>(
+  ({ cart, isInserted, accentColor, accentInk, bestScore, onSelect }) => (
+    <Pressable
+      onPress={() => onSelect(cart)}
+      style={[
+        styles.cartCard,
+        isInserted && {
+          borderColor: accentColor,
+          backgroundColor: `${accentColor}12`,
+        },
+      ]}
+    >
+      {/* Cartridge Header */}
+      <View style={styles.cardHeader}>
+        <View style={styles.titleRow}>
+          <View
+            style={[
+              styles.cartIndicator,
+              { backgroundColor: isInserted ? accentColor : '#334155' },
+            ]}
+          />
+          <Text style={styles.cartTitle}>{cart.title}</Text>
+        </View>
+        <View style={styles.headerRight}>
+          <View style={[styles.genreTag, { borderColor: `${accentColor}44` }]}>
+            <Text style={[styles.genreTagText, { color: accentColor }]}>{cart.genre}</Text>
+          </View>
+          <Text style={styles.yearText}>{cart.year}</Text>
+        </View>
+      </View>
+
+      {/* Subtitle / Description */}
+      <Text style={styles.cardSubtitle}>{cart.subtitle}</Text>
+
+      {/* Controls Hint */}
+      <View style={styles.hintWrap}>
+        <Ionicons name="game-controller-outline" size={13} color="#94A3B8" />
+        <Text style={styles.hintText}>{cart.controlsHint}</Text>
+      </View>
+
+      {/* Card Footer Status */}
+      <View style={styles.cardFooter}>
+        <View style={styles.footerLeftBadges}>
+          <View style={styles.techBadge}>
+            <Ionicons name="flash" size={11} color="#10B981" />
+            <Text style={styles.techText}>60 FPS</Text>
+          </View>
+          <View style={[styles.bestScorePill, { borderColor: `${accentColor}44` }]}>
+            <Ionicons name="trophy-outline" size={10} color="#FFD700" />
+            <Text style={styles.bestScoreText}>
+              BEST: {bestScore.toString().padStart(6, '0')}
+            </Text>
+          </View>
+        </View>
+
+        {isInserted ? (
+          <View style={[styles.activePill, { backgroundColor: accentColor }]}>
+            <View style={[styles.activeDot, { backgroundColor: accentInk }]} />
+            <Text style={[styles.activePillText, { color: accentInk }]}>
+              INSERTED (ACTIVE)
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.loadAction}>
+            <Text style={[styles.loadActionText, { color: accentColor }]}>
+              TAP TO LOAD
+            </Text>
+            <Ionicons name="arrow-forward" size={12} color={accentColor} />
+          </View>
+        )}
+      </View>
+    </Pressable>
+  )
+);
+
 export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   cartridges,
   activeCartridgeId,
@@ -33,12 +119,65 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<FilterCategory>('ALL');
+  const accentInk = useMemo(() => getAccentInk(accentColor), [accentColor]);
 
-  const filteredCartridges = cartridges.filter((cart) => {
-    if (filter === 'NOKIA') return cart.genre.includes('NOKIA');
-    if (filter === 'ARCADE') return !cart.genre.includes('NOKIA');
-    return true;
-  });
+  const nokiaCount = useMemo(
+    () => cartridges.filter((c) => c.genre.includes('NOKIA')).length,
+    [cartridges]
+  );
+  const arcadeCount = cartridges.length - nokiaCount;
+
+  const filteredCartridges = useMemo(() => {
+    if (filter === 'NOKIA') return cartridges.filter((cart) => cart.genre.includes('NOKIA'));
+    if (filter === 'ARCADE') return cartridges.filter((cart) => !cart.genre.includes('NOKIA'));
+    return cartridges;
+  }, [cartridges, filter]);
+
+  const renderItem: ListRenderItem<ArcadeCartridgeDef> = useCallback(
+    ({ item }) => (
+      <CartridgeCard
+        cart={item}
+        isInserted={item.id === activeCartridgeId}
+        accentColor={accentColor}
+        accentInk={accentInk}
+        bestScore={highScores[item.id] || 0}
+        onSelect={onSelectCartridge}
+      />
+    ),
+    [activeCartridgeId, accentColor, accentInk, highScores, onSelectCartridge]
+  );
+
+  const keyExtractor = useCallback((item: ArcadeCartridgeDef) => item.id, []);
+
+  const listHeader = useMemo(() => {
+    if (!onOpenDevCart) return null;
+    return (
+      <Pressable
+        onPress={onOpenDevCart}
+        style={[styles.studioCard, { borderColor: accentColor }]}
+      >
+        <View style={styles.studioCardLeft}>
+          <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
+            <Ionicons name="game-controller" size={24} color={accentColor} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.studioTagRow}>
+              <Text style={[styles.studioTitle, { color: accentColor }]}>
+                CUSTOM GAME STUDIO
+              </Text>
+              <View style={styles.studioBadge}>
+                <Text style={styles.studioBadgeText}>CREATOR</Text>
+              </View>
+            </View>
+            <Text style={styles.studioSub}>
+              Pick a template or build your own custom retro game and play instantly
+            </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={accentColor} />
+      </Pressable>
+    );
+  }, [accentColor, onOpenDevCart]);
 
   return (
     <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6 }]}>
@@ -83,124 +222,30 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
                 {cat === 'ALL'
                   ? `ALL (${cartridges.length})`
                   : cat === 'NOKIA'
-                  ? `NOKIA CLASSICS (${cartridges.filter((c) => c.genre.includes('NOKIA')).length})`
-                  : `ARCADE (${cartridges.filter((c) => !c.genre.includes('NOKIA')).length})`}
+                  ? `NOKIA CLASSICS (${nokiaCount})`
+                  : `ARCADE (${arcadeCount})`}
               </Text>
             </Pressable>
           );
         })}
       </View>
 
-      {/* Scrollable Cartridge Shelf */}
-      <ScrollView
+      {/* Virtualized Cartridge Shelf (60 FPS smooth even with 100+ cartridges) */}
+      <FlatList
+        data={filteredCartridges}
+        renderItem={renderItem}
+        keyExtractor={keyExtractor}
+        ListHeaderComponent={listHeader || undefined}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
         contentContainerStyle={[
           styles.list,
           { paddingBottom: Math.max(insets.bottom, 20) + 16 },
         ]}
         showsVerticalScrollIndicator={false}
-      >
-        {/* Custom Game Studio Card */}
-        {onOpenDevCart && (
-          <Pressable
-            onPress={onOpenDevCart}
-            style={[styles.studioCard, { borderColor: accentColor }]}
-          >
-            <View style={styles.studioCardLeft}>
-              <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
-                <Ionicons name="game-controller" size={24} color={accentColor} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <View style={styles.studioTagRow}>
-                  <Text style={[styles.studioTitle, { color: accentColor }]}>
-                    CUSTOM GAME STUDIO
-                  </Text>
-                  <View style={styles.studioBadge}>
-                    <Text style={styles.studioBadgeText}>CREATOR</Text>
-                  </View>
-                </View>
-                <Text style={styles.studioSub}>
-                  Pick a template or build your own custom retro game and play instantly
-                </Text>
-              </View>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={accentColor} />
-          </Pressable>
-        )}
-
-        {/* Cartridge List Cards */}
-        {filteredCartridges.map((cart) => {
-          const isInserted = cart.id === activeCartridgeId;
-
-          return (
-            <Pressable
-              key={cart.id}
-              onPress={() => onSelectCartridge(cart)}
-              style={[
-                styles.cartCard,
-                isInserted && {
-                  borderColor: accentColor,
-                  backgroundColor: `${accentColor}12`,
-                },
-              ]}
-            >
-              {/* Cartridge Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.titleRow}>
-                  <View style={[styles.cartIndicator, { backgroundColor: isInserted ? accentColor : '#334155' }]} />
-                  <Text style={styles.cartTitle}>{cart.title}</Text>
-                </View>
-                <View style={styles.headerRight}>
-                  <View style={[styles.genreTag, { borderColor: `${accentColor}44` }]}>
-                    <Text style={[styles.genreTagText, { color: accentColor }]}>
-                      {cart.genre}
-                    </Text>
-                  </View>
-                  <Text style={styles.yearText}>{cart.year}</Text>
-                </View>
-              </View>
-
-              {/* Subtitle / Description */}
-              <Text style={styles.cardSubtitle}>{cart.subtitle}</Text>
-
-              {/* Controls Hint */}
-              <View style={styles.hintWrap}>
-                <Ionicons name="game-controller-outline" size={13} color="#94A3B8" />
-                <Text style={styles.hintText}>{cart.controlsHint}</Text>
-              </View>
-
-              {/* Card Footer Status */}
-              <View style={styles.cardFooter}>
-                <View style={styles.footerLeftBadges}>
-                  <View style={styles.techBadge}>
-                    <Ionicons name="flash" size={11} color="#10B981" />
-                    <Text style={styles.techText}>60 FPS</Text>
-                  </View>
-                  <View style={[styles.bestScorePill, { borderColor: `${accentColor}44` }]}>
-                    <Ionicons name="trophy-outline" size={10} color="#FFD700" />
-                    <Text style={styles.bestScoreText}>
-                      BEST: {highScores[cart.id]?.toString().padStart(6, '0') || '000000'}
-                    </Text>
-                  </View>
-                </View>
-
-                {isInserted ? (
-                  <View style={[styles.activePill, { backgroundColor: accentColor }]}>
-                    <View style={styles.activeDot} />
-                    <Text style={styles.activePillText}>INSERTED (ACTIVE)</Text>
-                  </View>
-                ) : (
-                  <View style={styles.loadAction}>
-                    <Text style={[styles.loadActionText, { color: accentColor }]}>
-                      TAP TO LOAD
-                    </Text>
-                    <Ionicons name="arrow-forward" size={12} color={accentColor} />
-                  </View>
-                )}
-              </View>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+      />
     </View>
   );
 };

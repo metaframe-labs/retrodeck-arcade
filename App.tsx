@@ -74,6 +74,8 @@ function RetroDeckConsole() {
   const [bayVisible, setBayVisible] = useState(false);
   const [devCartVisible, setDevCartVisible] = useState(false);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
+  const modalOpenRef = useRef(false);
+  modalOpenRef.current = bayVisible || devCartVisible || themeModalVisible;
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
@@ -181,7 +183,9 @@ function RetroDeckConsole() {
       if (delta > MAX_ACCUM) delta = MAX_ACCUM;
       accumulator += delta;
 
-      if (osMode) {
+      if (modalOpenRef.current) {
+        accumulator = 0;
+      } else if (osMode) {
         let playedSound: ArcadeSound | null = null;
         while (accumulator >= FIXED_STEP) {
           accumulator -= FIXED_STEP;
