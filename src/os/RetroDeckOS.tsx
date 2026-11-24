@@ -5330,7 +5330,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <View
             style={{
               width: '100%',
-              height: isArtTab ? 72 : 54,
+              height: isArtTab ? 78 : 56,
               borderWidth: 1.5,
               borderColor: fg,
               marginBottom: 3,
@@ -5343,48 +5343,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
             />
-            {/* Top-Right Perforated Postage Stamp */}
-            <View
-              style={{
-                position: 'absolute',
-                top: 4,
-                right: 4,
-                width: 26,
-                height: 30,
-                backgroundColor: bg,
-                borderWidth: 1,
-                borderStyle: 'dashed',
-                borderColor: fg,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 13 }}>{stamp.emoji}</Text>
-              <Text style={{ fontSize: 5.5, fontWeight: '900', color: fg, fontFamily: 'monospace' }}>
-                2026
-              </Text>
-            </View>
-            {/* Round Postmark Seal */}
-            <View
-              style={{
-                position: 'absolute',
-                top: 8,
-                right: 33,
-                width: 20,
-                height: 20,
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: '#FFFFFFCC',
-                backgroundColor: '#00000066',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Text style={{ fontSize: 5, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>
-                AIR{'\n'}MAIL
-              </Text>
-            </View>
-            {/* Bottom-Left Location Banner */}
             <View
               style={{
                 position: 'absolute',
@@ -5396,7 +5354,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               }}
             >
               <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
-                GREETINGS FROM {scene.title}
+                {scene.title}
               </Text>
             </View>
           </View>
@@ -5456,7 +5414,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ]}
           >
             <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
-              {this.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
+              {this.smsDraftText
+                ? `${stamp.emoji} ${this.smsDraftText}`
+                : `${stamp.emoji} (PRESS [▲] OR [KBD] TO WRITE MESSAGE)`}
             </Text>
           </View>
 
@@ -5494,11 +5454,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
         {realCard ? (
           <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {/* Full-Size Illustrated Postcard with Stamp & Postmark */}
+            {/* Full-Size Illustrated Postcard */}
             <View
               style={{
                 width: '100%',
-                height: 76,
+                height: 82,
                 borderWidth: 1.5,
                 borderColor: fg,
                 position: 'relative',
@@ -5510,47 +5470,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
-              {msg.stampEmoji ? (
-                <View
-                  style={{
-                    position: 'absolute',
-                    top: 4,
-                    right: 4,
-                    width: 26,
-                    height: 30,
-                    backgroundColor: bg,
-                    borderWidth: 1,
-                    borderStyle: 'dashed',
-                    borderColor: fg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Text style={{ fontSize: 13 }}>{msg.stampEmoji}</Text>
-                  <Text style={{ fontSize: 5.5, fontWeight: '900', color: fg, fontFamily: 'monospace' }}>
-                    2026
-                  </Text>
-                </View>
-              ) : null}
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 33,
-                  width: 20,
-                  height: 20,
-                  borderRadius: 10,
-                  borderWidth: 1,
-                  borderColor: '#FFFFFFCC',
-                  backgroundColor: '#00000066',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 5, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>
-                  AIR{'\n'}MAIL
-                </Text>
-              </View>
               <View
                 style={{
                   position: 'absolute',
@@ -5562,7 +5481,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 }}
               >
                 <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
-                  GREETINGS FROM {realCard.title}
+                  {realCard.title}
                 </Text>
               </View>
             </View>
@@ -5573,7 +5492,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ]}
             >
               <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
-                {msg.text}
+                {msg.stampEmoji ? `${msg.stampEmoji} ${msg.text}` : msg.text}
               </Text>
             </View>
           </View>
