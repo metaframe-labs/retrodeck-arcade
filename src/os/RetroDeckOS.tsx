@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Battery from 'expo-battery';
 import { Ionicons } from '@expo/vector-icons';
 
 const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
@@ -867,9 +868,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private operatorIdx = 0;
   private torchInvert = false;
 
+  // Device battery telemetry for OS status bar
+  private batteryPct: number | null = null;
+  private batteryCharging = false;
+  private batteryPollTimer = 0;
+
   constructor(cb: RetroDeckOSCallbacks) {
     this.cb = cb;
     this.clearCanvas();
+    this.refreshBattery();
     loadBYOKConfig().then((cfg) => {
       this.byokConfig = cfg;
     });
@@ -885,6 +892,23 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private toggleClockFace() {
     this.clockFace = this.clockFace === 'analog' ? 'digital' : 'analog';
     AsyncStorage.setItem(CLOCK_FACE_STORAGE_KEY, this.clockFace).catch(() => {});
+  }
+
+  private async refreshBattery() {
+    try {
+      const state = await Battery.getPowerStateAsync();
+      if (typeof state.batteryLevel === 'number' && state.batteryLevel >= 0 && state.batteryLevel <= 1) {
+        this.batteryPct = Math.round(state.batteryLevel * 100);
+      } else {
+        this.batteryPct = null;
+      }
+      this.batteryCharging =
+        state.batteryState === Battery.BatteryState.CHARGING ||
+        state.batteryState === Battery.BatteryState.FULL;
+    } catch {
+      this.batteryPct = null;
+      this.batteryCharging = false;
+    }
   }
 
   private clearCanvas() {
@@ -1527,6 +1551,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public update(input: ArcadeInput, dt: number): ArcadeSound | null {
     this.uptime += dt;
+    this.batteryPollTimer += dt;
+    if (this.batteryPollTimer >= 10) {
+      this.batteryPollTimer = 0;
+      this.refreshBattery();
+    }
     if (this.swRunning) this.swTime += dt;
     if (this.moveCd > 0) this.moveCd -= dt;
     if (this.unlockHintTimer > 0) this.unlockHintTimer -= dt;
@@ -2660,6 +2689,53 @@ export class RetroDeckOS implements ArcadeGameInstance {
     );
   }
 
+  /** Renders live audio/radio badge, battery percentage, and 4-cell pixel LCD battery icon */
+  private renderStatusRight(ink: string): React.ReactNode {
+    const isMuted = RetroAudioEngine.getMuted() || NOKIA_PROFILES[this.profileIdx] === 'SILENT';
+    const isRadio = somaRadioService.getIsPlaying();
+    const pct = this.batteryPct;
+    const filledCells =
+      pct === null
+        ? 4
+        : pct <= 5
+        ? 0
+        : pct <= 25
+        ? 1
+        : pct <= 50
+        ? 2
+        : pct <= 75
+        ? 3
+        : 4;
+
+    return (
+      <View style={styles.osBarRight}>
+        {isMuted && <Ionicons name="volume-mute" size={10} color={ink} />}
+        {!isMuted && isRadio && <Ionicons name="musical-notes" size={10} color={ink} />}
+        {this.batteryCharging && <Ionicons name="flash" size={9} color={ink} />}
+        {pct !== null && (
+          <Text style={[styles.osBarTxt, { color: ink }]}>{pct}%</Text>
+        )}
+        <View style={styles.batWrap}>
+          <View style={[styles.batShell, { borderColor: ink }]}>
+            {[0, 1, 2, 3].map((idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.batCell,
+                  {
+                    backgroundColor: idx < filledCells ? ink : 'transparent',
+                    opacity: pct === null ? 0.55 : 1,
+                  },
+                ]}
+              />
+            ))}
+          </View>
+          <View style={[styles.batNub, { backgroundColor: ink }]} />
+        </View>
+      </View>
+    );
+  }
+
   public renderEntities(palette: RetroPalette): React.ReactNode {
     const fg = this.torchInvert ? palette.screenBg : palette.pixelOn;
     const bg = this.torchInvert ? palette.pixelOn : palette.screenBg;
@@ -2699,9 +2775,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               Ψ|||| {NOKIA_OPERATORS[this.operatorIdx]}
             </Text>
             <Text style={[styles.osBarTxt, { color: bg }]}>[KEYGUARD]</Text>
-            <Text style={[styles.osBarTxt, { color: bg }]}>
-              {NOKIA_PROFILES[this.profileIdx].slice(0, 3)} [||||]
-            </Text>
+            {this.renderStatusRight(bg)}
           </View>
 
           <View style={[styles.centerBox, { transform: [{ translateY: driftY }] }]}>
@@ -2768,9 +2842,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               : `< ${this.app.toUpperCase()}`}
           </Text>
           <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
-          <Text style={[styles.osBarTxt, { color: bg }]}>
-            {NOKIA_PROFILES[this.profileIdx].slice(0, 3)} [||||]
-          </Text>
+          {this.renderStatusRight(bg)}
         </View>
 
         {/* Body */}
@@ -3926,6 +3998,32 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     fontFamily: 'monospace',
+  },
+  osBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  batWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  batShell: {
+    width: 17,
+    height: 9,
+    borderWidth: 1,
+    padding: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 1,
+  },
+  batCell: {
+    flex: 1,
+    height: '100%',
+  },
+  batNub: {
+    width: 2,
+    height: 5,
   },
   osBody: {
     flex: 1,
