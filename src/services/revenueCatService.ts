@@ -137,33 +137,30 @@ class RevenueCatService {
   }
 
   /**
-   * DEBUG / DEV: Reset / Revoke Pro purchases (logs out RC user or resets mock status)
+   * DEBUG / DEV: Reset / Revoke Pro purchases cleanly without triggering anonymous logOut errors
    */
   public async resetProDebug(): Promise<SubscriptionStatus> {
     try {
-      if (this.isConfigured && Purchases.logOut) {
-        // Log out or reset in RevenueCat to simulate fresh anonymous customer
-        const customerInfo = await Purchases.logOut();
-        this.updateCustomerInfo(customerInfo);
-      } else {
-        this.currentStatus = {
-          isPro: false,
-          activeSubscriptions: [],
-          expirationDate: null,
-          customerInfo: null,
-        };
-        this.listeners.forEach((listener) => listener(this.currentStatus));
+      if (this.isConfigured && Purchases.isAnonymous && Purchases.logOut) {
+        const isAnon = await Purchases.isAnonymous();
+        if (!isAnon) {
+          const customerInfo = await Purchases.logOut();
+          this.updateCustomerInfo(customerInfo);
+          return this.currentStatus;
+        }
       }
-    } catch (e) {
-      console.log('[RevenueCat] logOut not permitted or failed, forcing local debug reset:', e);
-      this.currentStatus = {
-        isPro: false,
-        activeSubscriptions: [],
-        expirationDate: null,
-        customerInfo: null,
-      };
-      this.listeners.forEach((listener) => listener(this.currentStatus));
+    } catch {
+      // Ignore SDK warning if not logged in with identified appUserID
     }
+
+    // Force local Pro state reset for testing
+    this.currentStatus = {
+      isPro: false,
+      activeSubscriptions: [],
+      expirationDate: null,
+      customerInfo: this.currentStatus.customerInfo,
+    };
+    this.listeners.forEach((listener) => listener(this.currentStatus));
     return this.currentStatus;
   }
 
