@@ -5275,47 +5275,150 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </View>
         ) : (
           <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {/* Hero Current Forecast Box */}
-            <View
-              style={[
-                styles.swBox,
-                {
-                  borderColor: fg,
-                  width: '100%',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  paddingHorizontal: 10,
-                  paddingVertical: 8,
-                  marginBottom: 4,
-                },
-              ]}
-            >
-              <View style={{ width: 48, height: 36, position: 'relative' }}>
-                {spans.map((sp) => (
-                  <View
-                    key={sp.key}
-                    style={{
-                      position: 'absolute',
-                      left: sp.x,
-                      top: sp.y,
-                      width: sp.w,
-                      height: sp.h,
-                      backgroundColor: fg,
-                    }}
-                  />
-                ))}
-              </View>
-              <View style={{ alignItems: 'flex-end', flex: 1, marginLeft: 8 }}>
-                <Text style={[styles.clockBig, { color: fg, fontSize: 24, lineHeight: 26 }]}>
-                  {data.tempC}°C
-                </Text>
-                <Text style={[styles.swLbl, { color: fg }]}>{cond.label}</Text>
-                <Text style={[styles.miniHint, { color: fg, marginTop: 2 }]}>
-                  FL {data.feelsC}°  •  WIND {data.windKmh}KM/H  •  HUM {data.humidity}%
-                </Text>
-              </View>
-            </View>
+            {/* Hero Current Forecast Box with 60 FPS Pixel LCD Animations */}
+            {(() => {
+              const t = this.uptime;
+              const isStorm = cond.sprite === 'STORM';
+              const lightningFlash = isStorm && (t % 2.8) < 0.12;
+              const boxFg = lightningFlash ? bg : fg;
+              const boxBg = lightningFlash ? fg : 'transparent';
+
+              const spriteDx =
+                cond.sprite === 'CLOUD'
+                  ? Math.round(Math.sin(t * 1.4) * 3)
+                  : cond.sprite === 'RAIN' || cond.sprite === 'STORM'
+                  ? Math.round(Math.sin(t * 2.2) * 1.5)
+                  : 0;
+              const spriteDy =
+                cond.sprite === 'SUN'
+                  ? Math.round(Math.sin(t * 2.6) * 1.5)
+                  : cond.sprite === 'SNOW'
+                  ? Math.round(Math.sin(t * 1.8) * 1)
+                  : 0;
+
+              return (
+                <View
+                  style={[
+                    styles.swBox,
+                    {
+                      borderColor: fg,
+                      backgroundColor: boxBg,
+                      width: '100%',
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingHorizontal: 10,
+                      paddingVertical: 8,
+                      marginBottom: 4,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
+                  <View style={{ width: 48, height: 36, position: 'relative', overflow: 'hidden' }}>
+                    {spans.map((sp) => (
+                      <View
+                        key={sp.key}
+                        style={{
+                          position: 'absolute',
+                          left: sp.x + spriteDx,
+                          top: sp.y + spriteDy,
+                          width: sp.w,
+                          height: sp.h,
+                          backgroundColor: boxFg,
+                        }}
+                      />
+                    ))}
+
+                    {/* SUN: twinkling outer ray pixels */}
+                    {cond.sprite === 'SUN' &&
+                      [0, 1, 2, 3].map((i) => {
+                        const angle = t * 1.8 + (i * Math.PI) / 2;
+                        const rx = Math.round(23 + Math.cos(angle) * 20);
+                        const ry = Math.round(17 + Math.sin(angle) * 15);
+                        return (
+                          <View
+                            key={`ray-${i}`}
+                            style={{
+                              position: 'absolute',
+                              left: rx,
+                              top: ry,
+                              width: 2,
+                              height: 2,
+                              backgroundColor: boxFg,
+                              opacity: Math.sin(t * 6 + i) > -0.2 ? 1 : 0.25,
+                            }}
+                          />
+                        );
+                      })}
+
+                    {/* CLOUD: drifting secondary pixel wisp */}
+                    {cond.sprite === 'CLOUD' && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: Math.round(((t * 8) % 56) - 10),
+                          top: 28,
+                          width: 12,
+                          height: 3,
+                          backgroundColor: boxFg,
+                          opacity: 0.7,
+                        }}
+                      />
+                    )}
+
+                    {/* RAIN & STORM: falling pixel raindrops */}
+                    {(cond.sprite === 'RAIN' || cond.sprite === 'STORM') &&
+                      [0, 1, 2, 3, 4, 5].map((i) => {
+                        const speed = cond.sprite === 'STORM' ? 42 : 28;
+                        const dropX = 6 + i * 7;
+                        const dropY = 20 + Math.round(((t * speed + i * 5.3) % 16));
+                        return (
+                          <View
+                            key={`drop-${i}`}
+                            style={{
+                              position: 'absolute',
+                              left: dropX,
+                              top: dropY,
+                              width: 2,
+                              height: 4,
+                              backgroundColor: boxFg,
+                            }}
+                          />
+                        );
+                      })}
+
+                    {/* SNOW: drifting pixel snowflakes */}
+                    {cond.sprite === 'SNOW' &&
+                      [0, 1, 2, 3, 4, 5, 6].map((i) => {
+                        const fallY = Math.round(((t * 14 + i * 5.7) % 34));
+                        const swayX = Math.round(4 + i * 6 + Math.sin(t * 2.5 + i * 1.4) * 3);
+                        return (
+                          <View
+                            key={`snow-${i}`}
+                            style={{
+                              position: 'absolute',
+                              left: swayX,
+                              top: fallY,
+                              width: 2,
+                              height: 2,
+                              backgroundColor: boxFg,
+                            }}
+                          />
+                        );
+                      })}
+                  </View>
+                  <View style={{ alignItems: 'flex-end', flex: 1, marginLeft: 8 }}>
+                    <Text style={[styles.clockBig, { color: boxFg, fontSize: 24, lineHeight: 26 }]}>
+                      {data.tempC}°C
+                    </Text>
+                    <Text style={[styles.swLbl, { color: boxFg }]}>{cond.label}</Text>
+                    <Text style={[styles.miniHint, { color: boxFg, marginTop: 2 }]}>
+                      FL {data.feelsC}°  •  WIND {data.windKmh}KM/H  •  HUM {data.humidity}%
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()}
 
             {/* 3-Day Mini Forecast */}
             <View style={{ flexDirection: 'row', gap: 4 }}>
