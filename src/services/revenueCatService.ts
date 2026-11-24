@@ -92,13 +92,19 @@ class RevenueCatService {
         }
       }
 
-      // Don't crash on web or unsupported simulators without billing
-      if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-        console.log('[RevenueCat] Platform is not iOS or Android, running in mock mode.');
+      // Don't crash on web, unsupported simulators, or Release builds using a Test Store key (`test_...`)
+      const isDev = typeof __DEV__ !== 'undefined' && __DEV__;
+      const isTestKey = REVENUECAT_API_KEY.startsWith('test_');
+      if (
+        (Platform.OS !== 'ios' && Platform.OS !== 'android') ||
+        (isTestKey && !isDev) ||
+        UNLOCK_ALL_PRO_FOR_BUILD
+      ) {
+        console.log('[RevenueCat] Skipping native SDK configure (mock/build-unlock/test-key release guard).');
         return;
       }
 
-      Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+      Purchases.setLogLevel(isDev ? LOG_LEVEL.DEBUG : LOG_LEVEL.WARN);
       Purchases.configure({ apiKey: REVENUECAT_API_KEY });
       this.isConfigured = true;
 
@@ -264,11 +270,25 @@ class RevenueCatService {
    * Purchase package by package type ('monthly' | 'yearly' | 'lifetime')
    */
   public async purchasePackageByType(type: ProPackageType): Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }> {
+    if (!this.isConfigured) {
+      if (UNLOCK_ALL_PRO_FOR_BUILD) {
+        this.debugRevoked = false;
+        this.currentStatus = {
+          isPro: true,
+          activeSubscriptions: ['retrodeck_pro_build_unlock'],
+          expirationDate: null,
+          customerInfo: this.currentStatus.customerInfo,
+        };
+        this.listeners.forEach((listener) => listener(this.currentStatus));
+        return { success: true, isPro: true };
+      }
+      return { success: false, isPro: false };
+    }
     const pkgInfo = this.cachedPackages.find((p) => p.type === type);
     if (pkgInfo?.rcPackage) {
       return this.purchasePackage(pkgInfo.rcPackage);
     }
-    // If running in development/simulator or RC package not returned yet, try paywall or simulate
+    // If running in development/simulator or RC package not returned yet, try paywall
     return this.presentPaywall().then((isPro) => ({ success: isPro, isPro }));
   }
 
@@ -316,7 +336,18 @@ class RevenueCatService {
   public async restorePurchases(): Promise<SubscriptionStatus> {
     this.debugRevoked = false;
     AsyncStorage.removeItem(DEBUG_REVOKED_STORAGE_KEY).catch(() => {});
-    if (!this.isConfigured) return this.currentStatus;
+    if (!this.isConfigured) {
+      if (UNLOCK_ALL_PRO_FOR_BUILD) {
+        this.currentStatus = {
+          isPro: true,
+          activeSubscriptions: ['retrodeck_pro_build_unlock'],
+          expirationDate: null,
+          customerInfo: this.currentStatus.customerInfo,
+        };
+        this.listeners.forEach((listener) => listener(this.currentStatus));
+      }
+      return this.currentStatus;
+    }
     try {
       const customerInfo = await Purchases.restorePurchases();
       this.updateCustomerInfo(customerInfo);
@@ -332,9 +363,9 @@ class RevenueCatService {
    * Returns true if user purchased or restored Pro, false otherwise
    */
   public async presentPaywall(): Promise<boolean> {
-    if (Platform.OS !== 'ios' && Platform.OS !== 'android') {
-      console.log('[RevenueCat] Paywall not supported on this platform');
-      return false;
+    if (!this.isConfigured || (Platform.OS !== 'ios' && Platform.OS !== 'android')) {
+      console.log('[RevenueCat] Paywall skipped (SDK not configured on this build/platform)');
+      return UNLOCK_ALL_PRO_FOR_BUILD && !this.debugRevoked;
     }
 
     try {
@@ -360,7 +391,9 @@ class RevenueCatService {
    * Presents the RevenueCat Paywall only if the user does NOT have the entitlement
    */
   public async presentPaywallIfNeeded(): Promise<boolean> {
-    if (Platform.OS !== 'ios' && Platform.OS !== 'android') return false;
+    if (!this.isConfigured || (Platform.OS !== 'ios' && Platform.OS !== 'android')) {
+      return UNLOCK_ALL_PRO_FOR_BUILD && !this.debugRevoked;
+    }
 
     try {
       const paywallResult = await RevenueCatUI.presentPaywallIfNeeded({
