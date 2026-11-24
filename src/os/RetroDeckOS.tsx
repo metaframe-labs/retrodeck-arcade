@@ -4576,7 +4576,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
       `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
       'OPEN FULL CARTRIDGE VAULT',
-      isPro ? '★ RETRODECK PRO: ACTIVE (MANAGE)' : '★ UPGRADE: RETRODECK PRO (PAYWALL)',
+      isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE: RETRODECK PRO',
       'REBOOT RETRODECK OS',
     ];
 

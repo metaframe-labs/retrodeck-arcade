@@ -214,22 +214,10 @@ class RevenueCatService {
   }
 
   /**
-   * Presents the RevenueCat Customer Center (Self-service subscription management, cancellation, refunds)
+   * Always present Paywall (or restore) on demand
    */
   public async presentCustomerCenter(): Promise<void> {
-    if (Platform.OS !== 'ios' && Platform.OS !== 'android') return;
-
-    try {
-      // Check if presentCustomerCenter is supported by the installed purchases-ui version
-      if (typeof (RevenueCatUI as any).presentCustomerCenter === 'function') {
-        await (RevenueCatUI as any).presentCustomerCenter();
-      } else {
-        // Fallback: Show Paywall or restore
-        await this.restorePurchases();
-      }
-    } catch (error) {
-      console.warn('[RevenueCat] Error presenting customer center:', error);
-    }
+    await this.presentPaywall();
   }
 }
 
