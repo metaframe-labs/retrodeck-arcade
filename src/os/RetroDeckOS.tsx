@@ -919,9 +919,15 @@ interface NokiaPicSms {
 }
 
 const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
+  { id: 'istanbul', title: 'ISTANBUL', image: require('../../assets/postcards/istanbul.jpg') },
   { id: 'paris', title: 'PARIS', image: require('../../assets/postcards/paris.jpg') },
-  { id: 'beach', title: 'TROPICAL BEACH', image: require('../../assets/postcards/beach.jpg') },
   { id: 'tokyo', title: 'TOKYO NIGHT', image: require('../../assets/postcards/tokyo.jpg') },
+  { id: 'venice', title: 'VENICE', image: require('../../assets/postcards/venice.jpg') },
+  { id: 'nyc', title: 'NEW YORK', image: require('../../assets/postcards/nyc.jpg') },
+  { id: 'sakura', title: 'KYOTO SAKURA', image: require('../../assets/postcards/sakura.jpg') },
+  { id: 'aurora', title: 'NORTHERN LIGHTS', image: require('../../assets/postcards/aurora.jpg') },
+  { id: 'egypt', title: 'GIZA PYRAMIDS', image: require('../../assets/postcards/egypt.jpg') },
+  { id: 'beach', title: 'TROPICAL BEACH', image: require('../../assets/postcards/beach.jpg') },
   { id: 'mountains', title: 'ALPINE PEAKS', image: require('../../assets/postcards/mountains.jpg') },
   { id: 'space', title: 'DEEP SPACE', image: require('../../assets/postcards/space.jpg') },
   { id: 'campfire', title: 'NIGHT CAMP', image: require('../../assets/postcards/campfire.jpg') },
