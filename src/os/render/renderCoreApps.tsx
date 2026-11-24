@@ -660,8 +660,8 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
               >
                 {pickLang(
                   L,
-                  'PRESS [◀ / ▶] TO PREVIEW 20 PIXEL SCENES',
-                  '20 PIKSEL SAHNEYI GORMEK ICIN [◀ / ▶] BAS'
+                  `PRESS [◀ / ▶] TO PREVIEW ${totalScenes} PIXEL SCENES`,
+                  `${totalScenes} PIKSEL SAHNEYI GORMEK ICIN [◀ / ▶] BAS`
                 )}
               </Text>
             </View>

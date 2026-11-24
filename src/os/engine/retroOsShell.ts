@@ -288,7 +288,7 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
     const q = arg.trim().toLowerCase();
     if (!q) {
       os.openWallpaperGallery();
-      os.pushTermLines(['OPENING 20-SCENE PIXEL WALLPAPER GALLERY...']);
+      os.pushTermLines([`OPENING ${REAL_POSTCARDS.length}-SCENE PIXEL WALLPAPER GALLERY...`]);
       return 'score';
     }
     if (q === 'off' || q === 'none' || q === 'clear') {
@@ -308,7 +308,7 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
       os.pushTermLines([`WALLPAPER SET: ${match.title} (${REAL_POSTCARDS.length} SCENES)`]);
       return 'powerup';
     }
-    os.pushTermLines(['usage: wallpaper <1..20 | tokyo | cyber | off>']);
+    os.pushTermLines([`usage: wallpaper <1..${REAL_POSTCARDS.length} | tokyo | cyber | off>`]);
     return 'die';
   }
 

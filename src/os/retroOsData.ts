@@ -1517,6 +1517,10 @@ export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'lofi_room', title: 'COZY LO-FI ROOM', image: require('../../assets/postcards/lofi_room.jpg') },
   { id: 'synth_highway', title: 'OUTRUN SUNSET', image: require('../../assets/postcards/synth_highway.jpg') },
   { id: 'underwater', title: 'CORAL REEF', image: require('../../assets/postcards/underwater.jpg') },
+  { id: 'autumn_shrine', title: 'AUTUMN SHRINE', image: require('../../assets/postcards/autumn_shrine.jpg') },
+  { id: 'train_coast', title: 'OCEAN RAILWAY', image: require('../../assets/postcards/train_coast.jpg') },
+  { id: 'neon_ramen', title: 'RAMEN ALLEY', image: require('../../assets/postcards/neon_ramen.jpg') },
+  { id: 'fantasy_castle', title: 'MOONLIT CASTLE', image: require('../../assets/postcards/fantasy_castle.jpg') },
 ];
 
 export const POSTCARD_STAMPS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
