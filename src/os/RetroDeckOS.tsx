@@ -148,6 +148,8 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'calc', label: 'CALC', icon: 'calculator' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
   { id: 'paint', label: 'PAINT', icon: 'brush' },
+  { id: 'term', label: 'SHELL', icon: 'terminal' },
+  { id: 'stats', label: 'STATS', icon: 'bar-chart' },
   { id: 'setup', label: 'SETUP', icon: 'settings' },
 ];
 
@@ -1674,11 +1676,24 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'desktop') {
-      const total = DESKTOP_ICONS.length; // 12 (4 cols x 3 rows)
+      const cols = 4;
+      const total = DESKTOP_ICONS.length;
       if (dir === 'left') this.deskIdx = (this.deskIdx + total - 1) % total;
       if (dir === 'right') this.deskIdx = (this.deskIdx + 1) % total;
-      if (dir === 'up') this.deskIdx = (this.deskIdx + total - 4) % total;
-      if (dir === 'down') this.deskIdx = (this.deskIdx + 4) % total;
+      if (dir === 'up') {
+        if (this.deskIdx >= cols) {
+          this.deskIdx -= cols;
+        } else {
+          const col = this.deskIdx % cols;
+          const lastRowBase = Math.floor((total - 1) / cols) * cols;
+          this.deskIdx =
+            lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+        }
+      }
+      if (dir === 'down') {
+        this.deskIdx =
+          this.deskIdx + cols < total ? this.deskIdx + cols : this.deskIdx % cols;
+      }
       if (dir) return 'hit';
 
       if (pressA) {
@@ -2916,27 +2931,39 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderDesktop(fg: string, bg: string) {
+    const cols = 4;
+    const rows = Math.ceil(DESKTOP_ICONS.length / cols);
+
     return (
       <View style={styles.deskGrid}>
-        {DESKTOP_ICONS.map((item, idx) => {
-          const sel = idx === this.deskIdx;
-          const iconColor = sel ? bg : fg;
-          return (
-            <View
-              key={item.id}
-              style={[
-                styles.deskTile,
-                {
-                  borderColor: fg,
-                  backgroundColor: sel ? fg : 'transparent',
-                },
-              ]}
-            >
-              <Ionicons name={item.icon} size={18} color={iconColor} />
-              <Text style={[styles.deskLbl, { color: iconColor }]}>{item.label}</Text>
-            </View>
-          );
-        })}
+        {Array.from({ length: rows }, (_, r) => (
+          <View key={r} style={styles.deskRow}>
+            {Array.from({ length: cols }, (_, c) => {
+              const idx = r * cols + c;
+              const item = DESKTOP_ICONS[idx];
+              if (!item) {
+                return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
+              }
+              const sel = idx === this.deskIdx;
+              const iconColor = sel ? bg : fg;
+              return (
+                <View
+                  key={item.id}
+                  style={[
+                    styles.deskTile,
+                    {
+                      borderColor: fg,
+                      backgroundColor: sel ? fg : 'transparent',
+                    },
+                  ]}
+                >
+                  <Ionicons name={item.icon} size={16} color={iconColor} />
+                  <Text style={[styles.deskLbl, { color: iconColor }]}>{item.label}</Text>
+                </View>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   }
@@ -4123,19 +4150,25 @@ const styles = StyleSheet.create({
   },
   deskGrid: {
     flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignContent: 'space-between',
+    gap: 4,
     padding: 2,
   },
+  deskRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+  },
   deskTile: {
-    width: '23.5%',
-    height: '30.5%',
+    flex: 1,
     borderWidth: 2,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  deskTileSpacer: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
   pixelIconBox: {
     width: 22,
