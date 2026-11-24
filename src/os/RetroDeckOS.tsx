@@ -996,6 +996,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private synthMode: 'pad' | 'list' = 'pad';
   private synthListIdx = 0;
   private synthClearConfirm = false;
+  private tuneNameDraft = '';
   private songIdx = 0;
   private songs: NokiaSong[] = [
     ...NOKIA_SONGS.map((s) => ({ ...s })),
@@ -1360,6 +1361,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
         secure: false,
       };
     }
+    if (this.app === 'synth') {
+      return {
+        targetLabel: 'TUNE NAME',
+        value: this.tuneNameDraft,
+        placeholder: 'MY TUNE NAME...',
+        secure: false,
+      };
+    }
     const pid = this.byokConfig.activeProvider;
     const meta = getProviderMeta(pid);
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
@@ -1402,6 +1411,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
     if (this.app === 'notes') {
       this.noteDraft = next;
+      return;
+    }
+    if (this.app === 'synth') {
+      this.tuneNameDraft = next.toUpperCase().slice(0, 14);
       return;
     }
     const pid = this.byokConfig.activeProvider;
@@ -1463,6 +1476,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.cb.onPlaySound?.('score');
       }
       this.noteDraft = '';
+      this.cb.onRequestKeyboard?.(false);
+      return;
+    }
+    if (this.app === 'synth') {
+      const targetIdx = this.synthMode === 'list' ? this.synthListIdx : this.songIdx;
+      if (this.isCustomTune(targetIdx)) {
+        const clean = this.tuneNameDraft.trim().toUpperCase().slice(0, 14);
+        const fallback = DEFAULT_CUSTOM_TUNES[targetIdx - NOKIA_SONGS.length]?.title || 'MY TUNE';
+        this.songs[targetIdx].title = clean || fallback;
+        this.saveCustomTunes();
+        this.cb.onPlaySound?.('powerup');
+      }
+      this.tuneNameDraft = '';
       this.cb.onRequestKeyboard?.(false);
       return;
     }
@@ -2621,17 +2647,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         if (dir === 'left') {
           this.synthClearConfirm = false;
-          return 'hit';
-        }
-        if (dir === 'right') {
+          if (!this.isCustomTune(this.synthListIdx)) return 'hit';
           const isPro = this.cb.getIsPro?.() ?? false;
-          if (!this.isCustomTune(this.synthListIdx)) {
-            this.synthClearConfirm = false;
-            return 'hit';
-          }
           if (!isPro) {
             this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
             return 'die';
+          }
+          this.tuneNameDraft = this.songs[this.synthListIdx].title.trim();
+          this.cb.onRequestKeyboard?.(true);
+          return 'score';
+        }
+        if (dir === 'right') {
+          if (!this.isCustomTune(this.synthListIdx)) {
+            this.synthClearConfirm = false;
+            return 'hit';
           }
           if (!this.synthClearConfirm) {
             this.synthClearConfirm = true;
@@ -4452,7 +4481,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
             {this.synthClearConfirm
               ? 'PRESS [▶] AGAIN TO CLEAR ALL NOTES!'
-              : '[▲/▼] BROWSE • [A] LOAD • [▶]x2 CLEAR • [B] PAD'}
+              : '[▲/▼] SEL • [A] LOAD • [◀] RENAME • [▶]x2 CLR'}
           </Text>
         </View>
       );
