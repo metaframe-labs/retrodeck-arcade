@@ -1418,9 +1418,17 @@ const TERM_PRESETS = [
   'reboot',
 ];
 
-function stripMarkdownForLcd(raw: string): string {
+function stripEmojis(raw: string): string {
   return raw
-    .replace(/```[a-zA-Z0-9_-]*\n?/g, '')
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{200D}]/gu, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
+function stripMarkdownForLcd(raw: string): string {
+  return stripEmojis(
+    raw
+      .replace(/```[a-zA-Z0-9_-]*\n?/g, '')
     .replace(/```/g, '')
     .replace(/^#{1,6}\s+(.+)$/gm, '[$1]')
     .replace(/\*\*\*(.+?)\*\*\*/g, '$1')
@@ -1430,7 +1438,8 @@ function stripMarkdownForLcd(raw: string): string {
     .replace(/`([^`]+)`/g, '$1')
     .replace(/^\s*[-*+]\s+/gm, '• ')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-    .trim();
+    .trim()
+  );
 }
 
 function wrapTextLines(text: string, maxCols = 34): string[] {
@@ -1812,7 +1821,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         `${persona.instruction}\n` +
         `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
         `SAAT: ${this.formatClock()}.\n` +
-        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`;
+        `KURAL: En az 40, en fazla 120 karakterlik tek bir gercekci SMS metni yaz. Onceki konusma varsa ona uygun devam et. Asla emoji kullanma, asla yapay zeka oldugunu belli etme, tirnak veya baslik koyma.`;
 
       const messages: BYOKChatMessage[] = [
         { role: 'user', content: systemContext },
@@ -2774,7 +2783,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         `[[ACTION:LIVE_SMS]]\n` +
         `[[ACTION:LOCK]]\n` +
         `[[ACTION:REBOOT]]\n` +
-        `Kisa, net ve yardimsever cevap ver. Islem gerekmiyorsa hic ACTION etiketi ekleme.`;
+        `Kisa, net ve yardimsever cevap ver. Asla emoji kullanma, sadece duz metin yaz. Islem gerekmiyorsa hic ACTION etiketi ekleme.`;
 
       const payload: BYOKChatMessage[] = [
         { role: 'user', content: sysGuide },
@@ -2784,7 +2793,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       const reply = await callBYOKAIChat(payload, this.byokConfig);
       const rawClean = reply.trim() || '(EMPTY)';
       const { displayText, actionLogs } = this.executeAiActions(rawClean);
-      const shown = displayText || (actionLogs.length > 0 ? 'DONE!' : '(EMPTY)');
+      const shown = stripEmojis(displayText) || (actionLogs.length > 0 ? 'DONE!' : '(EMPTY)');
 
       this.chatHistory.push({ role: 'assistant', content: shown });
       this.appendChatLines('AI>', shown);
