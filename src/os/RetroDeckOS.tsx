@@ -66,6 +66,34 @@ export interface RetroDeckOSCallbacks {
 
 import { styles } from './retroOsStyles';
 import {
+  renderAnalogDial,
+  renderStatusLeft,
+  renderStatusRight,
+  renderDesktop,
+  renderArcadeBrowser,
+  renderSetup,
+  renderThemes,
+  renderPro,
+} from './render/renderCoreApps';
+import {
+  renderWap,
+  renderAiApp,
+  renderPhone,
+  renderSms,
+  renderProfiles,
+} from './render/renderCommsApps';
+import {
+  renderRadio,
+  renderCalc,
+  renderClock,
+  renderSynth,
+  renderPaint,
+  renderWeather,
+  renderNotes,
+  renderStats,
+  renderTerm,
+} from './render/renderMediaToolApps';
+import {
   CLOCK_FACE_STORAGE_KEY,
   WEATHER_CITY_STORAGE_KEY,
   NOTES_STORAGE_KEY,
@@ -114,14 +142,14 @@ import {
 export type { PicArtKey } from './retroOsData';
 
 export class RetroDeckOS implements ArcadeGameInstance {
-  private cb: RetroDeckOSCallbacks;
-  private app: OsAppId = 'boot';
-  private bootTimer = 0;
-  private uptime = 0;
+  /** @internal */ cb: RetroDeckOSCallbacks;
+  /** @internal */ app: OsAppId = 'boot';
+  /** @internal */ bootTimer = 0;
+  /** @internal */ uptime = 0;
 
   // Keyguard & Screensaver state
-  private keyLocked = false;
-  private unlockStage = false; // true after pressing A once while locked ("NOW PRESS * / UP")
+  /** @internal */ keyLocked = false;
+  /** @internal */ unlockStage = false; // true after pressing A once while locked ("NOW PRESS * / UP")
   private unlockHintTimer = 0;
   private idleTimer = 0;
 
@@ -135,10 +163,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private prevRight = false;
 
   // Desktop 4x3 cursor
-  private deskIdx = 0;
+  /** @internal */ deskIdx = 0;
 
   // In-LCD Arcade Browser
-  private gameIdx = 0;
+  /** @internal */ gameIdx = 0;
 
   private playActiveSmsTone() {
     const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
@@ -178,71 +206,71 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   // AI & BYOK state
-  private byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
-  private aiTab: 'chat' | 'byok' = 'chat';
-  private byokRow = 0;
+  /** @internal */ byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
+  /** @internal */ aiTab: 'chat' | 'byok' = 'chat';
+  /** @internal */ byokRow = 0;
   private kbdTarget: 'chat' | 'key' | 'model' = 'chat';
-  private aiPrompt = '';
-  private aiLoading = false;
+  /** @internal */ aiPrompt = '';
+  /** @internal */ aiLoading = false;
   private aiStatus = 'READY';
   private chatClearConfirm = false;
   private chatHistory: BYOKChatMessage[] = [];
-  private chatLines: string[] = [
+  /** @internal */ chatLines: string[] = [
     'AI> WELCOME TO RETRODECK AI!',
     'AI> PRESS [KBD] OR [A] TO TYPE,',
     'AI> OR [RIGHT] FOR BYOK KEYS.',
   ];
-  private chatScroll = 0;
+  /** @internal */ chatScroll = 0;
 
   // Calculator state
-  private calcR = 0;
-  private calcC = 0;
-  private calcDisplay = '0';
-  private calcAcc: number | null = null;
-  private calcOp: string | null = null;
+  /** @internal */ calcR = 0;
+  /** @internal */ calcC = 0;
+  /** @internal */ calcDisplay = '0';
+  /** @internal */ calcAcc: number | null = null;
+  /** @internal */ calcOp: string | null = null;
   private calcFresh = true;
 
   // Clock / Stopwatch / Countdown Timer state
-  private clockTab: 'clk' | 'sw' | 'cd' = 'clk';
-  private clockFace: 'analog' | 'digital' = 'analog';
-  private swRunning = false;
-  private swTime = 0;
-  private swLap = 0;
+  /** @internal */ clockTab: 'clk' | 'sw' | 'cd' = 'clk';
+  /** @internal */ clockFace: 'analog' | 'digital' = 'analog';
+  /** @internal */ swRunning = false;
+  /** @internal */ swTime = 0;
+  /** @internal */ swLap = 0;
   private cdRunning = false;
-  private cdPresetSec = 30;
-  private cdRemaining = 30;
-  private cdAlarmActive = false;
+  /** @internal */ cdPresetSec = 30;
+  /** @internal */ cdRemaining = 30;
+  /** @internal */ cdAlarmActive = false;
 
   // Nokia 3310 Composer / Music state
-  private synthIdx = 0;
-  private synthMode: 'pad' | 'list' = 'pad';
-  private synthListIdx = 0;
-  private synthClearConfirm = false;
+  /** @internal */ synthIdx = 0;
+  /** @internal */ synthMode: 'pad' | 'list' = 'pad';
+  /** @internal */ synthListIdx = 0;
+  /** @internal */ synthClearConfirm = false;
   private tuneNameDraft = '';
-  private songIdx = 0;
-  private songs: NokiaSong[] = [
+  /** @internal */ songIdx = 0;
+  /** @internal */ songs: NokiaSong[] = [
     ...NOKIA_SONGS.map((s) => ({ ...s })),
     ...DEFAULT_CUSTOM_TUNES.map((s) => ({ ...s })),
   ];
-  private melodyPlaying = false;
-  private melodyTimer = 0;
+  /** @internal */ melodyPlaying = false;
+  /** @internal */ melodyTimer = 0;
   private melodyDuration = 0;
-  private melodyEvents: NokiaNoteEvent[] = [];
+  /** @internal */ melodyEvents: NokiaNoteEvent[] = [];
 
   // Pixel Paint 16x10
   private paintW = 16;
   private paintH = 10;
-  private paintGrid: boolean[][] = [];
-  private paintR = 4;
-  private paintC = 7;
+  /** @internal */ paintGrid: boolean[][] = [];
+  /** @internal */ paintR = 4;
+  /** @internal */ paintC = 7;
 
   // Nokia WAP 1.1 Browser state
-  private wapUrl = 'https://www.metaframelabs.space/';
+  /** @internal */ wapUrl = 'https://www.metaframelabs.space/';
   private wapBookmarkIdx = 0;
-  private wapLoading = false;
-  private wapScroll = 0;
+  /** @internal */ wapLoading = false;
+  /** @internal */ wapScroll = 0;
   private wapFetchedOnce = false;
-  private wapLines: string[] = [
+  /** @internal */ wapLines: string[] = [
     '=== METAFRAME LABS ===',
     '// AI-NATIVE · PRIVACY-FIRST',
     "[ WE DON'T BUILD WEBSITES. ]",
@@ -258,11 +286,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Real Interactive Shell (rdsh) state
   private termIdx = -1;
-  private termCwd = '/home';
-  private termInput = '';
-  private termScroll = 0;
-  private termShowLogo = true;
-  private termOut: string[] = [
+  /** @internal */ termCwd = '/home';
+  /** @internal */ termInput = '';
+  /** @internal */ termScroll = 0;
+  /** @internal */ termShowLogo = true;
+  /** @internal */ termOut: string[] = [
     'root@retrodeck',
     '------------------',
     'OS: RetroDeck v1.2',
@@ -272,66 +300,66 @@ export class RetroDeckOS implements ArcadeGameInstance {
   ];
 
   // Setup state
-  private setupIdx = 0;
+  /** @internal */ setupIdx = 0;
 
   // In-LCD Themes Browser state
-  private themeIdx = 0;
+  /** @internal */ themeIdx = 0;
 
   // RetroDeck Pro In-LCD App state
-  private proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
-  private proStatusMsg = '';
+  /** @internal */ proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
+  /** @internal */ proStatusMsg = '';
   private proBusy = false;
 
   // Nokia 3310 Phone / SMS / Profiles state
-  private dialR = 0;
-  private dialC = 0;
-  private dialBuffer = '';
-  private isNumericDeckActive = false;
-  private callState: 'idle' | 'ringing' | 'connected' | 'info' | 'warranty' = 'idle';
-  private warrantyPage = 0;
-  private callTitle = '';
-  private callSub = '';
-  private callTimer = 0;
+  /** @internal */ dialR = 0;
+  /** @internal */ dialC = 0;
+  /** @internal */ dialBuffer = '';
+  /** @internal */ isNumericDeckActive = false;
+  /** @internal */ callState: 'idle' | 'ringing' | 'connected' | 'info' | 'warranty' = 'idle';
+  /** @internal */ warrantyPage = 0;
+  /** @internal */ callTitle = '';
+  /** @internal */ callSub = '';
+  /** @internal */ callTimer = 0;
   private ringRepeatTimer = 0;
   private ringDuration = 0;
 
-  private smsList: NokiaPicSms[] = INITIAL_PIC_MESSAGES.map((m) => ({ ...m }));
-  private smsIdx = 0;
-  private smsBanner = '';
-  private smsBannerTimer = 0;
-  private unreadSmsCount = 0;
+  /** @internal */ smsList: NokiaPicSms[] = INITIAL_PIC_MESSAGES.map((m) => ({ ...m }));
+  /** @internal */ smsIdx = 0;
+  /** @internal */ smsBanner = '';
+  /** @internal */ smsBannerTimer = 0;
+  /** @internal */ unreadSmsCount = 0;
   private smsSendingAi = false;
-  private smsDeleteConfirm = false;
-  private smsMode: 'inbox' | 'compose' = 'inbox';
-  private smsStudioTab: 'art' | 'stamps' = 'art';
-  private smsArtIdx = 0;
-  private smsStampIdx = 0;
-  private smsDraftText = '';
+  /** @internal */ smsDeleteConfirm = false;
+  /** @internal */ smsMode: 'inbox' | 'compose' = 'inbox';
+  /** @internal */ smsStudioTab: 'art' | 'stamps' = 'art';
+  /** @internal */ smsArtIdx = 0;
+  /** @internal */ smsStampIdx = 0;
+  /** @internal */ smsDraftText = '';
   private smsReplyTargetIdx: number | null = null;
-  private liveAiSmsEnabled = true;
+  /** @internal */ liveAiSmsEnabled = true;
   private liveSmsTimer = 80;
   private liveSmsFetching = false;
   private personaHistories: Record<string, { role: 'user' | 'assistant'; content: string }[]> = {};
 
-  private profRow = 0;
-  private profileIdx = 0;
-  private ringtoneIdx = 0;
-  private smsToneIdx = 0;
-  private operatorIdx = 0;
-  private torchInvert = false;
+  /** @internal */ profRow = 0;
+  /** @internal */ profileIdx = 0;
+  /** @internal */ ringtoneIdx = 0;
+  /** @internal */ smsToneIdx = 0;
+  /** @internal */ operatorIdx = 0;
+  /** @internal */ torchInvert = false;
 
   // Device battery telemetry for OS status bar
-  private batteryPct: number | null = null;
-  private batteryCharging = false;
+  /** @internal */ batteryPct: number | null = null;
+  /** @internal */ batteryCharging = false;
   private batteryPollTimer = 0;
 
   // Live Weather state (Open-Meteo, zero API key required)
   private weatherCityIdx = 0;
-  private weatherQuery = 'Palo Alto';
-  private weatherLoading = false;
+  /** @internal */ weatherQuery = 'Palo Alto';
+  /** @internal */ weatherLoading = false;
   private weatherFetchedOnce = false;
-  private weatherError = '';
-  private weatherData: {
+  /** @internal */ weatherError = '';
+  /** @internal */ weatherData: {
     city: string;
     region: string;
     country: string;
@@ -344,10 +372,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   } | null = null;
 
   // Persistent Pixel Notepad state
-  private notes: PixelNoteItem[] = DEFAULT_NOTES.map((n) => ({ ...n }));
-  private noteIdx = 0;
+  /** @internal */ notes: PixelNoteItem[] = DEFAULT_NOTES.map((n) => ({ ...n }));
+  /** @internal */ noteIdx = 0;
   private noteDraft = '';
-  private noteDeleteConfirm = false;
+  /** @internal */ noteDeleteConfirm = false;
 
   constructor(cb: RetroDeckOSCallbacks) {
     this.cb = cb;
@@ -533,7 +561,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     AsyncStorage.setItem(SMS_LIST_STORAGE_KEY, JSON.stringify(this.smsList)).catch(() => {});
   }
 
-  private isCustomTune(idx = this.songIdx): boolean {
+  /** @internal */ isCustomTune(idx = this.songIdx): boolean {
     return idx >= NOKIA_SONGS.length;
   }
 
@@ -2746,7 +2774,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     return null;
   }
 
-  private pressCalcKey(k: string) {
+  /** @internal */ pressCalcKey(k: string) {
     if (k === 'DEL') {
       if (this.calcFresh) return;
       this.calcDisplay =
@@ -3167,204 +3195,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
     };
   }
 
-  private formatClock(): string {
+  /** @internal */ formatClock(): string {
     const d = new Date();
     const hh = String(d.getHours()).padStart(2, '0');
     const mm = String(d.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
-  }
-
-  private renderAnalogDial(fg: string, dialSize = 84) {
-    const d = new Date();
-    const hours = d.getHours();
-    const mins = d.getMinutes();
-    const secs = d.getSeconds();
-    const secDeg = secs * 6;
-    const minDeg = mins * 6 + secs * 0.1;
-    const hourDeg = ((hours % 12) * 30) + mins * 0.5;
-    const center = dialSize / 2;
-    const scale = dialSize / 84;
-
-    return (
-      <View
-        style={{
-          width: dialSize,
-          height: dialSize,
-          borderRadius: center,
-          borderWidth: 2,
-          borderColor: fg,
-          position: 'relative',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        {Array.from({ length: 12 }).map((_, i) => {
-          const angle = (i * 30 - 90) * (Math.PI / 180);
-          const r = center - 6;
-          const isMajor = i % 3 === 0;
-          const dotSize = isMajor ? 4 : 2;
-          const tx = center + Math.cos(angle) * r - dotSize / 2 - 2;
-          const ty = center + Math.sin(angle) * r - dotSize / 2 - 2;
-          return (
-            <View
-              key={i}
-              style={{
-                position: 'absolute',
-                left: tx,
-                top: ty,
-                width: dotSize,
-                height: dotSize,
-                backgroundColor: fg,
-              }}
-            />
-          );
-        })}
-
-        {/* Hour Hand */}
-        <View
-          style={{
-            position: 'absolute',
-            width: 3,
-            height: Math.round(20 * scale),
-            backgroundColor: fg,
-            borderRadius: 1.5,
-            transform: [
-              { rotate: `${hourDeg}deg` },
-              { translateY: -Math.round(9 * scale) },
-            ],
-          }}
-        />
-
-        {/* Minute Hand */}
-        <View
-          style={{
-            position: 'absolute',
-            width: 2,
-            height: Math.round(29 * scale),
-            backgroundColor: fg,
-            borderRadius: 1,
-            transform: [
-              { rotate: `${minDeg}deg` },
-              { translateY: -Math.round(13 * scale) },
-            ],
-          }}
-        />
-
-        {/* Second Hand */}
-        <View
-          style={{
-            position: 'absolute',
-            width: 1,
-            height: Math.round(33 * scale),
-            backgroundColor: fg,
-            opacity: 0.85,
-            transform: [
-              { rotate: `${secDeg}deg` },
-              { translateY: -Math.round(14 * scale) },
-            ],
-          }}
-        />
-
-        {/* Center Pivot */}
-        <View
-          style={{
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: fg,
-          }}
-        />
-      </View>
-    );
-  }
-
-  /** Renders retro LCD antenna mast, 4 stepped cellular signal bars, and operator name */
-  private renderStatusLeft(ink: string): React.ReactNode {
-    const signalBars = (Math.floor(this.uptime / 4) + this.operatorIdx) % 7 === 0 ? 3 : 4;
-    const barHeights = [3, 5, 7, 9];
-
-    return (
-      <View style={styles.osBarLeft}>
-        <View style={styles.sigMeter}>
-          <View style={styles.sigAnt}>
-            <View style={[styles.sigAntWingL, { backgroundColor: ink }]} />
-            <View style={[styles.sigAntWingR, { backgroundColor: ink }]} />
-            <View style={[styles.sigAntBridge, { backgroundColor: ink }]} />
-            <View style={[styles.sigAntStem, { backgroundColor: ink }]} />
-          </View>
-          {barHeights.map((h, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.sigBar,
-                {
-                  height: h,
-                  backgroundColor: ink,
-                  opacity: idx < signalBars ? 1 : 0.25,
-                },
-              ]}
-            />
-          ))}
-        </View>
-        <Text style={[styles.osBarTxt, { color: ink }]} numberOfLines={1}>
-          {NOKIA_OPERATORS[this.operatorIdx]}
-        </Text>
-      </View>
-    );
-  }
-
-  /** Renders live audio/radio badge, battery percentage, and 4-cell pixel LCD battery icon */
-  private renderStatusRight(ink: string): React.ReactNode {
-    const isMuted = RetroAudioEngine.getMuted() || NOKIA_PROFILES[this.profileIdx] === 'SILENT';
-    const isRadio = somaRadioService.getIsPlaying();
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const pct = this.batteryPct;
-    const filledCells =
-      pct === null
-        ? 4
-        : pct <= 5
-        ? 0
-        : pct <= 25
-        ? 1
-        : pct <= 50
-        ? 2
-        : pct <= 75
-        ? 3
-        : 4;
-
-    return (
-      <View style={styles.osBarRight}>
-        {(this.smsBannerTimer > 0 || this.unreadSmsCount > 0) && (
-          <Ionicons name="mail" size={10} color={ink} style={{ marginRight: 2 }} />
-        )}
-        {isPro && (
-          <Text style={[styles.osBarTxt, { color: ink, fontSize: 8 }]}>PRO</Text>
-        )}
-        {isMuted && <Ionicons name="volume-mute" size={10} color={ink} />}
-        {!isMuted && isRadio && <Ionicons name="musical-notes" size={10} color={ink} />}
-        {this.batteryCharging && <Ionicons name="flash" size={9} color={ink} />}
-        {pct !== null && (
-          <Text style={[styles.osBarTxt, { color: ink }]}>{pct}%</Text>
-        )}
-        <View style={styles.batWrap}>
-          <View style={[styles.batShell, { borderColor: ink }]}>
-            {[0, 1, 2, 3].map((idx) => (
-              <View
-                key={idx}
-                style={[
-                  styles.batCell,
-                  {
-                    backgroundColor: idx < filledCells ? ink : 'transparent',
-                    opacity: pct === null ? 0.55 : 1,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-          <View style={[styles.batNub, { backgroundColor: ink }]} />
-        </View>
-      </View>
-    );
   }
 
   public renderEntities(palette: RetroPalette): React.ReactNode {
@@ -3402,9 +3237,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={[styles.container, { backgroundColor: bg }]}>
           <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
-            {this.renderStatusLeft(bg)}
+            {renderStatusLeft(this, bg)}
             <Text style={[styles.osBarTxt, { color: bg }]}>[KEYGUARD]</Text>
-            {this.renderStatusRight(bg)}
+            {renderStatusRight(this, bg)}
           </View>
 
           <View style={[styles.centerBox, { transform: [{ translateY: driftY }] }]}>
@@ -3422,7 +3257,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   },
                 ]}
               >
-                {this.renderAnalogDial(fg, 76)}
+                {renderAnalogDial(fg, 76)}
                 <View style={{ alignItems: 'flex-start' }}>
                   <Text style={[styles.swLbl, { color: fg }]}>
                     {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
@@ -3494,35 +3329,35 @@ export class RetroDeckOS implements ArcadeGameInstance {
         {/* OS Top Status Bar */}
         <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
           {this.app === 'desktop' ? (
-            this.renderStatusLeft(bg)
+            renderStatusLeft(this, bg)
           ) : (
             <Text style={[styles.osBarTxt, { color: bg }]}>{`< ${this.app.toUpperCase()}`}</Text>
           )}
           <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
-          {this.renderStatusRight(bg)}
+          {renderStatusRight(this, bg)}
         </View>
 
         {/* Body */}
         <View style={styles.osBody}>
-          {this.app === 'desktop' && this.renderDesktop(fg, bg)}
-          {this.app === 'arcade' && this.renderArcadeBrowser(fg, bg)}
-          {this.app === 'radio' && this.renderRadio(fg, bg)}
-          {this.app === 'ai' && this.renderAiApp(fg, bg)}
-          {this.app === 'wap' && this.renderWap(fg, bg)}
-          {this.app === 'synth' && this.renderSynth(fg, bg)}
-          {this.app === 'phone' && this.renderPhone(fg, bg)}
-          {this.app === 'sms' && this.renderSms(fg, bg)}
-          {this.app === 'profiles' && this.renderProfiles(fg, bg)}
-          {this.app === 'calc' && this.renderCalc(fg, bg)}
-          {this.app === 'clock' && this.renderClock(fg, bg)}
-          {this.app === 'paint' && this.renderPaint(fg, bg)}
-          {this.app === 'weather' && this.renderWeather(fg, bg)}
-          {this.app === 'notes' && this.renderNotes(fg, bg)}
-          {this.app === 'stats' && this.renderStats(fg, bg)}
-          {this.app === 'term' && this.renderTerm(fg, bg)}
-          {this.app === 'setup' && this.renderSetup(fg, bg)}
-          {this.app === 'themes' && this.renderThemes(fg, bg)}
-          {this.app === 'pro' && this.renderPro(fg, bg)}
+          {this.app === 'desktop' && renderDesktop(this, fg, bg)}
+          {this.app === 'arcade' && renderArcadeBrowser(this, fg, bg)}
+          {this.app === 'radio' && renderRadio(this, fg, bg)}
+          {this.app === 'ai' && renderAiApp(this, fg, bg)}
+          {this.app === 'wap' && renderWap(this, fg, bg)}
+          {this.app === 'synth' && renderSynth(this, fg, bg)}
+          {this.app === 'phone' && renderPhone(this, fg, bg)}
+          {this.app === 'sms' && renderSms(this, fg, bg)}
+          {this.app === 'profiles' && renderProfiles(this, fg, bg)}
+          {this.app === 'calc' && renderCalc(this, fg, bg)}
+          {this.app === 'clock' && renderClock(this, fg, bg)}
+          {this.app === 'paint' && renderPaint(this, fg, bg)}
+          {this.app === 'weather' && renderWeather(this, fg, bg)}
+          {this.app === 'notes' && renderNotes(this, fg, bg)}
+          {this.app === 'stats' && renderStats(this, fg, bg)}
+          {this.app === 'term' && renderTerm(this, fg, bg)}
+          {this.app === 'setup' && renderSetup(this, fg, bg)}
+          {this.app === 'themes' && renderThemes(this, fg, bg)}
+          {this.app === 'pro' && renderPro(this, fg, bg)}
 
           {/* Global Nokia 3310 SMS Notification Overlay Banner */}
           {this.smsBannerTimer > 0 && (
@@ -3580,1952 +3415,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
               : this.app === 'notes'
               ? '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP'
               : '[A] ACTION   [B] DESKTOP'}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  private renderDesktop(fg: string, bg: string) {
-    const cols = 4;
-    const rows = Math.ceil(DESKTOP_ICONS.length / cols);
-
-    return (
-      <View style={styles.deskGrid}>
-        {Array.from({ length: rows }, (_, r) => (
-          <View key={r} style={styles.deskRow}>
-            {Array.from({ length: cols }, (_, c) => {
-              const idx = r * cols + c;
-              const item = DESKTOP_ICONS[idx];
-              if (!item) {
-                return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
-              }
-              const sel = idx === this.deskIdx;
-              const iconColor = sel ? bg : fg;
-              return (
-                <View
-                  key={item.id}
-                  style={[
-                    styles.deskTile,
-                    {
-                      borderColor: fg,
-                      backgroundColor: sel ? fg : 'transparent',
-                    },
-                  ]}
-                >
-                  <Ionicons name={item.icon} size={16} color={iconColor} />
-                  <Text style={[styles.deskLbl, { color: iconColor }]}>{item.label}</Text>
-                </View>
-              );
-            })}
-          </View>
-        ))}
-      </View>
-    );
-  }
-
-  private renderRadio(fg: string, bg: string) {
-    const channel = somaRadioService.getChannel();
-    const isPlaying = somaRadioService.getIsPlaying();
-    const isLoading = somaRadioService.getIsLoading();
-    const song = somaRadioService.getCurrentSong();
-    const volPercent = Math.round(somaRadioService.getVolume() * 100);
-    const channelIdx = somaRadioService.getChannelIndex();
-    const totalChannels = SOMA_CHANNELS.length;
-
-    // Animated visualizer bars simulation
-    const bars = [4, 7, 12, 16, 9, 14, 8, 15, 11, 6, 13, 10, 5, 8];
-
-    return (
-      <View style={styles.listWrap}>
-        {/* Radio Header / Frequency & Status */}
-        <View
-          style={[
-            styles.aiPromptBar,
-            {
-              borderColor: fg,
-              backgroundColor: isPlaying ? fg : 'transparent',
-              marginBottom: 4,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.aiPromptTxt,
-              { color: isPlaying ? bg : fg, fontWeight: '900' },
-            ]}
-          >
-            {isPlaying ? '● ON AIR' : isLoading ? '◌ TUNING...' : '○ STANDBY'} [{channel.freq}]
-          </Text>
-          <Text
-            style={[
-              styles.aiPromptTxt,
-              { color: isPlaying ? bg : fg, fontWeight: '800' },
-            ]}
-          >
-            VOL {volPercent}%
-          </Text>
-        </View>
-
-        {/* Big Station Display Card */}
-        <View
-          style={[
-            styles.calcScreen,
-            {
-              borderColor: fg,
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              paddingVertical: 4,
-              height: 52,
-              marginBottom: 4,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.clockDate,
-              { color: fg, marginBottom: 1, letterSpacing: 1 },
-            ]}
-          >
-            SomaFM CH {channelIdx + 1}/{totalChannels} • {channel.genre}
-          </Text>
-          <Text
-            style={[
-              styles.calcNum,
-              { color: fg, fontSize: 13, fontWeight: '900', letterSpacing: 0.5 },
-            ]}
-            numberOfLines={1}
-          >
-            {channel.name}
-          </Text>
-          <Text
-            style={[
-              styles.miniHint,
-              { color: fg, fontSize: 7.5, opacity: 0.85, marginTop: 1 },
-            ]}
-            numberOfLines={1}
-          >
-            {channel.description}
-          </Text>
-        </View>
-
-        {/* Live Now Playing Info & Visualizer */}
-        <View
-          style={[
-            styles.aiChatBox,
-            {
-              borderColor: fg,
-              paddingVertical: 3,
-              paddingHorizontal: 6,
-              marginBottom: 4,
-              justifyContent: 'space-between',
-            },
-          ]}
-        >
-          <View>
-            <Text
-              style={[
-                styles.miniHint,
-                { color: fg, fontSize: 7.5, fontWeight: '900' },
-              ]}
-            >
-              NOW PLAYING:
-            </Text>
-            <Text
-              style={[
-                styles.aiChatLine,
-                { color: fg, fontSize: 9.5, lineHeight: 13 },
-              ]}
-              numberOfLines={1}
-            >
-              {song?.title || (isPlaying ? 'LIVE STREAMING...' : 'PRESS [A] TO TUNE IN')}
-            </Text>
-            {song?.artist ? (
-              <Text
-                style={[
-                  styles.miniHint,
-                  { color: fg, fontSize: 8, opacity: 0.9 },
-                ]}
-                numberOfLines={1}
-              >
-                BY: {song.artist}
-              </Text>
-            ) : null}
-          </View>
-
-          {/* Retro Spectrum Bars */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'flex-end',
-              justifyContent: 'space-between',
-              height: 18,
-              marginTop: 2,
-              paddingHorizontal: 4,
-            }}
-          >
-            {bars.map((maxH, i) => {
-              const activeH = isPlaying
-                ? Math.max(3, Math.min(18, Math.round(((Math.sin((this.uptime * 10) + i) + 1) / 2) * maxH + 3)))
-                : 2;
-              return (
-                <View
-                  key={i}
-                  style={{
-                    width: 7,
-                    height: activeH,
-                    backgroundColor: fg,
-                    borderRadius: 1,
-                  }}
-                />
-              );
-            })}
-          </View>
-        </View>
-      </View>
-    );
-  }
-
-  private renderWap(fg: string, bg: string) {
-    const cleanHost = this.wapUrl.replace(/^https?:\/\/(www\.)?/i, '').slice(0, 26);
-    const slice = this.wapLines.slice(this.wapScroll, this.wapScroll + 6);
-
-    return (
-      <View style={styles.listWrap}>
-        {/* Top WAP Address Bar */}
-        <View
-          style={[
-            styles.aiPromptBar,
-            {
-              borderColor: fg,
-              backgroundColor: fg,
-              marginBottom: 4,
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            },
-          ]}
-        >
-          <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
-            {this.wapLoading ? 'WAP: CONNECTING...' : `WAP://${cleanHost}`}
-          </Text>
-          <Text style={[styles.aiPromptTxt, { color: bg }]}>
-            {this.wapScroll + 1}/{this.wapLines.length}
-          </Text>
-        </View>
-
-        {/* WML Monochrome Page Content */}
-        <View style={[styles.aiChatBox, { borderColor: fg, marginBottom: 2 }]}>
-          {slice.map((line, i) => (
-            <Text key={i} style={[styles.aiChatLine, { color: fg }]} numberOfLines={1}>
-              {line}
-            </Text>
-          ))}
-        </View>
-
-        <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-          [▲/▼] SCROLL • [◀/▶] SITES • [A/KBD] ENTER URL
-        </Text>
-      </View>
-    );
-  }
-
-  private renderAiApp(fg: string, bg: string) {
-    const pid = this.byokConfig.activeProvider;
-    const meta = getProviderMeta(pid);
-    const hasKey = !meta.requiresKey || Boolean(this.byokConfig.keys[pid]?.trim());
-    const rawKey = this.byokConfig.keys[pid] || '';
-    const maskedKey = rawKey
-      ? rawKey.length > 8
-        ? `${rawKey.slice(0, 5)}...${rawKey.slice(-3)}`
-        : 'SET (***)'
-      : 'NOT SET [PRESS A]';
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={styles.aiTabsRow}>
-          <View
-            style={[
-              styles.aiTabPill,
-              {
-                borderColor: fg,
-                backgroundColor: this.aiTab === 'chat' ? fg : 'transparent',
-              },
-            ]}
-          >
-            <Text style={[styles.aiTabTxt, { color: this.aiTab === 'chat' ? bg : fg }]}>
-              1.CHAT ({meta.shortName})
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.aiTabPill,
-              {
-                borderColor: fg,
-                backgroundColor: this.aiTab === 'byok' ? fg : 'transparent',
-              },
-            ]}
-          >
-            <Text style={[styles.aiTabTxt, { color: this.aiTab === 'byok' ? bg : fg }]}>
-              2.BYOK [{hasKey ? 'KEY:OK' : 'NO KEY'}]
-            </Text>
-          </View>
-        </View>
-
-        {this.aiTab === 'chat' ? (
-          <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            <View style={[styles.aiChatBox, { borderColor: fg }]}>
-              {this.chatLines.slice(this.chatScroll, this.chatScroll + 6).map((line, idx) => (
-                <Text key={idx} style={[styles.aiChatLine, { color: fg }]} numberOfLines={1}>
-                  {line}
-                </Text>
-              ))}
-            </View>
-
-            <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
-              <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
-                {this.aiLoading
-                  ? `> [${meta.shortName} THINKING...]`
-                  : `> ${this.aiPrompt || 'PRESS [KBD] OR [A] TO CHAT_'}`}
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={{ flex: 1 }}>
-            {[
-              `PROVIDER: < ${meta.name.toUpperCase()} >`,
-              `API KEY: ${maskedKey}`,
-              `MODEL: ${getProviderModel(pid, this.byokConfig)}`,
-              '>> BACK TO AI CHAT <<',
-            ].map((rowLabel, rIdx) => {
-              const sel = rIdx === this.byokRow;
-              return (
-                <View
-                  key={rIdx}
-                  style={[
-                    styles.setupRow,
-                    { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                  ]}
-                >
-                  <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                    {sel ? '> ' : '  '}
-                    {rowLabel}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  private renderArcadeBrowser(fg: string, bg: string) {
-    const carts = this.cb.getCartridges();
-    const scores = this.cb.getHighScores();
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const visibleCount = 7;
-    const start = Math.max(0, Math.min(carts.length - visibleCount, this.gameIdx - 3));
-    const slice = carts.slice(start, start + visibleCount);
-
-    return (
-      <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>
-          CARTRIDGE BAY ({this.gameIdx + 1}/{carts.length})  ◀/▶ ±5
-        </Text>
-        {slice.map((c, i) => {
-          const realIdx = start + i;
-          const sel = realIdx === this.gameIdx;
-          const hs = scores[c.id] || 0;
-          const locked = isCartridgeProLocked(c.id, isPro);
-          return (
-            <View
-              key={c.id}
-              style={[
-                styles.listRow,
-                { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
-              ]}
-            >
-              <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                {String(realIdx + 1).padStart(3, '0')}. {c.title}
-              </Text>
-              <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-                {locked ? '[PRO]' : (hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6))}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    );
-  }
-
-  private renderCalc(fg: string, bg: string) {
-    if (this.isNumericDeckActive) {
-      const opBtns: { label: string; key: string }[] = [
-        { label: '+', key: '+' },
-        { label: '-', key: '-' },
-        { label: '×', key: '*' },
-        { label: '÷', key: '/' },
-        { label: '.', key: '.' },
-        { label: '=', key: '=' },
-      ];
-      return (
-        <View style={styles.calcWrap}>
-          <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]}>RETRODECK CALC</Text>
-            <Text style={[styles.compBpm, { color: fg }]}>
-              {this.calcOp ? `[OP: ${this.calcOp}]` : '[NUM PAD]'}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.swBox,
-              {
-                borderColor: fg,
-                flex: 1,
-                width: '100%',
-                justifyContent: 'center',
-                alignItems: 'flex-end',
-                paddingHorizontal: 14,
-                marginBottom: 6,
-              },
-            ]}
-          >
-            {this.calcAcc !== null && this.calcOp ? (
-              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginBottom: 2 }]}>
-                {this.calcAcc} {this.calcOp}
-              </Text>
-            ) : null}
-            <Text
-              style={[
-                styles.clockBig,
-                {
-                  color: fg,
-                  fontSize: this.calcDisplay.length > 9 ? 18 : 26,
-                  letterSpacing: 1,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {this.calcDisplay}
-            </Text>
-          </View>
-          {/* Single-row touchable operators (+, -, ×, ÷, ., =) */}
-          <View style={{ flexDirection: 'row', gap: 4, height: 26, marginBottom: 2 }}>
-            {opBtns.map((op) => {
-              const active = this.calcOp === op.key;
-              return (
-                <Pressable
-                  key={op.key}
-                  onPress={() => {
-                    this.pressCalcKey(op.key);
-                    this.cb.onPlaySound?.('hit');
-                  }}
-                  style={{
-                    flex: 1,
-                    borderWidth: 1.5,
-                    borderColor: fg,
-                    backgroundColor: active ? fg : 'transparent',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.compKeyTxt,
-                      { color: active ? bg : fg, fontSize: 10 },
-                    ]}
-                  >
-                    {op.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.calcWrap}>
-        <View style={[styles.calcScreen, { borderColor: fg }]}>
-          <Text style={[styles.calcModeTag, { color: fg }]}>
-            {this.calcOp ? `OP: ${this.calcOp}` : 'CALC'}
-          </Text>
-          <Text style={[styles.calcNum, { color: fg }]} numberOfLines={1}>
-            {this.calcDisplay}
-          </Text>
-        </View>
-        <View style={styles.calcGrid}>
-          {CALC_KEYS.map((row, r) => (
-            <View key={r} style={styles.calcRow}>
-              {row.map((k, c) => {
-                const sel = r === this.calcR && c === this.calcC;
-                return (
-                  <View
-                    key={`${r}-${c}`}
-                    style={[
-                      styles.calcKey5,
-                      { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                    ]}
-                  >
-                    <Text style={[styles.compKeyTxt, { color: sel ? bg : fg }]}>{k}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  private renderClock(fg: string, bg: string) {
-    const d = new Date();
-    const hours = d.getHours();
-    const mins = d.getMinutes();
-    const secs = d.getSeconds();
-    const hh = String(hours).padStart(2, '0');
-    const mm = String(mins).padStart(2, '0');
-    const ss = String(secs).padStart(2, '0');
-    const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-    const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
-    const dateStr = `${days[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`;
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={styles.aiTabsRow}>
-          {[
-            { id: 'clk', label: '1.CLOCK' },
-            { id: 'sw', label: '2.STOPWATCH' },
-            { id: 'cd', label: '3.TIMER' },
-          ].map((t) => {
-            const active = this.clockTab === t.id;
-            return (
-              <View
-                key={t.id}
-                style={[
-                  styles.aiTabPill,
-                  { borderColor: fg, backgroundColor: active ? fg : 'transparent' },
-                ]}
-              >
-                <Text style={[styles.aiTabTxt, { color: active ? bg : fg }]}>
-                  {t.label}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {this.clockTab === 'clk' ? (
-          <View style={styles.centerBox}>
-            {this.clockFace === 'analog' ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 4 }}>
-                {this.renderAnalogDial(fg, 84)}
-
-                {/* Digital & Date Side Readout */}
-                <View style={{ alignItems: 'flex-start', justifyContent: 'center' }}>
-                  <Text style={[styles.swLbl, { color: fg, opacity: 0.75 }]}>ANALOG WATCH</Text>
-                  <Text style={[styles.swTime, { color: fg, fontSize: 16 }]}>
-                    {hh}:{mm}:{ss}
-                  </Text>
-                  <Text style={[styles.clockDate, { color: fg, marginTop: 2, marginBottom: 0 }]}>
-                    {dateStr}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View style={[styles.swBox, { borderColor: fg }]}>
-                <Text style={[styles.swLbl, { color: fg }]}>DIGITAL WATCH</Text>
-                <Text style={[styles.clockBig, { color: fg }]}>
-                  {hh}:{mm}:{ss}
-                </Text>
-                <Text style={[styles.clockDate, { color: fg, marginBottom: 0 }]}>
-                  {dateStr}
-                </Text>
-              </View>
-            )}
-            <Text style={[styles.miniHint, { color: fg }]}>
-              [A] {this.clockFace === 'analog' ? 'DIGITAL' : 'ANALOG'} • [◀/▶] TABS • ALSO IN SETUP
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.centerBox}>
-            <Text style={[styles.clockDate, { color: fg }]}>
-              TIME {hh}:{mm}:{ss}
-            </Text>
-            {this.clockTab === 'sw' ? (
-              <View style={[styles.swBox, { borderColor: fg }]}>
-                <Text style={[styles.swLbl, { color: fg }]}>
-                  STOPWATCH {this.swRunning ? '[RUN]' : '[STOP]'}
-                </Text>
-                <Text style={[styles.swTime, { color: fg }]}>{this.swTime.toFixed(2)}s</Text>
-                {this.swLap > 0 && (
-                  <Text style={[styles.swLap, { color: fg }]}>LAP: {this.swLap.toFixed(2)}s</Text>
-                )}
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.swBox,
-                  {
-                    borderColor: fg,
-                    backgroundColor: this.cdAlarmActive ? fg : 'transparent',
-                  },
-                ]}
-              >
-                <Text style={[styles.swLbl, { color: this.cdAlarmActive ? bg : fg }]}>
-                  {this.cdAlarmActive
-                    ? '((( TIME UP! ALARM )))'
-                    : `COUNTDOWN (${this.cdPresetSec}s)`}
-                </Text>
-                <Text style={[styles.swTime, { color: this.cdAlarmActive ? bg : fg }]}>
-                  {this.cdRemaining.toFixed(1)}s
-                </Text>
-              </View>
-            )}
-            <Text style={[styles.miniHint, { color: fg }]}>
-              {this.clockTab === 'sw'
-                ? '[A] START/STOP • [▲] RESET • [▼] LAP'
-                : '[A] START/STOP • [▲] +15S • [▼] -5S'}
-            </Text>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  private renderSynth(fg: string, bg: string) {
-    const isPro = this.cb.getIsPro?.() ?? false;
-
-    if (this.synthMode === 'list') {
-      const visibleCount = 6;
-      const start = Math.max(0, Math.min(this.songs.length - visibleCount, this.synthListIdx - 2));
-      const slice = this.songs.slice(start, start + visibleCount);
-      const selCustom = this.isCustomTune(this.synthListIdx);
-
-      return (
-        <View style={styles.listWrap}>
-          <View style={styles.compHeader}>
-            <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-              TUNES ({this.synthListIdx + 1}/{this.songs.length})
-            </Text>
-            <Text style={[styles.listMeta, { color: fg }]}>
-              {this.synthClearConfirm
-                ? 'PRESS [▶] CONFIRM'
-                : selCustom
-                ? '[▶]x2 CLEAR'
-                : '[A] SELECT'}
-            </Text>
-          </View>
-
-          <View style={{ flex: 1, justifyContent: 'flex-start', marginTop: 3 }}>
-            {slice.map((s, i) => {
-              const realIdx = start + i;
-              const sel = realIdx === this.synthListIdx;
-              const custom = this.isCustomTune(realIdx);
-              const locked = custom && !isPro;
-              const noteCount = s.notes.trim().split(/\s+/).filter(Boolean).length;
-              const isRing = realIdx === this.ringtoneIdx;
-              return (
-                <View
-                  key={`${s.title}-${realIdx}`}
-                  style={[
-                    styles.listRow,
-                    { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
-                  ]}
-                >
-                  <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                    {String(realIdx + 1).padStart(2, '0')}. {s.title.trim()}
-                    {isRing ? ' [RING]' : ''}
-                  </Text>
-                  <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-                    {locked ? '[PRO]' : custom ? `${noteCount}N` : `${s.bpm}BPM`}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
-
-          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
-            {this.synthClearConfirm
-              ? 'PRESS [▶] AGAIN TO CLEAR ALL NOTES!'
-              : '[▲/▼] SEL • [A] LOAD • [◀] RENAME • [▶]x2 CLR'}
-          </Text>
-        </View>
-      );
-    }
-
-    const curSong = this.songs[this.songIdx];
-    const isCustom = this.isCustomTune();
-    const isLocked = isCustom && !isPro;
-    const tokens = curSong.notes.trim().split(/\s+/).filter(Boolean);
-
-    let activeNoteIdx = -1;
-    if (this.melodyPlaying) {
-      for (let i = 0; i < this.melodyEvents.length; i++) {
-        const ev = this.melodyEvents[i];
-        if (
-          this.melodyTimer >= ev.startSec &&
-          this.melodyTimer < ev.startSec + ev.durationSec
-        ) {
-          activeNoteIdx = i;
-          break;
-        }
-      }
-    }
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={styles.compHeader}>
-          <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-            ♪ {this.songIdx + 1}/{this.songs.length} {curSong.title.trim()}
-            {this.songIdx === this.ringtoneIdx ? ' [RING]' : ''}
-          </Text>
-          <Text style={[styles.compBpm, { color: fg }]}>
-            {isLocked ? '[PRO]' : (this.melodyPlaying ? 'PLAYING' : (isCustom ? 'SAVED' : `${curSong.bpm}BPM`))}
-          </Text>
-        </View>
-
-        <View style={[styles.compStaff, { borderColor: fg }]}>
-          <View style={styles.compTokensWrap}>
-            {isLocked ? (
-              <Text style={[styles.compTokTxt, { color: fg }]}>
-                PRO REQUIRED TO COMPOSE & SAVE CUSTOM TUNES
-              </Text>
-            ) : (
-              <>
-                {tokens.slice(0, 18).map((tok, idx) => {
-                  const isPlaying = idx === activeNoteIdx;
-                  return (
-                    <View
-                      key={idx}
-                      style={[styles.compTokPill, isPlaying && { backgroundColor: fg }]}
-                    >
-                      <Text style={[styles.compTokTxt, { color: isPlaying ? bg : fg }]}>
-                        {tok}
-                      </Text>
-                    </View>
-                  );
-                })}
-                {tokens.length === 0 && (
-                  <Text style={[styles.compTokTxt, { color: fg }]}>
-                    {isCustom
-                      ? '(EMPTY SLOT - TAP NOTES TO COMPOSE & AUTO-SAVE)'
-                      : '(EMPTY - TAP NOTES BELOW TO COMPOSE)'}
-                  </Text>
-                )}
-              </>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.compKeypad}>
-          {COMPOSER_KEYS.map((item, idx) => {
-            const sel = idx === this.synthIdx;
-            const label =
-              item.token === 'PLAY' && this.melodyPlaying ? '■ STOP' : item.label;
-            return (
-              <View
-                key={idx}
-                style={[
-                  styles.compKey,
-                  { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                ]}
-              >
-                <Text style={[styles.compKeyTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                  {label}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-      </View>
-    );
-  }
-
-  private renderPhone(fg: string, bg: string) {
-    if (this.callState === 'warranty') {
-      const lifeMins = String(Math.floor(this.uptime / 60)).padStart(2, '0');
-      const lifeSecs = String(Math.floor(this.uptime % 60)).padStart(2, '0');
-      const pages = [
-        { hdr: '1/5 SERIAL NO:', val: '350993103310008', sub: 'NHM-5NX FINLAND' },
-        { hdr: '2/5 MADE DATE:', val: '092000', sub: 'SALO FACTORY FI' },
-        { hdr: '3/5 PURCHASING:', val: '112026', sub: 'ORIGINAL OWNER' },
-        { hdr: '4/5 REPAIRED:', val: '0000', sub: 'INDESTRUCTIBLE 3310' },
-        { hdr: '5/5 LIFE TIMER:', val: `0000:${lifeMins}:${lifeSecs}`, sub: 'TOTAL ACTIVE TIME' },
-      ];
-      const p = pages[this.warrantyPage];
-      return (
-        <View style={styles.centerBox}>
-          <View style={[styles.swBox, { borderColor: fg, width: '92%' }]}>
-            <Text style={[styles.swLbl, { color: fg, marginBottom: 4 }]}>
-              *#WAR0ANTY# ({p.hdr})
-            </Text>
-            <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
-              {p.val}
-            </Text>
-            <Text style={[styles.clockDate, { color: fg, marginTop: 4, marginBottom: 2 }]}>
-              {p.sub}
-            </Text>
-          </View>
-          <Text style={[styles.miniHint, { color: fg }]}>
-            [A] / [▼]: NEXT WARRANTY PAGE • [B]: EXIT
-          </Text>
-        </View>
-      );
-    }
-
-    if (this.callState !== 'idle') {
-      return (
-        <View style={styles.centerBox}>
-          <View style={[styles.swBox, { borderColor: fg, width: '90%' }]}>
-            <Text style={[styles.swLbl, { color: fg, marginBottom: 4 }]}>
-              {this.callState === 'ringing'
-                ? '((( INCOMING CALL )))'
-                : this.callState === 'connected'
-                ? `CONNECTED 00:${String(Math.floor(this.callTimer)).padStart(2, '0')}`
-                : 'RETRODECK SERVICE'}
-            </Text>
-            <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
-              {this.callTitle}
-            </Text>
-            <Text style={[styles.clockDate, { color: fg, marginTop: 4, marginBottom: 4 }]}>
-              {this.callSub}
-            </Text>
-          </View>
-          <Text style={[styles.miniHint, { color: fg }]}>
-            {this.callState === 'ringing'
-              ? '[A] ANSWER CALL   [B] REJECT'
-              : '[A] / [B] END / BACK'}
-          </Text>
-        </View>
-      );
-    }
-
-    if (this.isNumericDeckActive) {
-      const blink = Math.floor(this.uptime * 2.5) % 2 === 0;
-      return (
-        <View style={styles.calcWrap}>
-          <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]}>RETRODECK DIALER</Text>
-            <Text style={[styles.compBpm, { color: fg }]}>[NUM PAD]</Text>
-          </View>
-          <View
-            style={[
-              styles.swBox,
-              {
-                borderColor: fg,
-                flex: 1,
-                width: '100%',
-                justifyContent: 'center',
-                marginBottom: 4,
-              },
-            ]}
-          >
-            <Text
-              style={[
-                styles.clockBig,
-                {
-                  color: fg,
-                  fontSize: this.dialBuffer.length > 10 ? 16 : 22,
-                  textAlign: 'center',
-                  letterSpacing: 1.5,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {this.dialBuffer ? `${this.dialBuffer}${blink ? '_' : ' '}` : blink ? '_' : ' '}
-            </Text>
-            {!this.dialBuffer && (
-              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 4 }]}>
-                DIAL NUMBER OR *#0000# / *#06#
-              </Text>
-            )}
-          </View>
-          <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-            [OK]: CALL   [DEL]: ERASE   [BACK]: DESKTOP
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.calcWrap}>
-        <View style={[styles.calcScreen, { borderColor: fg }]}>
-          <Text style={[styles.calcOp, { color: fg }]}>TEL:</Text>
-          <Text style={[styles.calcNum, { color: fg }]} numberOfLines={1}>
-            {this.dialBuffer || '*#0000# / *#06#'}
-          </Text>
-        </View>
-        <View style={styles.calcGrid}>
-          {DIAL_KEYS.map((row, r) => (
-            <View key={r} style={styles.calcRow}>
-              {row.map((k, c) => {
-                const sel = r === this.dialR && c === this.dialC;
-                return (
-                  <View
-                    key={k}
-                    style={[
-                      styles.calcKey,
-                      { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                    ]}
-                  >
-                    <Text style={[styles.compKeyTxt, { color: sel ? bg : fg }]}>{k}</Text>
-                  </View>
-                );
-              })}
-            </View>
-          ))}
-        </View>
-      </View>
-    );
-  }
-
-  private renderSms(fg: string, bg: string) {
-    if (this.smsMode === 'compose') {
-      const isArtTab = this.smsStudioTab === 'art';
-      const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
-      const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
-      const totalStamps = POSTCARD_STAMPS.length;
-      const stripOffsets = [-3, -2, -1, 0, 1, 2, 3];
-
-      return (
-        <View style={styles.listWrap}>
-          <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-              {isArtTab ? 'POSTCARD P1/2: SCENE' : 'POSTCARD P2/2: ICON'}
-            </Text>
-            <Text style={[styles.compBpm, { color: fg }]}>
-              {isArtTab
-                ? `${this.smsArtIdx + 1}/${REAL_POSTCARDS.length} [${scene.title}]`
-                : `${this.smsStampIdx + 1}/${totalStamps} [${stamp.label}]`}
-            </Text>
-          </View>
-
-          {/* Real Full-Width Postcard Visual with Stamp & Postmark */}
-          <View
-            style={{
-              width: '100%',
-              height: isArtTab ? 78 : 56,
-              borderWidth: 1.5,
-              borderColor: fg,
-              marginBottom: 3,
-              position: 'relative',
-              overflow: 'hidden',
-            }}
-          >
-            <Image
-              source={scene.image}
-              style={{ width: '100%', height: '100%' }}
-              resizeMode="cover"
-            />
-            <View
-              style={{
-                position: 'absolute',
-                bottom: 3,
-                left: 4,
-                backgroundColor: '#000000AA',
-                paddingHorizontal: 5,
-                paddingVertical: 1.5,
-              }}
-            >
-              <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
-                {scene.title}
-              </Text>
-            </View>
-          </View>
-
-          {!isArtTab && (
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                borderWidth: 1,
-                borderColor: fg,
-                paddingVertical: 2,
-                paddingHorizontal: 4,
-                marginBottom: 3,
-              }}
-            >
-              {stripOffsets.map((off) => {
-                const idx = (this.smsStampIdx + off + totalStamps) % totalStamps;
-                const item = POSTCARD_STAMPS[idx];
-                const isCenter = off === 0;
-                return (
-                  <View
-                    key={`${off}-${item.icon}-${idx}`}
-                    style={{
-                      width: isCenter ? 26 : 18,
-                      height: isCenter ? 22 : 18,
-                      backgroundColor: isCenter ? fg : 'transparent',
-                      borderWidth: isCenter ? 1 : 0,
-                      borderColor: fg,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: isCenter ? 1 : 0.7,
-                    }}
-                  >
-                    <Ionicons
-                      name={item.icon}
-                      size={isCenter ? 14 : 11}
-                      color={isCenter ? bg : fg}
-                    />
-                  </View>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Message Preview Box */}
-          <View
-            style={[
-              styles.swBox,
-              {
-                borderColor: fg,
-                width: '100%',
-                flex: 1,
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 6,
-                paddingHorizontal: 6,
-                paddingVertical: 2,
-              },
-            ]}
-          >
-            <Ionicons name={stamp.icon} size={13} color={fg} />
-            <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5, flex: 1, textAlign: 'left' }]} numberOfLines={2}>
-              {this.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
-            </Text>
-          </View>
-
-          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
-            [◀/▶] PICK • [▼] {isArtTab ? 'ICONS (P2)' : 'SCENE (P1)'} • [▲] MSG • [A] SEND
-          </Text>
-        </View>
-      );
-    }
-
-    if (this.smsList.length === 0) {
-      return (
-        <View style={[styles.listWrap, { justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={[styles.subHeader, { color: fg }]}>INBOX EMPTY</Text>
-          <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>PRESS [▲] TO CREATE A POSTCARD</Text>
-        </View>
-      );
-    }
-    const msg = this.smsList[this.smsIdx] || this.smsList[0];
-    const bannerSpans = PIC_BANNERS[msg.artKey] || PIC_BANNERS.COFFEE;
-    const realCard = msg.postcardId
-      ? REAL_POSTCARDS.find((p) => p.id === msg.postcardId) || REAL_POSTCARDS[0]
-      : null;
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={styles.compHeader}>
-          <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-            ✉ {this.smsIdx + 1}/{this.smsList.length} {msg.sender}
-          </Text>
-          <Text style={[styles.compBpm, { color: fg }]}>
-            {this.smsDeleteConfirm ? '[CONFIRM DEL]' : `[${msg.title}]`}
-          </Text>
-        </View>
-
-        {realCard ? (
-          <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {/* Full-Size Illustrated Postcard */}
-            <View
-              style={{
-                width: '100%',
-                height: 82,
-                borderWidth: 1.5,
-                borderColor: fg,
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <Image
-                source={realCard.image}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  bottom: 3,
-                  left: 4,
-                  backgroundColor: '#000000AA',
-                  paddingHorizontal: 5,
-                  paddingVertical: 1.5,
-                }}
-              >
-                <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
-                  {realCard.title}
-                </Text>
-              </View>
-            </View>
-            <View
-              style={[
-                styles.swBox,
-                { borderColor: fg, width: '100%', paddingVertical: 3, paddingHorizontal: 6, marginTop: 3, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
-              ]}
-            >
-              {msg.stampIcon && <Ionicons name={msg.stampIcon} size={13} color={fg} />}
-              <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5, flex: 1, textAlign: msg.stampIcon ? 'left' : 'center' }]} numberOfLines={2}>
-                {msg.text}
-              </Text>
-            </View>
-          </View>
-        ) : msg.isLivePersona ? (
-          /* Authentic Plain-Text Real SMS Bubble with Timestamp & Mood */
-          <View
-            style={[
-              styles.compStaff,
-              {
-                borderColor: fg,
-                alignItems: 'flex-start',
-                justifyContent: 'center',
-                paddingHorizontal: 10,
-                paddingVertical: 8,
-                gap: 6,
-              },
-            ]}
-          >
-            <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
-                FROM: {msg.sender}
-              </Text>
-              <Text style={[styles.listMeta, { color: fg, fontSize: 8, opacity: 0.75 }]}>
-                {msg.mood ? `${msg.mood} • ` : ''}{msg.timestamp || this.formatClock()}
-              </Text>
-            </View>
-            <Text style={[styles.smsBodyTxt, { color: fg, textAlign: 'left', fontSize: 10.5, lineHeight: 14 }]} numberOfLines={5}>
-              {msg.text}
-            </Text>
-          </View>
-        ) : (
-          /* Classic Nokia 3310 Picture Message Card */
-          <View
-            style={[
-              styles.compStaff,
-              {
-                borderColor: fg,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-              },
-            ]}
-          >
-            {msg.stampIcon ? (
-              <View
-                style={[
-                  styles.picBannerBox,
-                  {
-                    borderColor: fg,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                  },
-                ]}
-              >
-                <Ionicons name={msg.stampIcon} size={18} color={fg} />
-                {msg.stampLabel ? (
-                  <Text style={[styles.compBpm, { color: fg, fontSize: 9 }]}>
-                    {msg.stampLabel}
-                  </Text>
-                ) : null}
-              </View>
-            ) : (
-              <View style={[styles.picBannerBox, { borderColor: fg }]}>
-                {bannerSpans.map((s) => (
-                  <View
-                    key={s.key}
-                    style={{
-                      position: 'absolute',
-                      left: s.x,
-                      top: s.y,
-                      width: s.w,
-                      height: s.h,
-                      backgroundColor: fg,
-                    }}
-                  />
-                ))}
-              </View>
-            )}
-
-            <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
-              {msg.text}
-            </Text>
-          </View>
-        )}
-
-        <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-          {this.smsBannerTimer > 0
-            ? this.smsBanner
-            : (this.smsDeleteConfirm
-                ? 'PRESS [▼] AGAIN TO CONFIRM DELETE!'
-                : msg.isLivePersona
-                ? '[▲] POSTCARD • [▼]/DEL DEL • [A] REPLY'
-                : '[▲] POSTCARD • [▼]/DEL DEL • [A] AI')}
-        </Text>
-      </View>
-    );
-  }
-
-  private renderProfiles(fg: string, bg: string) {
-    const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
-    const activeSms = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
-    const activeKeyStyle =
-      KEYPAD_SOUND_STYLES.find((s) => s.id === RetroAudioEngine.getKeySoundStyle()) ||
-      KEYPAD_SOUND_STYLES[0];
-    const volPct = Math.round(RetroAudioEngine.getVolume() * 100);
-    const bars = Math.round(volPct / 10);
-    const volBar = '█'.repeat(bars) + '░'.repeat(10 - bars);
-
-    const rows = [
-      `PROFILE: < ${NOKIA_PROFILES[this.profileIdx]} >`,
-      `VOLUME: < [${volBar}] ${volPct}% >`,
-      `RINGTONE: < ${activeRing.title.trim()} >`,
-      `SMS TONE: < ${activeSms.title} >`,
-      `KEY SOUND: < ${activeKeyStyle.name} >`,
-      `OPERATOR: < ${NOKIA_OPERATORS[this.operatorIdx]} >`,
-      `[A] LOCK KEYS • [◀/▶] TORCH: ${this.torchInvert ? 'ON' : 'OFF'}`,
-    ];
-    return (
-      <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>PROFILES & AUDIO</Text>
-        {rows.map((label, i) => {
-          const sel = i === this.profRow;
-          return (
-            <View
-              key={i}
-              style={[
-                styles.setupRow,
-                {
-                  borderColor: fg,
-                  backgroundColor: sel ? fg : 'transparent',
-                  paddingVertical: 3.5,
-                  marginBottom: 2.5,
-                },
-              ]}
-            >
-              <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                {sel ? '> ' : '  '}
-                {label}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    );
-  }
-
-  private renderPaint(fg: string, bg: string) {
-    return (
-      <View style={styles.centerBox}>
-        <View style={[styles.paintBoard, { borderColor: fg }]}>
-          {this.paintGrid.map((row, r) => (
-            <View key={r} style={{ flexDirection: 'row' }}>
-              {row.map((on, c) => {
-                const isCur = r === this.paintR && c === this.paintC;
-                return (
-                  <View
-                    key={c}
-                    style={{
-                      width: 15,
-                      height: 15,
-                      backgroundColor: on ? fg : bg,
-                      borderWidth: isCur ? 2 : 0.3,
-                      borderColor: isCur ? (on ? bg : fg) : fg,
-                    }}
-                  />
-                );
-              })}
-            </View>
-          ))}
-        </View>
-        <Text style={[styles.miniHint, { color: fg }]}>
-          POS ({this.paintC},{this.paintR}) • [A] TOGGLE PIXEL
-        </Text>
-      </View>
-    );
-  }
-
-  private renderWeather(fg: string, bg: string) {
-    const data = this.weatherData;
-    const cond = data ? decodeWmoWeather(data.code) : { label: 'SYNCING...', sprite: 'CLOUD' as WeatherSpriteKey };
-    const spans = WEATHER_SPRITES[cond.sprite];
-    const dayTags = ['TOM', 'D+2', 'D+3'];
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={[styles.compHeader, { marginBottom: 4 }]}>
-          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-            {data
-              ? `◀ ${data.city}${data.region ? `, ${data.region}` : ''}${
-                  data.country ? `, ${data.country}` : ''
-                } ▶`
-              : `◀ ${this.weatherQuery.toUpperCase()} ▶`}
-          </Text>
-          <Text style={[styles.listMeta, { color: fg }]}>
-            {this.weatherLoading ? 'FETCH...' : 'OPEN-METEO'}
-          </Text>
-        </View>
-
-        {this.weatherError ? (
-          <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
-            <Text style={[styles.subHeader, { color: fg }]}>{this.weatherError}</Text>
-            <Text style={[styles.miniHint, { color: fg }]}>
-              [▲] RETRY   •   [◀/▶] CHANGE CITY   •   [A] KBD
-            </Text>
-          </View>
-        ) : !data ? (
-          <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
-            <Text style={[styles.subHeader, { color: fg }]}>
-              {this.weatherLoading ? 'LOADING WEATHER...' : 'PRESS [▲] TO FETCH'}
-            </Text>
-          </View>
-        ) : (
-          <View style={{ flex: 1, justifyContent: 'space-between' }}>
-            {/* Hero Current Forecast Box with 60 FPS Pixel LCD Animations */}
-            {(() => {
-              const t = this.uptime;
-              const isStorm = cond.sprite === 'STORM';
-              const lightningFlash = isStorm && (t % 2.8) < 0.12;
-              const boxFg = lightningFlash ? bg : fg;
-              const boxBg = lightningFlash ? fg : 'transparent';
-
-              const spriteDx =
-                cond.sprite === 'CLOUD'
-                  ? Math.round(Math.sin(t * 1.4) * 3)
-                  : cond.sprite === 'RAIN' || cond.sprite === 'STORM'
-                  ? Math.round(Math.sin(t * 2.2) * 1.5)
-                  : 0;
-              const spriteDy =
-                cond.sprite === 'SUN'
-                  ? Math.round(Math.sin(t * 2.6) * 1.5)
-                  : cond.sprite === 'SNOW'
-                  ? Math.round(Math.sin(t * 1.8) * 1)
-                  : 0;
-
-              return (
-                <View
-                  style={[
-                    styles.swBox,
-                    {
-                      borderColor: fg,
-                      backgroundColor: boxBg,
-                      width: '100%',
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      marginBottom: 4,
-                      overflow: 'hidden',
-                    },
-                  ]}
-                >
-                  <View style={{ width: 48, height: 36, position: 'relative', overflow: 'hidden' }}>
-                    {spans.map((sp) => (
-                      <View
-                        key={sp.key}
-                        style={{
-                          position: 'absolute',
-                          left: sp.x + spriteDx,
-                          top: sp.y + spriteDy,
-                          width: sp.w,
-                          height: sp.h,
-                          backgroundColor: boxFg,
-                        }}
-                      />
-                    ))}
-
-                    {/* SUN: twinkling outer ray pixels */}
-                    {cond.sprite === 'SUN' &&
-                      [0, 1, 2, 3].map((i) => {
-                        const angle = t * 1.8 + (i * Math.PI) / 2;
-                        const rx = Math.round(23 + Math.cos(angle) * 20);
-                        const ry = Math.round(17 + Math.sin(angle) * 15);
-                        return (
-                          <View
-                            key={`ray-${i}`}
-                            style={{
-                              position: 'absolute',
-                              left: rx,
-                              top: ry,
-                              width: 2,
-                              height: 2,
-                              backgroundColor: boxFg,
-                              opacity: Math.sin(t * 6 + i) > -0.2 ? 1 : 0.25,
-                            }}
-                          />
-                        );
-                      })}
-
-                    {/* CLOUD: drifting secondary pixel wisp */}
-                    {cond.sprite === 'CLOUD' && (
-                      <View
-                        style={{
-                          position: 'absolute',
-                          left: Math.round(((t * 8) % 56) - 10),
-                          top: 28,
-                          width: 12,
-                          height: 3,
-                          backgroundColor: boxFg,
-                          opacity: 0.7,
-                        }}
-                      />
-                    )}
-
-                    {/* RAIN & STORM: falling pixel raindrops */}
-                    {(cond.sprite === 'RAIN' || cond.sprite === 'STORM') &&
-                      [0, 1, 2, 3, 4, 5].map((i) => {
-                        const speed = cond.sprite === 'STORM' ? 42 : 28;
-                        const dropX = 6 + i * 7;
-                        const dropY = 20 + Math.round(((t * speed + i * 5.3) % 16));
-                        return (
-                          <View
-                            key={`drop-${i}`}
-                            style={{
-                              position: 'absolute',
-                              left: dropX,
-                              top: dropY,
-                              width: 2,
-                              height: 4,
-                              backgroundColor: boxFg,
-                            }}
-                          />
-                        );
-                      })}
-
-                    {/* SNOW: drifting pixel snowflakes */}
-                    {cond.sprite === 'SNOW' &&
-                      [0, 1, 2, 3, 4, 5, 6].map((i) => {
-                        const fallY = Math.round(((t * 14 + i * 5.7) % 34));
-                        const swayX = Math.round(4 + i * 6 + Math.sin(t * 2.5 + i * 1.4) * 3);
-                        return (
-                          <View
-                            key={`snow-${i}`}
-                            style={{
-                              position: 'absolute',
-                              left: swayX,
-                              top: fallY,
-                              width: 2,
-                              height: 2,
-                              backgroundColor: boxFg,
-                            }}
-                          />
-                        );
-                      })}
-                  </View>
-                  <View style={{ alignItems: 'flex-end', flex: 1, marginLeft: 8 }}>
-                    <Text style={[styles.clockBig, { color: boxFg, fontSize: 24, lineHeight: 26 }]}>
-                      {data.tempC}°C
-                    </Text>
-                    <Text style={[styles.swLbl, { color: boxFg }]}>{cond.label}</Text>
-                    <Text style={[styles.miniHint, { color: boxFg, marginTop: 2 }]}>
-                      FL {data.feelsC}°  •  WIND {data.windKmh}KM/H  •  HUM {data.humidity}%
-                    </Text>
-                  </View>
-                </View>
-              );
-            })()}
-
-            {/* 3-Day Mini Forecast */}
-            <View style={{ flexDirection: 'row', gap: 4 }}>
-              {data.daily.map((d, i) => {
-                const dc = decodeWmoWeather(d.code);
-                return (
-                  <View
-                    key={i}
-                    style={{
-                      flex: 1,
-                      borderWidth: 1.5,
-                      borderColor: fg,
-                      paddingVertical: 4,
-                      paddingHorizontal: 4,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Text style={[styles.swLbl, { color: fg }]}>{dayTags[i]}</Text>
-                    <Text style={[styles.miniHint, { color: fg, marginTop: 1 }]} numberOfLines={1}>
-                      {dc.sprite}
-                    </Text>
-                    <Text style={[styles.swLbl, { color: fg, marginTop: 1 }]}>
-                      {d.minC}°/{d.maxC}°
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
-      </View>
-    );
-  }
-
-  private renderNotes(fg: string, bg: string) {
-    const total = this.notes.length;
-    const selected = total > 0 ? this.notes[this.noteIdx] : null;
-    const start = Math.max(0, Math.min(this.noteIdx - 1, Math.max(0, total - 3)));
-    const visible = this.notes.slice(start, start + 3);
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={[styles.compHeader, { marginBottom: 4 }]}>
-          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-            PIXEL NOTES ({total})
-          </Text>
-          <Text style={[styles.listMeta, { color: fg }]}>
-            {this.noteDeleteConfirm ? 'PRESS [▶] CONFIRM DEL' : '[A] +NEW'}
-          </Text>
-        </View>
-
-        {/* Preview Box of Selected Note */}
-        <View
-          style={[
-            styles.swBox,
-            {
-              borderColor: fg,
-              width: '100%',
-              alignItems: 'flex-start',
-              paddingHorizontal: 8,
-              paddingVertical: 6,
-              marginBottom: 5,
-              minHeight: 46,
-              justifyContent: 'center',
-            },
-          ]}
-        >
-          {selected ? (
-            <>
-              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 0 }]}>
-                [{selected.ts}] NOTE #{this.noteIdx + 1}
-              </Text>
-              <Text style={[styles.listTxt, { color: fg, flex: 0, marginTop: 2 }]} numberOfLines={2}>
-                {selected.text}
-              </Text>
-            </>
-          ) : (
-            <Text style={[styles.emptyTxt, { color: fg, marginTop: 0 }]}>
-              NO NOTES YET. PRESS [A] TO WRITE!
-            </Text>
-          )}
-        </View>
-
-        {/* Scrollable Note Index */}
-        {visible.map((note, idx) => {
-          const absIdx = start + idx;
-          const sel = absIdx === this.noteIdx;
-          return (
-            <View
-              key={note.id}
-              style={[styles.listRow, { backgroundColor: sel ? fg : 'transparent' }]}
-            >
-              <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                {sel ? '> ' : '  '}
-                {note.text}
-              </Text>
-              <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>{note.ts}</Text>
-            </View>
-          );
-        })}
-      </View>
-    );
-  }
-
-  private renderStats(fg: string, _bg: string) {
-    const carts = this.cb.getCartridges();
-    const scores = this.cb.getHighScores();
-    const entries = Object.entries(scores)
-      .filter(([, v]) => v > 0)
-      .sort((a, b) => b[1] - a[1]);
-    const totalPts = entries.reduce((acc, [, v]) => acc + v, 0);
-    const top4 = entries.slice(0, 4);
-
-    return (
-      <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>
-          PLAYED: {entries.length}/{carts.length}   TOTAL: {totalPts}
-        </Text>
-        <View style={[styles.statRule, { backgroundColor: fg }]} />
-        {top4.length === 0 ? (
-          <Text style={[styles.emptyTxt, { color: fg }]}>
-            NO HIGH SCORES YET. PLAY A GAME!
-          </Text>
-        ) : (
-          top4.map(([id, val], idx) => {
-            const title = carts.find((c) => c.id === id)?.title || id;
-            return (
-              <View key={id} style={styles.listRow}>
-                <Text style={[styles.listTxt, { color: fg }]}>
-                  #{idx + 1} {title}
-                </Text>
-                <Text style={[styles.listMeta, { color: fg }]}>{val}</Text>
-              </View>
-            );
-          })
-        )}
-      </View>
-    );
-  }
-
-  private renderTerm(fg: string, bg: string) {
-    const visibleLines = this.termShowLogo
-      ? this.termOut.slice(0, 6)
-      : this.termOut.slice(this.termScroll, this.termScroll + 6);
-
-    return (
-      <View style={styles.listWrap}>
-        {/* Full-Screen Scrollable Unix Terminal Output */}
-        <View
-          style={[
-            styles.termScreen,
-            {
-              borderColor: fg,
-              flexDirection: 'row',
-              alignItems: 'center',
-            },
-          ]}
-        >
-          {this.termShowLogo && (
-            <View style={[styles.neoConsole, { borderColor: fg }]}>
-              <View style={[styles.neoLcd, { borderColor: fg, backgroundColor: fg }]}>
-                <Text style={[styles.neoLcdTxt, { color: bg }]}>RD-OS</Text>
-              </View>
-              <View style={styles.neoControls}>
-                <View style={styles.neoDpad}>
-                  <View style={[styles.neoDpadV, { backgroundColor: fg }]} />
-                  <View style={[styles.neoDpadH, { backgroundColor: fg }]} />
-                </View>
-                <View style={styles.neoBtns}>
-                  <View style={[styles.neoBtnDot, { backgroundColor: fg }]} />
-                  <View style={[styles.neoBtnDot, { backgroundColor: fg, marginTop: -4 }]} />
-                </View>
-              </View>
-            </View>
-          )}
-          <View style={{ flex: 1, justifyContent: 'flex-start' }}>
-            {visibleLines.map((line, i) => (
-              <Text key={i} style={[styles.termLine, { color: fg }]} numberOfLines={1}>
-                {line}
-              </Text>
-            ))}
-          </View>
-        </View>
-
-        {/* Live Interactive Shell Prompt Bar */}
-        <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
-          <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
-            {`root@rd:${this.termCwd}$ ${this.termInput || '(PRESS [A]/[KBD] OR ◀/▶)_'}`}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  private renderSetup(fg: string, bg: string) {
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const items = [
-      isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE: RETRODECK PRO',
-      `PALETTE: ${this.cb.getPaletteName()}`,
-      `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
-      `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
-      `LIVE AI SMS: ${this.liveAiSmsEnabled ? 'ON' : 'OFF'}`,
-      'OPEN FULL CARTRIDGE VAULT',
-      'REBOOT RETRODECK OS',
-    ];
-
-    // Virtual windowed scroll: show 5 items tightly and naturally stacked
-    const PAGE_SIZE = 5;
-    const maxStart = Math.max(0, items.length - PAGE_SIZE);
-    const startIdx = Math.max(0, Math.min(this.setupIdx - 2, maxStart));
-    const visibleItems = items.slice(startIdx, startIdx + PAGE_SIZE);
-
-    return (
-      <View style={styles.listWrap}>
-        <View style={[styles.compHeader, { marginBottom: 3 }]}>
-          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-            SYSTEM SETUP
-          </Text>
-          <Text style={[styles.listMeta, { color: fg }]}>
-            {this.setupIdx + 1}/{items.length}
-          </Text>
-        </View>
-
-        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
-          {visibleItems.map((label, i) => {
-            const actualIdx = startIdx + i;
-            const sel = actualIdx === this.setupIdx;
-            const isProRow = actualIdx === 0;
-            return (
-              <View
-                key={label}
-                style={[
-                  styles.setupRow,
-                  {
-                    borderColor: fg,
-                    backgroundColor: sel ? fg : 'transparent',
-                    marginBottom: 3,
-                    paddingVertical: 3.5,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.setupTxt,
-                    { color: sel ? bg : fg },
-                    isProRow && { fontWeight: '900' },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {sel ? '▶ ' : '  '}
-                  {label}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, height: 12 }}>
-          <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx > 0 ? 0.9 : 0.2 }]}>
-            ▲ PREV
-          </Text>
-          <Text style={[styles.miniHint, { color: fg, marginTop: 0, opacity: startIdx < maxStart ? 0.9 : 0.2 }]}>
-            ▼ MORE
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  private renderThemes(fg: string, bg: string) {
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const activeId = this.cb.getPaletteId?.();
-    const visibleCount = 7;
-    const start = Math.max(0, Math.min(PALETTE_ORDER.length - visibleCount, this.themeIdx - 3));
-    const slice = PALETTE_ORDER.slice(start, start + visibleCount);
-
-    return (
-      <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>
-          THEMES ({this.themeIdx + 1}/{PALETTE_ORDER.length})  ◀/▶ ±5
-        </Text>
-        {slice.map((id, i) => {
-          const realIdx = start + i;
-          const t = RETRO_PALETTES[id];
-          const sel = realIdx === this.themeIdx;
-          const active = id === activeId;
-          const locked = isPaletteProLocked(id, isPro);
-          return (
-            <View
-              key={id}
-              style={[
-                styles.listRow,
-                { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
-              ]}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 4, gap: 4 }}>
-                <View
-                  style={{
-                    width: 8,
-                    height: 8,
-                    backgroundColor: t.screenBg,
-                    borderWidth: 1,
-                    borderColor: sel ? bg : fg,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  <View style={{ width: 4, height: 4, backgroundColor: t.pixelOn }} />
-                </View>
-                <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-                  {String(realIdx + 1).padStart(3, '0')}. {t.name}
-                </Text>
-              </View>
-              <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-                {active ? 'ACTIVE' : (locked ? '[PRO]' : t.category.slice(0, 6))}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
-    );
-  }
-
-  private renderPro(fg: string, bg: string) {
-    const isPro = this.cb.getIsPro?.() ?? false;
-    const expiration = this.cb.getProExpirationDate?.();
-    const pkgs = this.cb.getProPackages?.() ?? [
-      { type: 'monthly', title: 'MONTHLY ACCESS', priceString: '$2.99 / MO', badge: 'FLEXIBLE' },
-      { type: 'yearly', title: 'YEARLY PASS', priceString: '$19.99 / YR', badge: 'SAVE 45%' },
-      { type: 'lifetime', title: 'LIFETIME VIP', priceString: '$49.99', badge: 'BEST VALUE' },
-    ];
-
-    const menuItems = [
-      ...pkgs.map((p) => ({
-        id: p.type,
-        label: p.title,
-        price: p.priceString,
-        badge: p.badge,
-      })),
-      {
-        id: 'restore',
-        label: 'RESTORE PURCHASES',
-        price: 'SYNC ACCOUNT',
-        badge: 'STORE',
-      },
-      {
-        id: 'debug_reset',
-        label: 'REVOKE PRO (DEBUG)',
-        price: 'RESET TO FREE',
-        badge: 'DEV',
-      },
-    ];
-
-    return (
-      <View style={[styles.listWrap, { paddingVertical: 2, paddingHorizontal: 4 }]}>
-        {/* Header Bar */}
-        <View style={[styles.compHeader, { marginBottom: 2, paddingBottom: 2, borderBottomWidth: 1, borderBottomColor: fg }]}>
-          <Text style={[styles.subHeader, { color: fg, marginBottom: 0, fontSize: 10, letterSpacing: 1 }]}>
-            {isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE TO PRO'}
-          </Text>
-          <Text style={[styles.listMeta, { color: fg, fontSize: 8 }]}>
-            {this.proIdx + 1}/{menuItems.length}
-          </Text>
-        </View>
-
-        {/* Status / Perks Banner */}
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: fg,
-            paddingVertical: 2,
-            paddingHorizontal: 4,
-            marginBottom: 3,
-            backgroundColor: isPro ? fg : 'transparent',
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-              fontSize: 8,
-              fontWeight: 'bold',
-              color: isPro ? bg : fg,
-              textAlign: 'center',
-            }}
-            numberOfLines={1}
-          >
-            {isPro
-              ? (expiration ? `PRO VALID UNTIL: ${new Date(expiration).toLocaleDateString()}` : 'LIFETIME ALL-ACCESS UNLOCKED')
-              : 'ALL 100 CARTS • DEV VAULT • PRO THEMES'}
-          </Text>
-        </View>
-
-        {/* Package Rows */}
-        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
-          {menuItems.map((item, idx) => {
-            const sel = idx === this.proIdx;
-            return (
-              <View
-                key={item.id}
-                style={[
-                  styles.setupRow,
-                  {
-                    borderColor: fg,
-                    backgroundColor: sel ? fg : 'transparent',
-                    marginBottom: 2,
-                    paddingVertical: 2.5,
-                    paddingHorizontal: 4,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  },
-                ]}
-              >
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 4 }}>
-                  <Text
-                    style={{
-                      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                      fontSize: 9,
-                      fontWeight: 'bold',
-                      color: sel ? bg : fg,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {sel ? '▶ ' : '  '}
-                    {item.label}
-                  </Text>
-                </View>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  {item.badge ? (
-                    <Text
-                      style={{
-                        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                        fontSize: 7,
-                        color: sel ? bg : fg,
-                        opacity: 0.85,
-                        marginRight: 4,
-                        borderWidth: 0.5,
-                        borderColor: sel ? bg : fg,
-                        paddingHorizontal: 2,
-                      }}
-                    >
-                      {item.badge}
-                    </Text>
-                  ) : null}
-                  <Text
-                    style={{
-                      fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                      fontSize: 8.5,
-                      fontWeight: '900',
-                      color: sel ? bg : fg,
-                    }}
-                  >
-                    {item.price}
-                  </Text>
-                </View>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Action Prompt / Status Message */}
-        <View style={{ borderTopWidth: 1, borderTopColor: fg, paddingTop: 2, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Text
-            style={{
-              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-              fontSize: 7.5,
-              fontWeight: 'bold',
-              color: fg,
-            }}
-            numberOfLines={1}
-          >
-            {this.proStatusMsg
-              ? this.proStatusMsg
-              : (this.proIdx === 4
-                  ? '[A] RESET PRO STATUS (DEBUG)'
-                  : (this.proIdx === 3
-                      ? '[A] RESTORE PURCHASES'
-                      : (isPro ? '[A] PLAN DETAILS' : '[A] BUY SELECTED PLAN')))}
-          </Text>
-          <Text
-            style={{
-              fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-              fontSize: 7.5,
-              color: fg,
-              opacity: 0.8,
-            }}
-          >
-            [B] BACK
           </Text>
         </View>
       </View>
