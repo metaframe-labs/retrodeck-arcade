@@ -6,6 +6,97 @@ import { RetroPalette } from '../../theme/palettes';
 const ARENA_W = 320;
 const ARENA_H = 240;
 
+interface SpriteSpan {
+  key: string;
+  l: string;
+  t: string;
+  w: string;
+  h: string;
+  isAccent?: boolean;
+}
+
+function compileSprite(rows: string[]): SpriteSpan[] {
+  const spans: SpriteSpan[] = [];
+  const totalH = rows.length;
+  const totalW = rows[0]?.length || 1;
+  const rowH = `${(100 / totalH).toFixed(2)}%`;
+
+  for (let r = 0; r < totalH; r++) {
+    const row = rows[r];
+    let c = 0;
+    while (c < row.length) {
+      const ch = row[c];
+      if (ch === '#' || ch === '@') {
+        let len = 1;
+        while (c + len < row.length && row[c + len] === ch) {
+          len++;
+        }
+        spans.push({
+          key: `${r}-${c}`,
+          l: `${((c / totalW) * 100).toFixed(2)}%`,
+          t: `${((r / totalH) * 100).toFixed(2)}%`,
+          w: `${((len / totalW) * 100).toFixed(2)}%`,
+          h: rowH,
+          isAccent: ch === '@',
+        });
+        c += len;
+      } else {
+        c++;
+      }
+    }
+  }
+  return spans;
+}
+
+// '#' = main hull, '@' = cockpit / core accent
+const PLAYER_SPRITE = compileSprite([
+  '.###........',
+  '.####.......',
+  '..######....',
+  '#####@@##...',
+  '############',
+  '#####@@##...',
+  '..######....',
+  '.###........',
+]);
+
+const SCOUT_SPRITE = compileSprite([
+  '....####..',
+  '..######..',
+  '########..',
+  '##@####@##',
+  '########..',
+  '..######..',
+  '....####..',
+]);
+
+const CRUISER_SPRITE = compileSprite([
+  '......####..',
+  '....######..',
+  '..########..',
+  '####@##@####',
+  '############',
+  '####@##@####',
+  '..########..',
+  '....######..',
+  '......####..',
+]);
+
+const BOSS_SPRITE = compileSprite([
+  '......########..',
+  '....############',
+  '..##############',
+  '####..######..##',
+  '################',
+  '##@##########@##',
+  '##@##########@##',
+  '################',
+  '####..######..##',
+  '..##############',
+  '....############',
+  '......########..',
+]);
+
 interface Star {
   x: number;
   y: number;
@@ -529,32 +620,39 @@ export class SpaceImpactGame implements ArcadeGameInstance {
           />
         ))}
 
-        {/* Player Spaceship */}
+        {/* Player Spaceship (Pixel-Art Fighter) */}
         <View
-          style={[
-            styles.playerShip,
-            {
-              left: `${(this.player.x / ARENA_W) * 100}%`,
-              top: `${(this.player.y / ARENA_H) * 100}%`,
-              width: `${(this.player.w / ARENA_W) * 100}%`,
-              height: `${(this.player.h / ARENA_H) * 100}%`,
-              borderColor: palette.bezelAccent,
-              backgroundColor: isLight ? palette.pixelOn : '#0A1320',
-            },
-          ]}
+          style={{
+            position: 'absolute',
+            left: `${(this.player.x / ARENA_W) * 100}%`,
+            top: `${(this.player.y / ARENA_H) * 100}%`,
+            width: `${(this.player.w / ARENA_W) * 100}%`,
+            height: `${(this.player.h / ARENA_H) * 100}%`,
+          }}
         >
-          {/* Cockpit */}
-          <View
-            style={[
-              styles.playerCockpit,
-              { backgroundColor: isLight ? palette.screenBg : '#00F0FF' },
-            ]}
-          />
-          {/* Thruster Jet Flame */}
+          {PLAYER_SPRITE.map((sp) => (
+            <View
+              key={sp.key}
+              style={{
+                position: 'absolute',
+                left: sp.l as any,
+                top: sp.t as any,
+                width: sp.w as any,
+                height: sp.h as any,
+                backgroundColor: sp.isAccent
+                  ? (isLight ? palette.screenBg : '#00F0FF')
+                  : palette.pixelOn,
+              }}
+            />
+          ))}
+          {/* Flickering Thruster Jet Flame */}
           <View
             style={[
               styles.thrusterFlame,
-              { backgroundColor: isLight ? palette.pixelOn : '#FF9F0A' },
+              {
+                backgroundColor: isLight ? palette.pixelOn : '#FF9F0A',
+                width: Math.floor(Date.now() / 60) % 2 === 0 ? 5 : 3,
+              },
             ]}
           />
         </View>
@@ -595,37 +693,52 @@ export class SpaceImpactGame implements ArcadeGameInstance {
           />
         ))}
 
-        {/* Enemies */}
+        {/* Enemies (Pixel-Art Alien Ships & Bosses) */}
         {this.enemies.map((e) => {
           const isBoss = e.type === 'boss';
           const isCruiser = e.type === 'cruiser';
+          const spans = isBoss
+            ? BOSS_SPRITE
+            : isCruiser
+            ? CRUISER_SPRITE
+            : SCOUT_SPRITE;
+          const hullColor = isLight
+            ? palette.pixelOn
+            : isBoss
+            ? '#FF0055'
+            : isCruiser
+            ? '#FF9F0A'
+            : palette.bezelAccent;
+          const coreColor = isLight
+            ? palette.screenBg
+            : isBoss
+            ? '#FFEC27'
+            : '#FFFFFF';
 
           return (
             <View
               key={e.id}
-              style={[
-                styles.enemyShip,
-                {
-                  left: `${(e.x / ARENA_W) * 100}%`,
-                  top: `${(e.y / ARENA_H) * 100}%`,
-                  width: `${(e.w / ARENA_W) * 100}%`,
-                  height: `${(e.h / ARENA_H) * 100}%`,
-                  backgroundColor: isLight
-                    ? palette.pixelOn
-                    : isBoss
-                    ? '#FF0055'
-                    : isCruiser
-                    ? '#FF9F0A'
-                    : palette.bezelAccent,
-                  borderRadius: isBoss ? 6 : 2,
-                },
-              ]}
+              style={{
+                position: 'absolute',
+                left: `${(e.x / ARENA_W) * 100}%`,
+                top: `${(e.y / ARENA_H) * 100}%`,
+                width: `${(e.w / ARENA_W) * 100}%`,
+                height: `${(e.h / ARENA_H) * 100}%`,
+              }}
             >
-              {isBoss && (
-                <View style={styles.bossCore}>
-                  <View style={styles.bossEye} />
-                </View>
-              )}
+              {spans.map((sp) => (
+                <View
+                  key={sp.key}
+                  style={{
+                    position: 'absolute',
+                    left: sp.l as any,
+                    top: sp.t as any,
+                    width: sp.w as any,
+                    height: sp.h as any,
+                    backgroundColor: sp.isAccent ? coreColor : hullColor,
+                  }}
+                />
+              ))}
             </View>
           );
         })}
