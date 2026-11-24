@@ -158,6 +158,7 @@ export class SpaceImpactGame implements ArcadeGameInstance {
   private lives = 3;
   private bombs = 2;
   private wave = 1;
+  private nextBossScore = 3000;
   private gameOver = false;
   private isMenu = true;
 
@@ -185,6 +186,7 @@ export class SpaceImpactGame implements ArcadeGameInstance {
     this.lives = 3;
     this.bombs = 2;
     this.wave = 1;
+    this.nextBossScore = 3000;
     this.gameOver = false;
     this.isMenu = true;
     this.playerBullets = [];
@@ -301,9 +303,14 @@ export class SpaceImpactGame implements ArcadeGameInstance {
       this.enemyBullets = [];
 
       // Damage all enemies on screen
-      for (const e of this.enemies) {
+      for (let ei = this.enemies.length - 1; ei >= 0; ei--) {
+        const e = this.enemies[ei];
         e.hp -= 4;
         this.spawnExplosion(e.x + e.w / 2, e.y + e.h / 2, 8, '#00F0FF');
+        if (e.hp <= 0) {
+          const defeatSound = this.handleEnemyDefeated(ei);
+          if (defeatSound === 'levelclear') soundToPlay = 'levelclear';
+        }
       }
 
       this.addFloatText(ARENA_W / 2, ARENA_H / 2, 'EMP MEGABOMB!', '#00F0FF');
@@ -324,14 +331,7 @@ export class SpaceImpactGame implements ArcadeGameInstance {
           this.spawnExplosion(b.x, b.y, 4, '#FFFFFF');
 
           if (e.hp <= 0) {
-            const pts = e.type === 'boss' ? 2500 : e.type === 'cruiser' ? 350 : 150;
-            this.score += pts;
-            if (this.score > this.highScore) this.highScore = this.score;
-
-            this.spawnExplosion(e.x + e.w / 2, e.y + e.h / 2, e.type === 'boss' ? 30 : 14, '#FF0055');
-            this.addFloatText(e.x, e.y, `+${pts}`, '#FFD700');
-            this.enemies.splice(ei, 1);
-            soundToPlay = 'explode';
+            soundToPlay = this.handleEnemyDefeated(ei);
           } else {
             soundToPlay = 'hit';
           }
@@ -386,8 +386,8 @@ export class SpaceImpactGame implements ArcadeGameInstance {
       }
     }
 
-    // Boss check (at 3000 pts per wave)
-    if (this.score > this.wave * 3000 && !this.enemies.some((e) => e.type === 'boss')) {
+    // Boss check (advances per level via nextBossScore)
+    if (this.score >= this.nextBossScore && !this.enemies.some((e) => e.type === 'boss')) {
       this.enemies.push({
         id: this.nextEntityId++,
         type: 'boss',
@@ -402,7 +402,7 @@ export class SpaceImpactGame implements ArcadeGameInstance {
         shootTimer: 1.2,
         animTimer: 0,
       });
-      this.addFloatText(ARENA_W / 2, ARENA_H / 2, 'BOSS INCOMING!', '#FF0055');
+      this.addFloatText(ARENA_W / 2, ARENA_H / 2, `LVL ${this.wave} BOSS!`, '#FF0055');
     }
 
     // 7. Update Enemies
@@ -533,6 +533,32 @@ export class SpaceImpactGame implements ArcadeGameInstance {
         this.addFloatText(this.player.x, this.player.y, 'RESPAWNED!', '#00F0FF');
       }
     }
+  }
+
+  private handleEnemyDefeated(ei: number): ArcadeSound {
+    const e = this.enemies[ei];
+    const pts = e.type === 'boss' ? 2500 : e.type === 'cruiser' ? 350 : 150;
+    this.score += pts;
+    if (this.score > this.highScore) this.highScore = this.score;
+
+    this.spawnExplosion(
+      e.x + e.w / 2,
+      e.y + e.h / 2,
+      e.type === 'boss' ? 30 : 14,
+      '#FF0055'
+    );
+    this.addFloatText(e.x, e.y, `+${pts}`, '#FFD700');
+    this.enemies.splice(ei, 1);
+
+    if (e.type === 'boss') {
+      this.wave += 1;
+      this.nextBossScore = this.score + 3000 + this.wave * 500;
+      this.player.shield = Math.min(this.player.maxShield, this.player.shield + 25);
+      this.bombs = Math.min(3, this.bombs + 1);
+      this.addFloatText(ARENA_W / 2 - 30, ARENA_H / 2 - 12, `LEVEL ${this.wave}!`, '#00FFAA');
+      return 'levelclear';
+    }
+    return 'explode';
   }
 
   private spawnExplosion(x: number, y: number, count: number, color: string): void {
