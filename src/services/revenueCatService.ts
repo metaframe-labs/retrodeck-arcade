@@ -30,6 +30,7 @@ export interface ProPackageInfo {
 
 class RevenueCatService {
   private isConfigured = false;
+  private debugRevoked = false;
   private listeners: ((status: SubscriptionStatus) => void)[] = [];
   private currentStatus: SubscriptionStatus = {
     isPro: false,
@@ -99,10 +100,11 @@ class RevenueCatService {
    * Updates internal state and notifies subscribers
    */
   private updateCustomerInfo(customerInfo: CustomerInfo): void {
-    const isPro = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
-    const activeSubscriptions = customerInfo.activeSubscriptions || [];
+    const rawPro = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
+    const isPro = this.debugRevoked ? false : rawPro;
+    const activeSubscriptions = this.debugRevoked ? [] : (customerInfo.activeSubscriptions || []);
     const entitlement = customerInfo.entitlements.active[ENTITLEMENT_ID];
-    const expirationDate = entitlement?.expirationDate || null;
+    const expirationDate = this.debugRevoked ? null : (entitlement?.expirationDate || null);
 
     this.currentStatus = {
       isPro,
@@ -140,6 +142,7 @@ class RevenueCatService {
    * DEBUG / DEV: Reset / Revoke Pro purchases cleanly without triggering anonymous logOut errors
    */
   public async resetProDebug(): Promise<SubscriptionStatus> {
+    this.debugRevoked = true;
     try {
       if (this.isConfigured && Purchases.isAnonymous && Purchases.logOut) {
         const isAnon = await Purchases.isAnonymous();
@@ -264,6 +267,7 @@ class RevenueCatService {
    * Purchase a specific package manually (if not using Paywall UI)
    */
   public async purchasePackage(pkg: PurchasesPackage): Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }> {
+    this.debugRevoked = false;
     if (!this.isConfigured) return { success: false, isPro: false };
     try {
       const { customerInfo } = await Purchases.purchasePackage(pkg);
@@ -283,6 +287,7 @@ class RevenueCatService {
    * Restore previous purchases
    */
   public async restorePurchases(): Promise<SubscriptionStatus> {
+    this.debugRevoked = false;
     if (!this.isConfigured) return this.currentStatus;
     try {
       const customerInfo = await Purchases.restorePurchases();
