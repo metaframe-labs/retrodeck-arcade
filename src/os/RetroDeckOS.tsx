@@ -4579,35 +4579,66 @@ export class RetroDeckOS implements ArcadeGameInstance {
       isPro ? '★ RETRODECK PRO: ACTIVE (MANAGE)' : '★ UPGRADE: RETRODECK PRO (PAYWALL)',
       'REBOOT RETRODECK OS',
     ];
+
+    // Virtual windowed scroll: show exactly 4 items at a time so rows never cram or overflow LCD
+    const PAGE_SIZE = 4;
+    const maxStart = Math.max(0, items.length - PAGE_SIZE);
+    const startIdx = Math.max(0, Math.min(this.setupIdx - 1, maxStart));
+    const visibleItems = items.slice(startIdx, startIdx + PAGE_SIZE);
+
     return (
       <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>SYSTEM PREFERENCES</Text>
-        {items.map((label, i) => {
-          const sel = i === this.setupIdx;
-          const isProRow = i === 4;
-          return (
-            <View
-              key={label}
-              style={[
-                styles.setupRow,
-                { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
-                isProRow && !sel && { borderColor: fg },
-              ]}
-            >
-              <Text
+        <View style={styles.compHeader}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            SYSTEM SETUP
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {this.setupIdx + 1}/{items.length}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, justifyContent: 'space-around', marginVertical: 2 }}>
+          {visibleItems.map((label, i) => {
+            const actualIdx = startIdx + i;
+            const sel = actualIdx === this.setupIdx;
+            const isProRow = actualIdx === 4;
+            return (
+              <View
+                key={label}
                 style={[
-                  styles.setupTxt,
-                  { color: sel ? bg : fg },
-                  isProRow && { fontWeight: '900' },
+                  styles.setupRow,
+                  {
+                    borderColor: fg,
+                    backgroundColor: sel ? fg : 'transparent',
+                    marginVertical: 1,
+                    paddingVertical: 5,
+                  },
                 ]}
-                numberOfLines={1}
               >
-                {sel ? '> ' : '  '}
-                {label}
-              </Text>
-            </View>
-          );
-        })}
+                <Text
+                  style={[
+                    styles.setupTxt,
+                    { color: sel ? bg : fg },
+                    isProRow && { fontWeight: '900' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {sel ? '▶ ' : '  '}
+                  {label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4 }}>
+          <Text style={[styles.miniHint, { color: fg, opacity: startIdx > 0 ? 0.9 : 0.25 }]}>
+            ▲ PREV
+          </Text>
+          <Text style={[styles.miniHint, { color: fg, opacity: startIdx < maxStart ? 0.9 : 0.25 }]}>
+            ▼ MORE
+          </Text>
+        </View>
       </View>
     );
   }
