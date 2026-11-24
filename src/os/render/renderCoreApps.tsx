@@ -737,13 +737,264 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
   const carts = os.cb.getCartridges();
   const scores = os.cb.getHighScores();
   const isPro = os.cb.getIsPro?.() ?? false;
+  const activeWall = os.getActiveWallpaper();
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+
+  const renderWallBackdrop = () =>
+    activeWall ? (
+      <>
+        <Image
+          source={activeWall.image}
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            width: undefined,
+            height: undefined,
+          }}
+          resizeMode="cover"
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            backgroundColor: bg,
+            opacity: os.getWallpaperDimOpacity(),
+          }}
+        />
+      </>
+    ) : null;
+
+  // STYLE 2: Nokia 3310 Single-Cartridge Carousel
+  if (os.menuStyle === 'nokia') {
+    const total = carts.length;
+    const cur = carts[os.gameIdx] || carts[0];
+    const prev = carts[(os.gameIdx + total - 1) % total];
+    const next = carts[(os.gameIdx + 1) % total];
+    const hs = cur ? scores[cur.id] || 0 : 0;
+    const locked = cur ? isCartridgeProLocked(cur.id, isPro) : false;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
+        {renderWallBackdrop()}
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: fg }}>
+            {pickLang(os.lang, 'CARTRIDGE', 'KARTUS')}
+          </Text>
+          <View style={{ backgroundColor: fg, paddingHorizontal: 6, paddingVertical: 1 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: bg }}>
+              {String(os.gameIdx + 1).padStart(3, '0')}/{total}
+            </Text>
+          </View>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 2 }}>
+          <View style={{ alignItems: 'center', opacity: 0.45, width: 34 }}>
+            <Ionicons name="game-controller" size={14} color={fg} />
+            <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
+              ◀ {prev?.title}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flex: 1,
+              marginHorizontal: 5,
+              borderWidth: 2,
+              borderColor: fg,
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.82) : 'transparent',
+              borderRadius: 6,
+              paddingVertical: 12,
+              paddingHorizontal: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 5,
+            }}
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 8,
+                backgroundColor: fg,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name={locked ? 'lock-closed' : 'game-controller'} size={22} color={bg} />
+            </View>
+            <Text
+              style={{ fontFamily: monoFont, fontSize: 11, fontWeight: '900', color: fg, textAlign: 'center' }}
+              numberOfLines={1}
+            >
+              {cur?.title}
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '800', color: fg, opacity: 0.85 }} numberOfLines={1}>
+              {locked ? '[PRO REQUIRED]' : hs > 0 ? `HI-SCORE: ${hs}` : cur?.genre}
+            </Text>
+          </View>
+
+          <View style={{ alignItems: 'center', opacity: 0.45, width: 34 }}>
+            <Ionicons name="game-controller" size={14} color={fg} />
+            <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
+              {next?.title} ▶
+            </Text>
+          </View>
+        </View>
+
+        <View
+          style={{
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            borderTopWidth: 1,
+            borderTopColor: hexWithAlpha(fg, 0.4),
+            paddingVertical: 2,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(os.lang, '◀ / ▶ BROWSE  •  [A] PLAY', '◀ / ▶ GEZ  •  [A] OYNA')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 1 & 4: Paginated 4x3 Grid (12/page) OR Big 3x2 Cards (6/page)
+  if (os.menuStyle === 'grid' || os.menuStyle === 'cards') {
+    const isCards = os.menuStyle === 'cards';
+    const cols = isCards ? 3 : 4;
+    const rows = isCards ? 2 : 3;
+    const pageSize = cols * rows;
+    const totalPages = Math.max(1, Math.ceil(carts.length / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(os.gameIdx / pageSize));
+    const pageStart = curPage * pageSize;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative' }]}>
+        {renderWallBackdrop()}
+
+        {Array.from({ length: rows }, (_, r) => (
+          <View key={r} style={styles.deskRow}>
+            {Array.from({ length: cols }, (_, c) => {
+              const idx = pageStart + r * cols + c;
+              const cart = carts[idx];
+              if (!cart) {
+                return <View key={`sp-g-${c}`} style={styles.deskTileSpacer} />;
+              }
+              const sel = idx === os.gameIdx;
+              const locked = isCartridgeProLocked(cart.id, isPro);
+              const hs = scores[cart.id] || 0;
+              const ink = sel ? bg : fg;
+              return (
+                <View
+                  key={cart.id}
+                  style={[
+                    styles.deskTile,
+                    { borderRadius: isCards ? 6 : 4, paddingHorizontal: 2 },
+                    activeWall
+                      ? {
+                          borderWidth: isCards ? 2 : 1.5,
+                          borderColor: sel ? fg : hexWithAlpha(fg, 0.85),
+                          backgroundColor: sel ? fg : hexWithAlpha(bg, 0.74),
+                        }
+                      : {
+                          borderColor: fg,
+                          backgroundColor: sel ? fg : 'transparent',
+                        },
+                  ]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                    <Ionicons
+                      name={locked ? 'lock-closed' : 'game-controller'}
+                      size={isCards ? 16 : 12}
+                      color={ink}
+                    />
+                    <Text style={{ fontFamily: monoFont, fontSize: isCards ? 8 : 7, fontWeight: '900', color: ink }}>
+                      {String(idx + 1).padStart(2, '0')}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.deskLbl,
+                      { color: ink, fontSize: isCards ? 8.5 : 7.2, marginTop: isCards ? 3 : 1.5, textAlign: 'center' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {cart.title}
+                  </Text>
+                  {isCards && (
+                    <Text
+                      style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '800', color: ink, opacity: 0.8, marginTop: 1 }}
+                      numberOfLines={1}
+                    >
+                      {locked ? '[PRO]' : hs > 0 ? `HI:${hs}` : cart.genre.slice(0, 7)}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+        ))}
+
+        {/* Tappable Page Strip */}
+        <Pressable
+          onPress={() => {
+            const nextPage = (curPage + 1) % totalPages;
+            os.gameIdx = nextPage * pageSize;
+            os.cb.onPlaySound?.('hit');
+          }}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 6,
+            paddingVertical: 1.5,
+            borderWidth: 1,
+            borderColor: hexWithAlpha(fg, 0.45),
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            borderRadius: 3,
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(
+              os.lang,
+              `PAGE ${curPage + 1}/${totalPages} (${os.gameIdx + 1}/${carts.length})`,
+              `SAYFA ${curPage + 1}/${totalPages} (${os.gameIdx + 1}/${carts.length})`
+            )}
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(os.lang, '[A] PLAY ▶', '[A] OYNA ▶')}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  // STYLE 3: Classic 7-Row Retro List
   const visibleCount = 7;
   const start = Math.max(0, Math.min(carts.length - visibleCount, os.gameIdx - 3));
   const slice = carts.slice(start, start + visibleCount);
 
   return (
-    <View style={styles.listWrap}>
-      <Text style={[styles.subHeader, { color: fg }]}>
+    <View style={[styles.listWrap, { position: 'relative' }]}>
+      {renderWallBackdrop()}
+      <Text
+        style={[
+          styles.subHeader,
+          {
+            color: fg,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'transparent',
+            paddingHorizontal: activeWall ? 4 : 0,
+          },
+        ]}
+      >
         {tOs('arcadeHeader', { cur: os.gameIdx + 1, total: carts.length }, os.lang)}
       </Text>
       {slice.map((c, i) => {
@@ -756,7 +1007,14 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
             key={c.id}
             style={[
               styles.listRow,
-              { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
+              {
+                backgroundColor: sel
+                  ? fg
+                  : activeWall
+                  ? hexWithAlpha(bg, 0.74)
+                  : 'transparent',
+                borderColor: fg,
+              },
             ]}
           >
             <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>

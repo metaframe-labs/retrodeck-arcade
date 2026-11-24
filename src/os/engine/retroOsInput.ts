@@ -1176,10 +1176,34 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   if (os.app === 'arcade') {
     const carts = os.cb.getCartridges();
-    if (dir === 'up') os.gameIdx = (os.gameIdx + carts.length - 1) % carts.length;
-    if (dir === 'down') os.gameIdx = (os.gameIdx + 1) % carts.length;
-    if (dir === 'left') os.gameIdx = (os.gameIdx + carts.length - 5) % carts.length;
-    if (dir === 'right') os.gameIdx = (os.gameIdx + 5) % carts.length;
+    const total = carts.length;
+    if (os.menuStyle === 'nokia') {
+      if (dir === 'left' || dir === 'up') os.gameIdx = (os.gameIdx + total - 1) % total;
+      if (dir === 'right' || dir === 'down') os.gameIdx = (os.gameIdx + 1) % total;
+    } else if (os.menuStyle === 'grid' || os.menuStyle === 'cards') {
+      const cols = os.menuStyle === 'cards' ? 3 : 4;
+      if (dir === 'left') os.gameIdx = (os.gameIdx + total - 1) % total;
+      if (dir === 'right') os.gameIdx = (os.gameIdx + 1) % total;
+      if (dir === 'up') {
+        if (os.gameIdx >= cols) {
+          os.gameIdx -= cols;
+        } else {
+          const col = os.gameIdx % cols;
+          const lastRowBase = Math.floor((total - 1) / cols) * cols;
+          os.gameIdx =
+            lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+        }
+      }
+      if (dir === 'down') {
+        os.gameIdx =
+          os.gameIdx + cols < total ? os.gameIdx + cols : os.gameIdx % cols;
+      }
+    } else {
+      if (dir === 'up') os.gameIdx = (os.gameIdx + total - 1) % total;
+      if (dir === 'down') os.gameIdx = (os.gameIdx + 1) % total;
+      if (dir === 'left') os.gameIdx = (os.gameIdx + total - 5) % total;
+      if (dir === 'right') os.gameIdx = (os.gameIdx + 5) % total;
+    }
     if (dir) return 'hit';
 
     if (pressA && carts[os.gameIdx]) {
