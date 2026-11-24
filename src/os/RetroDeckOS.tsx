@@ -53,6 +53,7 @@ export interface RetroDeckOSCallbacks {
   onOpenCustomerCenter?: () => void;
   onPurchasePackage?: (type: 'monthly' | 'yearly' | 'lifetime') => Promise<{ success: boolean; isPro: boolean; userCancelled?: boolean }>;
   onRestorePurchases?: () => Promise<boolean>;
+  onResetProDebug?: () => Promise<void>;
   getProPackages?: () => { type: 'monthly' | 'yearly' | 'lifetime'; title: string; priceString: string; badge?: string }[];
   getProExpirationDate?: () => string | null;
 }
@@ -836,6 +837,8 @@ const TERM_PRESETS = [
   'open snake',
   'randgame',
   'ai hello 3310',
+  'pro',
+  'resetpro',
   'clear',
   'reboot',
 ];
@@ -2623,7 +2626,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'pro') {
       const isPro = this.cb.getIsPro?.() ?? false;
-      const totalProItems = 4; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore
+      const totalProItems = 5; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore, 4: Debug Revoke
       if (dir === 'up') this.proIdx = (this.proIdx + totalProItems - 1) % totalProItems;
       if (dir === 'down') this.proIdx = (this.proIdx + 1) % totalProItems;
       if (dir) return 'hit';
@@ -2643,6 +2646,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
             this.proStatusMsg = 'RESTORE ERROR. TRY AGAIN.';
           });
           return 'powerup';
+        }
+
+        if (this.proIdx === 4) {
+          // Debug: Revoke / Reset Purchases
+          this.proBusy = true;
+          this.proStatusMsg = 'REVOKING PURCHASES...';
+          this.cb.onResetProDebug?.().then(() => {
+            this.proBusy = false;
+            this.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
+          }).catch(() => {
+            this.proBusy = false;
+            this.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
+          });
+          return 'die';
         }
 
         const packageTypes: ('monthly' | 'yearly' | 'lifetime')[] = ['monthly', 'yearly', 'lifetime'];
@@ -2984,6 +3001,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.cb.onCyclePalette();
       this.pushTermLines([`THEME SWITCHED.`]);
       return 'powerup';
+    }
+
+    if (bin === 'pro' || bin === 'buy') {
+      this.app = 'pro';
+      this.proIdx = 0;
+      this.proStatusMsg = '';
+      this.cb.onRequestKeyboard?.(false);
+      return 'powerup';
+    }
+
+    if (bin === 'revokepro' || bin === 'resetpro' || bin === 'unpro') {
+      this.cb.onResetProDebug?.().then(() => {
+        this.pushTermLines(['PRO STATUS REVOKED (DEBUG OK).']);
+      });
+      this.pushTermLines(['REVOKING PRO STATUS...']);
+      return 'die';
     }
 
     if (bin === 'lock') {
@@ -4726,7 +4759,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
         id: 'restore',
         label: 'RESTORE PURCHASES',
         price: 'SYNC ACCOUNT',
-        badge: 'ICLOUD/STORE',
+        badge: 'STORE',
+      },
+      {
+        id: 'debug_reset',
+        label: 'REVOKE PRO (DEBUG)',
+        price: 'RESET TO FREE',
+        badge: 'DEV',
       },
     ];
 
@@ -4848,7 +4887,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
             }}
             numberOfLines={1}
           >
-            {this.proStatusMsg ? this.proStatusMsg : (this.proIdx === 3 ? '[A] RESTORE PURCHASES' : (isPro ? '[A] PLAN DETAILS' : '[A] BUY SELECTED PLAN'))}
+            {this.proStatusMsg
+              ? this.proStatusMsg
+              : (this.proIdx === 4
+                  ? '[A] RESET PRO STATUS (DEBUG)'
+                  : (this.proIdx === 3
+                      ? '[A] RESTORE PURCHASES'
+                      : (isPro ? '[A] PLAN DETAILS' : '[A] BUY SELECTED PLAN')))}
           </Text>
           <Text
             style={{

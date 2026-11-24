@@ -137,6 +137,37 @@ class RevenueCatService {
   }
 
   /**
+   * DEBUG / DEV: Reset / Revoke Pro purchases (logs out RC user or resets mock status)
+   */
+  public async resetProDebug(): Promise<SubscriptionStatus> {
+    try {
+      if (this.isConfigured && Purchases.logOut) {
+        // Log out or reset in RevenueCat to simulate fresh anonymous customer
+        const customerInfo = await Purchases.logOut();
+        this.updateCustomerInfo(customerInfo);
+      } else {
+        this.currentStatus = {
+          isPro: false,
+          activeSubscriptions: [],
+          expirationDate: null,
+          customerInfo: null,
+        };
+        this.listeners.forEach((listener) => listener(this.currentStatus));
+      }
+    } catch (e) {
+      console.log('[RevenueCat] logOut not permitted or failed, forcing local debug reset:', e);
+      this.currentStatus = {
+        isPro: false,
+        activeSubscriptions: [],
+        expirationDate: null,
+        customerInfo: null,
+      };
+      this.listeners.forEach((listener) => listener(this.currentStatus));
+    }
+    return this.currentStatus;
+  }
+
+  /**
    * Subscribe to customer info changes
    */
   public subscribe(listener: (status: SubscriptionStatus) => void): () => void {

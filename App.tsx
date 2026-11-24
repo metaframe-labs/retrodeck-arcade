@@ -411,6 +411,9 @@ function RetroDeckConsole() {
         const status = await revenueCatService.restorePurchases();
         return status.isPro;
       },
+      onResetProDebug: async () => {
+        await revenueCatService.resetProDebug();
+      },
       getProPackages: () => revenueCatService.getCachedPackages(),
       getProExpirationDate: () => revenueCatService.getStatus().expirationDate,
     })
