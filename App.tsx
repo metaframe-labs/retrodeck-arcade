@@ -513,8 +513,9 @@ function RetroDeckConsole() {
           </View>
 
           <View style={styles.topActions}>
-            {/* PRO / Paywall Badge Button */}
+            {/* PRO / Paywall Badge Button (Compact Icon Pill) */}
             <Pressable
+              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
               onPress={async () => {
                 handleSoundEvent('score');
                 if (isPro) {
@@ -524,11 +525,10 @@ function RetroDeckConsole() {
                 }
               }}
               style={[
-                styles.paletteBtn,
+                styles.proBtn,
                 {
                   backgroundColor: isPro ? `${palette.bezelAccent}33` : palette.surfaceBg,
-                  borderColor: isPro ? palette.bezelAccent : `${palette.bezelAccent}66`,
-                  paddingHorizontal: 7,
+                  borderColor: isPro ? '#34D399' : `${palette.bezelAccent}88`,
                 },
               ]}
             >
@@ -538,15 +538,12 @@ function RetroDeckConsole() {
                 color={isPro ? '#34D399' : palette.bezelAccent}
               />
               <Text
-                style={{
-                  fontSize: 8.5,
-                  fontWeight: '900',
-                  fontFamily: 'monospace',
-                  color: isPro ? '#34D399' : palette.bezelAccent,
-                  marginLeft: 3,
-                }}
+                style={[
+                  styles.proBtnText,
+                  { color: isPro ? '#34D399' : palette.bezelAccent },
+                ]}
               >
-                {isPro ? 'PRO' : 'GET PRO'}
+                PRO
               </Text>
             </Pressable>
 
@@ -975,8 +972,23 @@ const styles = StyleSheet.create({
   topActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
+  },
+  proBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1.2,
+  },
+  proBtnText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+    fontFamily: 'monospace',
   },
   paletteBtn: {
     flexDirection: 'row',
