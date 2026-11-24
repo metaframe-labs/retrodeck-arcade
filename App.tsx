@@ -25,10 +25,12 @@ import {
   ArcadeStats,
 } from './src/arcade/types';
 import {
+  FREE_PALETTE_ORDER,
   PALETTE_ORDER,
   RETRO_PALETTES,
   RetroPaletteId,
   getAccentInk,
+  isPaletteProLocked,
 } from './src/theme/palettes';
 import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
@@ -386,6 +388,14 @@ function RetroDeckConsole() {
   }, [handleSoundEvent]);
 
   const handleSelectPalette = useCallback((next: RetroPaletteId) => {
+    if (isPaletteProLocked(next, isProRef.current)) {
+      setThemeModalVisible(false);
+      osRef.current.openProScreen('PRO REQUIRED FOR THIS THEME!');
+      setOsMode(true);
+      setIsPaused(false);
+      handleSoundEvent('die');
+      return;
+    }
     setPaletteId(next);
     AsyncStorage.setItem(PALETTE_STORAGE_KEY, next).catch(() => {});
     handleSoundEvent('score');
@@ -393,8 +403,9 @@ function RetroDeckConsole() {
 
   const handleCyclePalette = useCallback(() => {
     setPaletteId((prev) => {
-      const idx = PALETTE_ORDER.indexOf(prev);
-      const next = PALETTE_ORDER[(idx + 1) % PALETTE_ORDER.length];
+      const pool = isProRef.current ? PALETTE_ORDER : FREE_PALETTE_ORDER;
+      const idx = pool.indexOf(prev);
+      const next = pool[(idx + 1) % pool.length];
       AsyncStorage.setItem(PALETTE_STORAGE_KEY, next).catch(() => {});
       return next;
     });
@@ -415,6 +426,8 @@ function RetroDeckConsole() {
       onLaunchGame: (cart) => handleSelectCartridge(cart),
       onOpenCartVault: () => setBayVisible(true),
       onCyclePalette: () => handleCyclePalette(),
+      onSelectPalette: (id) => handleSelectPalette(id),
+      getPaletteId: () => paletteIdRef.current,
       onToggleScanlines: () => handleToggleScanlines(),
       getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
@@ -917,6 +930,7 @@ function RetroDeckConsole() {
         visible={themeModalVisible}
         activePaletteId={paletteId}
         activePalette={palette}
+        isPro={isPro}
         onSelectPalette={handleSelectPalette}
         onCyclePalette={() => {
           handleCyclePalette();

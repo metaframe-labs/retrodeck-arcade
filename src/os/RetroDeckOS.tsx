@@ -15,7 +15,13 @@ import {
   ArcadeStats,
 } from '../arcade/types';
 import { isCartridgeProLocked } from '../arcade/cartridges';
-import { RetroPalette } from '../theme/palettes';
+import {
+  PALETTE_ORDER,
+  RETRO_PALETTES,
+  RetroPalette,
+  RetroPaletteId,
+  isPaletteProLocked,
+} from '../theme/palettes';
 import {
   NokiaNoteEvent,
   RetroAudioEngine,
@@ -44,6 +50,8 @@ export interface RetroDeckOSCallbacks {
   onLaunchGame: (cart: ArcadeCartridgeDef) => void;
   onOpenCartVault: () => void;
   onCyclePalette: () => void;
+  onSelectPalette?: (id: RetroPaletteId) => void;
+  getPaletteId?: () => RetroPaletteId;
   onToggleScanlines: () => void;
   getPaletteName: () => string;
   getScanlines: () => boolean;
@@ -78,6 +86,7 @@ type OsAppId =
   | 'stats'
   | 'term'
   | 'setup'
+  | 'themes'
   | 'pro';
 
 interface PixelSpan {
@@ -1029,6 +1038,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Setup state
   private setupIdx = 0;
 
+  // In-LCD Themes Browser state
+  private themeIdx = 0;
+
   // RetroDeck Pro In-LCD App state
   private proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
   private proStatusMsg = '';
@@ -1259,7 +1271,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
       case 'term':
         return '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit';
       case 'setup':
-        return '[▲]/[▼]: Setting • [A]: Toggle/Run • [B]: Desktop';
+        return '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop';
+      case 'themes':
+        return '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back';
       case 'pro':
         return '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back';
       default:
@@ -2741,7 +2755,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.proStatusMsg = '';
           return 'powerup';
         }
-        else if (this.setupIdx === 1) this.cb.onCyclePalette();
+        else if (this.setupIdx === 1) {
+          const curId = this.cb.getPaletteId?.();
+          const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
+          this.themeIdx = idx >= 0 ? idx : 0;
+          this.app = 'themes';
+          return 'score';
+        }
         else if (this.setupIdx === 2) this.cb.onToggleScanlines();
         else if (this.setupIdx === 3) this.toggleClockFace();
         else if (this.setupIdx === 4) this.cb.onOpenCartVault();
@@ -2750,6 +2770,29 @@ export class RetroDeckOS implements ArcadeGameInstance {
           this.bootTimer = 0;
         }
         return 'powerup';
+      }
+      return null;
+    }
+
+    if (this.app === 'themes') {
+      const total = PALETTE_ORDER.length;
+      if (dir === 'up') this.themeIdx = (this.themeIdx + total - 1) % total;
+      if (dir === 'down') this.themeIdx = (this.themeIdx + 1) % total;
+      if (dir === 'left') this.themeIdx = (this.themeIdx + total - 5) % total;
+      if (dir === 'right') this.themeIdx = (this.themeIdx + 5) % total;
+      if (dir) return 'hit';
+
+      if (pressA) {
+        const isPro = this.cb.getIsPro?.() ?? false;
+        const selectedId = PALETTE_ORDER[this.themeIdx];
+        if (selectedId) {
+          if (isPaletteProLocked(selectedId, isPro)) {
+            this.openProScreen('PRO REQUIRED FOR THIS THEME!');
+            return 'die';
+          }
+          this.cb.onSelectPalette?.(selectedId);
+          return 'powerup';
+        }
       }
       return null;
     }
@@ -3564,6 +3607,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'stats' && this.renderStats(fg, bg)}
           {this.app === 'term' && this.renderTerm(fg, bg)}
           {this.app === 'setup' && this.renderSetup(fg, bg)}
+          {this.app === 'themes' && this.renderThemes(fg, bg)}
           {this.app === 'pro' && this.renderPro(fg, bg)}
 
           {/* Global Nokia 3310 SMS Notification Overlay Banner */}
@@ -4949,6 +4993,65 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ▼ MORE
           </Text>
         </View>
+      </View>
+    );
+  }
+
+  private renderThemes(fg: string, bg: string) {
+    const isPro = this.cb.getIsPro?.() ?? false;
+    const activeId = this.cb.getPaletteId?.();
+    const visibleCount = 7;
+    const start = Math.max(0, Math.min(PALETTE_ORDER.length - visibleCount, this.themeIdx - 3));
+    const slice = PALETTE_ORDER.slice(start, start + visibleCount);
+
+    return (
+      <View style={styles.listWrap}>
+        <Text style={[styles.subHeader, { color: fg }]}>
+          THEMES ({this.themeIdx + 1}/{PALETTE_ORDER.length})  ◀/▶ ±5
+        </Text>
+        {slice.map((id, i) => {
+          const realIdx = start + i;
+          const t = RETRO_PALETTES[id];
+          const sel = realIdx === this.themeIdx;
+          const active = id === activeId;
+          const locked = isPaletteProLocked(id, isPro);
+          return (
+            <View
+              key={id}
+              style={[
+                styles.listRow,
+                { backgroundColor: sel ? fg : 'transparent', borderColor: fg },
+              ]}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 4, gap: 4 }}>
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    backgroundColor: t.screenBg,
+                    borderWidth: 1,
+                    borderColor: sel ? bg : fg,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <View style={{ width: 4, height: 4, backgroundColor: t.pixelOn }} />
+                </View>
+                <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                  {String(realIdx + 1).padStart(3, '0')}. {t.name}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                {locked && (
+                  <Ionicons name="lock-closed" size={9} color={sel ? bg : fg} />
+                )}
+                <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
+                  {active ? 'ACTIVE' : (locked ? 'PRO' : t.category.slice(0, 6))}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
       </View>
     );
   }

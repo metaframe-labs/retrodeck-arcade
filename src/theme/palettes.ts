@@ -2065,7 +2065,27 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
   },
 };
 
-export const PALETTE_ORDER: RetroPaletteId[] = [
+export const FREE_PALETTE_ORDER: RetroPaletteId[] = [
+  'gameboy',
+  'nokia',
+  'famicom',
+  'atomic_purple',
+  'playdate',
+  'gameboy_pocket',
+  'cyberpunk',
+  'matrix',
+  'pipboy',
+  'oled',
+];
+
+export const FREE_PALETTE_IDS = new Set<RetroPaletteId>(FREE_PALETTE_ORDER);
+
+export function isPaletteProLocked(id: RetroPaletteId, isPro: boolean): boolean {
+  if (isPro) return false;
+  return !FREE_PALETTE_IDS.has(id);
+}
+
+const RAW_PALETTE_ORDER: RetroPaletteId[] = [
   'gameboy',
   'nokia',
   'playdate',
@@ -2166,6 +2186,11 @@ export const PALETTE_ORDER: RetroPaletteId[] = [
   'nord',
   'solarized',
   'oled',
+];
+
+export const PALETTE_ORDER: RetroPaletteId[] = [
+  ...FREE_PALETTE_ORDER,
+  ...RAW_PALETTE_ORDER.filter((id) => !FREE_PALETTE_IDS.has(id)),
 ];
 
 /** Returns high-contrast foreground text color for solid accent pills/buttons */

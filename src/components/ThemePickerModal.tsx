@@ -19,6 +19,7 @@ import {
   RetroPaletteId,
   RetroThemeCategory,
   getAccentInk,
+  isPaletteProLocked,
 } from '../theme/palettes';
 
 const FAV_THEMES_STORAGE_KEY = '@retrodeck8_fav_themes_v1';
@@ -27,6 +28,7 @@ interface ThemePickerModalProps {
   visible: boolean;
   activePaletteId: RetroPaletteId;
   activePalette: RetroPalette;
+  isPro?: boolean;
   onSelectPalette: (id: RetroPaletteId) => void;
   onCyclePalette: () => void;
   onClose: () => void;
@@ -48,12 +50,13 @@ interface ThemeCardProps {
   theme: RetroPalette;
   isSelected: boolean;
   isFav: boolean;
+  isLocked: boolean;
   onSelect: (id: RetroPaletteId) => void;
   onToggleFav: (id: RetroPaletteId) => void;
 }
 
 const ThemeCard = React.memo<ThemeCardProps>(
-  ({ theme, isSelected, isFav, onSelect, onToggleFav }) => (
+  ({ theme, isSelected, isFav, isLocked, onSelect, onToggleFav }) => (
     <Pressable
       onPress={() => onSelect(theme.id)}
       style={[
@@ -77,13 +80,18 @@ const ThemeCard = React.memo<ThemeCardProps>(
           <Text style={styles.catBadge}>{theme.category}</Text>
         </View>
         <View style={styles.cardTopRight}>
-          {isSelected && (
+          {isSelected ? (
             <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
               <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
                 ACTIVE
               </Text>
             </View>
-          )}
+          ) : isLocked ? (
+            <View style={[styles.activeTag, { backgroundColor: '#F59E0B22', borderWidth: 1, borderColor: '#F59E0B', flexDirection: 'row', alignItems: 'center', gap: 3 }]}>
+              <Ionicons name="lock-closed" size={9} color="#F59E0B" />
+              <Text style={[styles.activeTagTxt, { color: '#F59E0B' }]}>PRO</Text>
+            </View>
+          ) : null}
           <Pressable
             hitSlop={8}
             onPress={() => onToggleFav(theme.id)}
@@ -152,6 +160,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   visible,
   activePaletteId,
   activePalette,
+  isPro = false,
   onSelectPalette,
   onCyclePalette,
   onClose,
@@ -195,11 +204,12 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
         theme={item}
         isSelected={item.id === activePaletteId}
         isFav={favSet.has(item.id)}
+        isLocked={isPaletteProLocked(item.id, isPro)}
         onSelect={onSelectPalette}
         onToggleFav={toggleFav}
       />
     ),
-    [activePaletteId, favSet, onSelectPalette, toggleFav]
+    [activePaletteId, favSet, isPro, onSelectPalette, toggleFav]
   );
 
   const keyExtractor = useCallback((item: RetroPalette) => item.id, []);
