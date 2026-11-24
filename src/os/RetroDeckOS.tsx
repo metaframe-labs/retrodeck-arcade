@@ -926,6 +926,7 @@ interface LiveSmsPersona {
   sender: string;
   tag: string;
   instruction: string;
+  fallback: string;
 }
 
 const LIVE_SMS_PERSONAS: LiveSmsPersona[] = [
@@ -933,55 +934,64 @@ const LIVE_SMS_PERSONAS: LiveSmsPersona[] = [
     id: 'kanka',
     sender: 'MERT (KANKA)',
     tag: 'SMS',
-    instruction: 'Sen kullanıcının yakın Türk arkadaşısın (Mert). Halısaha, akşam buluşma, kahve, oyun veya günlük komik bir olay hakkında çok doğal, samimi, sokak ağzıyla kısa bir SMS yaz (max 100 karakter, asla AI olduğunu belli etme).',
+    instruction: 'Sen kullanicinin yakin Turk arkadasisin (Mert). Halisaha, aksam bulusma, kahve veya oyun hakkinda cok dogal, samimi, sokak agziyla tam bir cumlelik SMS yaz.',
+    fallback: 'kanka aksam 8de halisaha var unutmadin di mi? adam lazim acil don',
   },
   {
     id: 'anne',
     sender: 'ANNEM',
     tag: 'AILE',
-    instruction: 'Sen kullanıcının Türk annesisin. Akşam kaçta geleceğini sor, yemek yaptığını söyle veya üstünü sıkı giy gibi çok doğal, samimi bir anne SMSi yaz (max 100 karakter, asla AI olduğunu belli etme).',
+    instruction: 'Sen kullanicinin Turk annesisin. Aksam kacta gelecegini sor, yemek yaptigini soyle veya ustunu siki giy gibi cok dogal, samimi tam bir anne SMSi yaz.',
+    fallback: 'oglum aksam kacta geliyosun? sevdigin yemegi yaptim sogumasin haber ver',
   },
   {
     id: 'kurye',
     sender: 'JET-KARGO',
     tag: 'KARGO',
-    instruction: 'Sen kargo kuryesisin. Kapıda olduğunu, zili çaldığını veya paketi komşuya/güvenliğe bırakabileceğini yazan çok gerçekçi kısa bir kargo SMSi yaz (max 100 karakter, örnek 4 haneli teslimat kodu da verebilirsin).',
+    instruction: 'Sen kargo kuryesisin. Kapida oldugunu, zili caldigini ve 4 haneli teslimat kodunu paylasan cok gercekci tam bir kargo SMSi yaz.',
+    fallback: 'JET-KARGO: Gonderiniz dagitimda, kapinizdayiz! Teslimat kodunuz: 4821',
   },
   {
     id: 'patron',
     sender: 'SELIM BEY',
     tag: 'IS',
-    instruction: 'Sen iş yerindeki müdürsün. Toplantının saati değiştiğini veya sunum/rapor dosyasını soran gerçekçi, kibar ama hafif aceleci kısa bir iş SMSi yaz (max 100 karakter).',
+    instruction: 'Sen is yerindeki mudursun. Toplantinin saati degistigini veya sunum dosyasini soran gercekci, kibar ama aceleci tam bir is SMSi yaz.',
+    fallback: 'Selam, musteri toplantisini 15:00e cektiler. Sunum dosyasini birazdan atabilir misin?',
   },
   {
     id: 'flort',
     sender: '+90 532 *** 18',
     tag: 'SMS',
-    instruction: 'Sen eski bir flört veya uzun zamandır yazmayan gizemli bir tanıdıksın. "Geçen gün o şarkıyı duydum aklıma sen geldin" veya "hala aynı yerde misin?" gibi merak uyandıran gerçekçi kısa bir SMS yaz (max 100 karakter).',
+    instruction: 'Sen eski bir flort veya uzun zamandir yazmayan gizemli bir tanidiksin. Merak uyandiran cok dogal, samimi bir SMS yaz.',
+    fallback: 'gecen gun o sarkiyi duydum aklima sen geldin, nasilsin hala ayni yerde misin?',
   },
   {
     id: 'operator_ad',
     sender: 'RD-CELL',
     tag: 'REKLAM',
-    instruction: 'Sen bir GSM operatörüsün. Kullanıcıya özel internet/dakika paketi kampanyası (örneğin 10GB 129TL gibi) sunan, sonunda "Ret: B001" yazan çok gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+    instruction: 'Sen bir GSM operatorusun. Kullaniciya ozel 10GB internet paketi firsati sunan, sonunda Ret:B001 yazan eksiksiz bir reklam SMSi yaz.',
+    fallback: 'RD-CELL: Hattiniza ozel 10GB internet sadece 129TL! EVET yaz gonder. Ret:B001',
   },
   {
     id: 'pizza_ad',
     sender: 'PIZZA-3310',
     tag: 'KAMPANYA',
-    instruction: 'Sen bir pizzacısın. Bugüne özel "1 orta boy pizza alana 2.si bedava" veya %40 indirim kodu veren, sonunda "B014" yazan iştah açıcı gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+    instruction: 'Sen bir pizzacisin. Bugune ozel 1 orta boy pizza alana ikincisinin bedava oldugunu ve indirim kodunu soyleyen eksiksiz bir kampanya SMSi yaz.',
+    fallback: 'PIZZA-3310: Bugune ozel 1 orta boy pizza alana 2.si BEDAVA! Kod: RETRO26 Ret:B014',
   },
   {
     id: 'bank_ad',
     sender: 'RD-BANK',
     tag: 'FINANS',
-    instruction: 'Sen bir bankasın. "Size özel faizsiz taksitli nakit fırsatınız hazır" tarzında sonunda "B002" yazan çok gerçekçi bir banka kampanya SMSi yaz (max 105 karakter).',
+    instruction: 'Sen bir bankasin. Size ozel faizsiz taksitli nakit firsatiniz hazir diyen eksiksiz gercekci bir banka SMSi yaz.',
+    fallback: 'RD-BANK: Size ozel 50.000 TL %0 faizli hos geldin kredisi hazir! Ret:B002',
   },
   {
     id: 'market_ad',
     sender: 'PIXEL-MALL',
     tag: 'INDIRIM',
-    instruction: 'Sen bir giyim/teknoloji mağazasısın. "Hafta sonu tüm ürünlerde 3 AL 2 ÖDE fırsatı başladı!" tarzında sonunda "B042" yazan gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+    instruction: 'Sen bir magazasın. Hafta sonuna ozel secili urunlerde %40 indirim veya 3 AL 2 ODE firsatini duyuran eksiksiz bir reklam SMSi yaz.',
+    fallback: 'PIXEL-MALL: Hafta sonuna ozel tum urunlerde 3 AL 2 ODE basladi! Ret:B042',
   },
 ];
 
@@ -1756,17 +1766,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.liveSmsFetching = true;
     try {
       const prompt = userReply
-        ? `${persona.instruction}\n\nKullanıcı sana az önce şu cevabı yazdı: "${userReply}". Karakterinden hiç çıkmadan buna çok doğal, kısa bir SMS cevabı yaz (sadece SMS metnini döndür, tırnak işareti koyma).`
-        : `${persona.instruction}\n\nSadece gönderilecek ham SMS metnini yaz (başlık, tırnak işareti veya açıklama ekleme).`;
+        ? `${persona.instruction}\n\nKullanıcı sana az önce şu cevabı yazdı: "${userReply}". Karakterinden hiç çıkmadan buna çok doğal, eksiksiz, tek bir SMS cevabı yaz (en az 30, en fazla 120 karakter; sadece SMS metnini döndür, tırnak koyma).`
+        : `${persona.instruction}\n\nÖNEMLİ: Tek başına kod değil, en az 45 en fazla 120 karakterlik eksiksiz, tam bir SMS cümlesi yaz (başlık, tırnak veya açıklama ekleme).`;
 
       const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
-      const cleaned = stripMarkdownForLcd(raw)
+      let cleaned = stripMarkdownForLcd(raw)
         .replace(/^["']|["']$/g, '')
         .replace(/\n+/g, ' ')
         .trim()
         .slice(0, 130);
 
-      if (!cleaned) return false;
+      if (!cleaned || cleaned.length < 22) {
+        cleaned = persona.fallback;
+      }
 
       this.smsList.unshift({
         sender: persona.sender,
