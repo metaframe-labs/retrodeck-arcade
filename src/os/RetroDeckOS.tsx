@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
 import { Ionicons } from '@expo/vector-icons';
@@ -913,9 +913,19 @@ interface NokiaPicSms {
   title: string;
   text: string;
   artKey: PicArtKey;
+  postcardId?: string;
   stampEmoji?: string;
   stampLabel?: string;
 }
+
+const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
+  { id: 'paris', title: 'PARIS', image: require('../../assets/postcards/paris.jpg') },
+  { id: 'beach', title: 'TROPICAL BEACH', image: require('../../assets/postcards/beach.jpg') },
+  { id: 'tokyo', title: 'TOKYO NIGHT', image: require('../../assets/postcards/tokyo.jpg') },
+  { id: 'mountains', title: 'ALPINE PEAKS', image: require('../../assets/postcards/mountains.jpg') },
+  { id: 'space', title: 'DEEP SPACE', image: require('../../assets/postcards/space.jpg') },
+  { id: 'campfire', title: 'NIGHT CAMP', image: require('../../assets/postcards/campfire.jpg') },
+];
 
 const POSTCARD_EMOJIS: { emoji: string; label: string }[] = [
   { emoji: '❤️', label: 'LOVE' },
@@ -2851,13 +2861,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
           return 'score';
         }
         if (this.smsStudioTab === 'art') {
-          const totalArts = ALL_PIC_ART_KEYS.length;
+          const totalScenes = REAL_POSTCARDS.length;
           if (dir === 'left') {
-            this.smsArtIdx = (this.smsArtIdx + totalArts - 1) % totalArts;
+            this.smsArtIdx = (this.smsArtIdx + totalScenes - 1) % totalScenes;
             return 'hit';
           }
           if (dir === 'right') {
-            this.smsArtIdx = (this.smsArtIdx + 1) % totalArts;
+            this.smsArtIdx = (this.smsArtIdx + 1) % totalScenes;
             return 'hit';
           }
         } else {
@@ -2881,30 +2891,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
             this.cb.onRequestKeyboard?.(true);
             return 'score';
           }
-          if (this.smsStudioTab === 'art') {
-            const artKey = ALL_PIC_ART_KEYS[this.smsArtIdx] || 'EIFFEL';
-            this.smsList.unshift({
-              sender: 'MY-POSTCARD',
-              title: artKey.replace('_', ' '),
-              text,
-              artKey,
-            });
-          } else {
-            const stamp = POSTCARD_EMOJIS[this.smsStampIdx] || POSTCARD_EMOJIS[0];
-            this.smsList.unshift({
-              sender: 'MY-POSTCARD',
-              title: stamp.label,
-              text,
-              artKey: 'SMILE',
-              stampEmoji: stamp.emoji,
-              stampLabel: stamp.label,
-            });
-          }
+          const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
+          const stamp = POSTCARD_EMOJIS[this.smsStampIdx] || POSTCARD_EMOJIS[0];
+          this.smsList.unshift({
+            sender: 'AIR-MAIL',
+            title: scene.title,
+            text,
+            artKey: 'SMILE',
+            postcardId: scene.id,
+            stampEmoji: stamp.emoji,
+            stampLabel: stamp.label,
+          });
           if (this.smsList.length > 20) this.smsList.pop();
           this.smsIdx = 0;
           this.smsDraftText = '';
           this.smsMode = 'inbox';
-          this.smsBanner = '✉ POSTCARD CREATED!';
+          this.smsBanner = '✉ POSTCARD SENT!';
           this.smsBannerTimer = 3.0;
           this.saveSmsList();
           this.playActiveSmsTone();
@@ -5306,8 +5308,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderSms(fg: string, bg: string) {
     if (this.smsMode === 'compose') {
       const isArtTab = this.smsStudioTab === 'art';
-      const artKey = ALL_PIC_ART_KEYS[this.smsArtIdx] || 'EIFFEL';
-      const artSpans = PIC_BANNERS[artKey] || PIC_BANNERS.COFFEE;
+      const scene = REAL_POSTCARDS[this.smsArtIdx] || REAL_POSTCARDS[0];
       const stamp = POSTCARD_EMOJIS[this.smsStampIdx] || POSTCARD_EMOJIS[0];
       const totalStamps = POSTCARD_EMOJIS.length;
       const stripOffsets = [-3, -2, -1, 0, 1, 2, 3];
@@ -5316,47 +5317,91 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <View style={styles.listWrap}>
           <View style={styles.compHeader}>
             <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-              {isArtTab ? 'POSTCARD P1/2: BIG ART' : 'POSTCARD P2/2: EMOJIS'}
+              {isArtTab ? 'POSTCARD P1/2: SCENE' : 'POSTCARD P2/2: STAMP'}
             </Text>
             <Text style={[styles.compBpm, { color: fg }]}>
               {isArtTab
-                ? `${this.smsArtIdx + 1}/${ALL_PIC_ART_KEYS.length} [${artKey.replace('_', ' ')}]`
+                ? `${this.smsArtIdx + 1}/${REAL_POSTCARDS.length} [${scene.title}]`
                 : `${this.smsStampIdx + 1}/${totalStamps} [${stamp.label}]`}
             </Text>
           </View>
 
-          {isArtTab ? (
+          {/* Real Full-Width Postcard Visual with Stamp & Postmark */}
+          <View
+            style={{
+              width: '100%',
+              height: isArtTab ? 72 : 54,
+              borderWidth: 1.5,
+              borderColor: fg,
+              marginBottom: 3,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <Image
+              source={scene.image}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+            />
+            {/* Top-Right Perforated Postage Stamp */}
             <View
               style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                position: 'absolute',
+                top: 4,
+                right: 4,
+                width: 26,
+                height: 30,
+                backgroundColor: bg,
                 borderWidth: 1,
+                borderStyle: 'dashed',
                 borderColor: fg,
-                paddingVertical: 4,
-                paddingHorizontal: 8,
-                marginBottom: 4,
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Text style={[styles.compBpm, { color: fg }]}>◀</Text>
-              <View style={[styles.picBannerBox, { borderColor: fg }]}>
-                {artSpans.map((s) => (
-                  <View
-                    key={s.key}
-                    style={{
-                      position: 'absolute',
-                      left: s.x,
-                      top: s.y,
-                      width: s.w,
-                      height: s.h,
-                      backgroundColor: fg,
-                    }}
-                  />
-                ))}
-              </View>
-              <Text style={[styles.compBpm, { color: fg }]}>▶</Text>
+              <Text style={{ fontSize: 13 }}>{stamp.emoji}</Text>
+              <Text style={{ fontSize: 5.5, fontWeight: '900', color: fg, fontFamily: 'monospace' }}>
+                2026
+              </Text>
             </View>
-          ) : (
+            {/* Round Postmark Seal */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 8,
+                right: 33,
+                width: 20,
+                height: 20,
+                borderRadius: 10,
+                borderWidth: 1,
+                borderColor: '#FFFFFFCC',
+                backgroundColor: '#00000066',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontSize: 5, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>
+                AIR{'\n'}MAIL
+              </Text>
+            </View>
+            {/* Bottom-Left Location Banner */}
+            <View
+              style={{
+                position: 'absolute',
+                bottom: 3,
+                left: 4,
+                backgroundColor: '#000000AA',
+                paddingHorizontal: 5,
+                paddingVertical: 1.5,
+              }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
+                GREETINGS FROM {scene.title}
+              </Text>
+            </View>
+          </View>
+
+          {!isArtTab && (
             <View
               style={{
                 flexDirection: 'row',
@@ -5364,9 +5409,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 alignItems: 'center',
                 borderWidth: 1,
                 borderColor: fg,
-                paddingVertical: 4,
+                paddingVertical: 2,
                 paddingHorizontal: 4,
-                marginBottom: 4,
+                marginBottom: 3,
               }}
             >
               {stripOffsets.map((off) => {
@@ -5377,17 +5422,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   <View
                     key={`${off}-${item.label}-${idx}`}
                     style={{
-                      width: isCenter ? 30 : 20,
-                      height: isCenter ? 26 : 20,
+                      width: isCenter ? 26 : 18,
+                      height: isCenter ? 22 : 18,
                       backgroundColor: isCenter ? fg : 'transparent',
-                      borderWidth: isCenter ? 1.5 : 0,
+                      borderWidth: isCenter ? 1 : 0,
                       borderColor: fg,
                       alignItems: 'center',
                       justifyContent: 'center',
                       opacity: isCenter ? 1 : 0.7,
                     }}
                   >
-                    <Text style={{ fontSize: isCenter ? 16 : 12 }}>
+                    <Text style={{ fontSize: isCenter ? 13 : 10 }}>
                       {item.emoji}
                     </Text>
                   </View>
@@ -5405,17 +5450,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 width: '100%',
                 flex: 1,
                 justifyContent: 'center',
-                paddingHorizontal: 8,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
               },
             ]}
           >
-            <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
+            <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
               {this.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
             </Text>
           </View>
 
-          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 3 }]} numberOfLines={1}>
-            [◀/▶] PICK • [▼] {isArtTab ? 'PAGE 2/2' : 'PAGE 1/2'} • [▲] MSG • [A] SAVE
+          <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
+            [◀/▶] PICK • [▼] {isArtTab ? 'STAMPS (P2)' : 'SCENE (P1)'} • [▲] MSG • [A] SEND
           </Text>
         </View>
       );
@@ -5431,6 +5477,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
     const msg = this.smsList[this.smsIdx] || this.smsList[0];
     const bannerSpans = PIC_BANNERS[msg.artKey] || PIC_BANNERS.COFFEE;
+    const realCard = msg.postcardId
+      ? REAL_POSTCARDS.find((p) => p.id === msg.postcardId) || REAL_POSTCARDS[0]
+      : null;
 
     return (
       <View style={styles.listWrap}>
@@ -5443,60 +5492,147 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </Text>
         </View>
 
-        {/* Wide 72x20 (36x10 @ 2px) Authentic Nokia 3310 Picture Message Card */}
-        <View
-          style={[
-            styles.compStaff,
-            {
-              borderColor: fg,
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
-            },
-          ]}
-        >
-          {msg.stampEmoji ? (
+        {realCard ? (
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
+            {/* Full-Size Illustrated Postcard with Stamp & Postmark */}
             <View
-              style={[
-                styles.picBannerBox,
-                {
-                  borderColor: fg,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 6,
-                },
-              ]}
+              style={{
+                width: '100%',
+                height: 76,
+                borderWidth: 1.5,
+                borderColor: fg,
+                position: 'relative',
+                overflow: 'hidden',
+              }}
             >
-              <Text style={{ fontSize: 16 }}>{msg.stampEmoji}</Text>
-              {msg.stampLabel ? (
-                <Text style={[styles.compBpm, { color: fg, fontSize: 9 }]}>
-                  {msg.stampLabel}
-                </Text>
-              ) : null}
-            </View>
-          ) : (
-            <View style={[styles.picBannerBox, { borderColor: fg }]}>
-              {bannerSpans.map((s) => (
+              <Image
+                source={realCard.image}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+              />
+              {msg.stampEmoji ? (
                 <View
-                  key={s.key}
                   style={{
                     position: 'absolute',
-                    left: s.x,
-                    top: s.y,
-                    width: s.w,
-                    height: s.h,
-                    backgroundColor: fg,
+                    top: 4,
+                    right: 4,
+                    width: 26,
+                    height: 30,
+                    backgroundColor: bg,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: fg,
+                    alignItems: 'center',
+                    justifyContent: 'center',
                   }}
-                />
-              ))}
+                >
+                  <Text style={{ fontSize: 13 }}>{msg.stampEmoji}</Text>
+                  <Text style={{ fontSize: 5.5, fontWeight: '900', color: fg, fontFamily: 'monospace' }}>
+                    2026
+                  </Text>
+                </View>
+              ) : null}
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 8,
+                  right: 33,
+                  width: 20,
+                  height: 20,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: '#FFFFFFCC',
+                  backgroundColor: '#00000066',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontSize: 5, fontWeight: '900', color: '#FFFFFF', textAlign: 'center' }}>
+                  AIR{'\n'}MAIL
+                </Text>
+              </View>
+              <View
+                style={{
+                  position: 'absolute',
+                  bottom: 3,
+                  left: 4,
+                  backgroundColor: '#000000AA',
+                  paddingHorizontal: 5,
+                  paddingVertical: 1.5,
+                }}
+              >
+                <Text style={{ color: '#FFFFFF', fontSize: 7.5, fontWeight: '900', fontFamily: 'monospace' }}>
+                  GREETINGS FROM {realCard.title}
+                </Text>
+              </View>
             </View>
-          )}
+            <View
+              style={[
+                styles.swBox,
+                { borderColor: fg, width: '100%', paddingVertical: 3, paddingHorizontal: 6, marginTop: 3, flex: 1, justifyContent: 'center' },
+              ]}
+            >
+              <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5 }]} numberOfLines={2}>
+                {msg.text}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          /* Classic Nokia 3310 Picture Message Card */
+          <View
+            style={[
+              styles.compStaff,
+              {
+                borderColor: fg,
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 8,
+              },
+            ]}
+          >
+            {msg.stampEmoji ? (
+              <View
+                style={[
+                  styles.picBannerBox,
+                  {
+                    borderColor: fg,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  },
+                ]}
+              >
+                <Text style={{ fontSize: 16 }}>{msg.stampEmoji}</Text>
+                {msg.stampLabel ? (
+                  <Text style={[styles.compBpm, { color: fg, fontSize: 9 }]}>
+                    {msg.stampLabel}
+                  </Text>
+                ) : null}
+              </View>
+            ) : (
+              <View style={[styles.picBannerBox, { borderColor: fg }]}>
+                {bannerSpans.map((s) => (
+                  <View
+                    key={s.key}
+                    style={{
+                      position: 'absolute',
+                      left: s.x,
+                      top: s.y,
+                      width: s.w,
+                      height: s.h,
+                      backgroundColor: fg,
+                    }}
+                  />
+                ))}
+              </View>
+            )}
 
-          <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
-            {msg.text}
-          </Text>
-        </View>
+            <Text style={[styles.smsBodyTxt, { color: fg }]} numberOfLines={3}>
+              {msg.text}
+            </Text>
+          </View>
+        )}
 
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
           {this.smsBannerTimer > 0
