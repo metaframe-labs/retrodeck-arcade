@@ -7,6 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
 const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v2';
 const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
+const MY_TUNES_STORAGE_KEY = '@retrodeck8_custom_tunes_v1';
+
+const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
+  { title: 'MY TUNE 1', bpm: 140, notes: '' },
+  { title: 'MY TUNE 2', bpm: 140, notes: '' },
+  { title: 'MY TUNE 3', bpm: 140, notes: '' },
+];
 import {
   ArcadeCartridgeDef,
   ArcadeGameInstance,
@@ -987,7 +994,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Nokia 3310 Composer / Music state
   private synthIdx = 0;
   private songIdx = 0;
-  private songs: NokiaSong[] = NOKIA_SONGS.map((s) => ({ ...s }));
+  private songs: NokiaSong[] = [
+    ...NOKIA_SONGS.map((s) => ({ ...s })),
+    ...DEFAULT_CUSTOM_TUNES.map((s) => ({ ...s })),
+  ];
   private melodyPlaying = false;
   private melodyTimer = 0;
   private melodyDuration = 0;
@@ -1131,6 +1141,34 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(MY_TUNES_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            for (let i = 0; i < DEFAULT_CUSTOM_TUNES.length; i++) {
+              const saved = parsed[i];
+              if (saved && typeof saved.notes === 'string') {
+                this.songs[NOKIA_SONGS.length + i] = {
+                  title: saved.title || DEFAULT_CUSTOM_TUNES[i].title,
+                  bpm: typeof saved.bpm === 'number' ? saved.bpm : 140,
+                  notes: saved.notes,
+                };
+              }
+            }
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  private isCustomTune(idx = this.songIdx): boolean {
+    return idx >= NOKIA_SONGS.length;
+  }
+
+  private saveCustomTunes() {
+    const custom = this.songs.slice(NOKIA_SONGS.length);
+    AsyncStorage.setItem(MY_TUNES_STORAGE_KEY, JSON.stringify(custom)).catch(() => {});
   }
 
   private toggleClockFace() {
@@ -2571,6 +2609,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (pressA) {
         const key = COMPOSER_KEYS[this.synthIdx];
         const curSong = this.songs[this.songIdx];
+        if (key.token === 'SONG') {
+          this.melodyPlaying = false;
+          RetroAudioEngine.stopNokiaMelody();
+          this.songIdx = (this.songIdx + 1) % this.songs.length;
+          return 'score';
+        }
+        const isPro = this.cb.getIsPro?.() ?? false;
+        if (this.isCustomTune() && !isPro) {
+          this.melodyPlaying = false;
+          RetroAudioEngine.stopNokiaMelody();
+          this.openProScreen('CUSTOM TUNES REQUIRE PRO!');
+          return 'die';
+        }
         if (key.token === 'PLAY') {
           if (this.melodyPlaying) {
             this.melodyPlaying = false;
@@ -2583,12 +2634,6 @@ export class RetroDeckOS implements ArcadeGameInstance {
             this.melodyPlaying = res.totalSec > 0;
           }
           return null;
-        }
-        if (key.token === 'SONG') {
-          this.melodyPlaying = false;
-          RetroAudioEngine.stopNokiaMelody();
-          this.songIdx = (this.songIdx + 1) % this.songs.length;
-          return 'score';
         }
         if (key.token === 'RING') {
           this.ringtoneIdx = this.songIdx;
@@ -2605,6 +2650,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           const parts = curSong.notes.trim().split(/\s+/).filter(Boolean);
           parts.pop();
           curSong.notes = parts.join(' ');
+          if (this.isCustomTune()) this.saveCustomTunes();
           return 'hit';
         }
         this.melodyPlaying = false;
@@ -2614,6 +2660,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         if (parts.length >= 24) parts.shift();
         parts.push(key.token);
         curSong.notes = parts.join(' ');
+        if (this.isCustomTune()) this.saveCustomTunes();
         return null;
       }
       return null;
@@ -4287,6 +4334,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private renderSynth(fg: string, bg: string) {
     const curSong = this.songs[this.songIdx];
+    const isPro = this.cb.getIsPro?.() ?? false;
+    const isCustom = this.isCustomTune();
+    const isLocked = isCustom && !isPro;
     const tokens = curSong.notes.trim().split(/\s+/).filter(Boolean);
 
     let activeNoteIdx = -1;
@@ -4308,32 +4358,42 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <View style={styles.compHeader}>
           <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
             ♪ {this.songIdx + 1}/{this.songs.length} {curSong.title.trim()}
-            {this.songIdx === this.ringtoneIdx ? ' [★RING]' : ''}
+            {this.songIdx === this.ringtoneIdx ? ' [RING]' : ''}
           </Text>
           <Text style={[styles.compBpm, { color: fg }]}>
-            {this.melodyPlaying ? 'PLAYING' : `${curSong.bpm}BPM`}
+            {isLocked ? '[PRO]' : (this.melodyPlaying ? 'PLAYING' : (isCustom ? 'SAVED' : `${curSong.bpm}BPM`))}
           </Text>
         </View>
 
         <View style={[styles.compStaff, { borderColor: fg }]}>
           <View style={styles.compTokensWrap}>
-            {tokens.slice(0, 18).map((tok, idx) => {
-              const isPlaying = idx === activeNoteIdx;
-              return (
-                <View
-                  key={idx}
-                  style={[styles.compTokPill, isPlaying && { backgroundColor: fg }]}
-                >
-                  <Text style={[styles.compTokTxt, { color: isPlaying ? bg : fg }]}>
-                    {tok}
-                  </Text>
-                </View>
-              );
-            })}
-            {tokens.length === 0 && (
+            {isLocked ? (
               <Text style={[styles.compTokTxt, { color: fg }]}>
-                (EMPTY - TAP NOTES BELOW TO COMPOSE)
+                PRO REQUIRED TO COMPOSE & SAVE CUSTOM TUNES
               </Text>
+            ) : (
+              <>
+                {tokens.slice(0, 18).map((tok, idx) => {
+                  const isPlaying = idx === activeNoteIdx;
+                  return (
+                    <View
+                      key={idx}
+                      style={[styles.compTokPill, isPlaying && { backgroundColor: fg }]}
+                    >
+                      <Text style={[styles.compTokTxt, { color: isPlaying ? bg : fg }]}>
+                        {tok}
+                      </Text>
+                    </View>
+                  );
+                })}
+                {tokens.length === 0 && (
+                  <Text style={[styles.compTokTxt, { color: fg }]}>
+                    {isCustom
+                      ? '(EMPTY SLOT - TAP NOTES TO COMPOSE & AUTO-SAVE)'
+                      : '(EMPTY - TAP NOTES BELOW TO COMPOSE)'}
+                  </Text>
+                )}
+              </>
             )}
           </View>
         </View>
