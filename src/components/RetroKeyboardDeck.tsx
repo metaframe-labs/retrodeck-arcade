@@ -204,7 +204,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           }}
           style={[styles.keyCap, styles.fnKey, { borderColor: `${accentColor}66` }]}
         >
-          <Ionicons name="game-controller-outline" size={13} color={accentColor} />
+          <Ionicons name="game-controller-outline" size={14} color={accentColor} />
           <Text style={[styles.fnKeyTxt, { color: accentColor }]}>PAD</Text>
         </Pressable>
 
@@ -238,7 +238,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={[styles.keyCap, styles.sendKey, { backgroundColor: accentColor }]}
         >
           <Text style={styles.sendKeyTxt}>SEND</Text>
-          <Ionicons name="return-down-back" size={13} color="#04100C" />
+          <Ionicons name="return-down-back" size={15} color="#04100C" />
         </Pressable>
       </View>
     </View>
@@ -247,11 +247,12 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
 
 const styles = StyleSheet.create({
   deckWrap: {
+    flex: 1,
     width: '100%',
-    paddingHorizontal: 4,
+    paddingHorizontal: 2,
     paddingVertical: 2,
     gap: 5,
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   bufferBar: {
     flexDirection: 'row',
@@ -259,9 +260,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#050911',
     borderWidth: 1.5,
     borderRadius: 8,
-    height: 34,
-    paddingHorizontal: 6,
-    marginBottom: 2,
+    height: 36,
+    paddingHorizontal: 8,
+    marginBottom: 1,
   },
   targetTag: {
     paddingHorizontal: 6,
@@ -295,23 +296,24 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
   keyRow: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 3.5,
+    gap: 4,
   },
   keyCap: {
     flex: 1,
-    height: 31,
+    minHeight: 34,
     backgroundColor: '#111927',
     borderWidth: 1,
-    borderBottomWidth: 2.5,
+    borderBottomWidth: 3,
     borderColor: '#263449',
-    borderRadius: 6,
+    borderRadius: 7,
     justifyContent: 'center',
     alignItems: 'center',
   },
   numKeyCap: {
-    height: 26,
+    minHeight: 30,
     backgroundColor: '#0B111C',
   },
   wideKey: {
@@ -319,43 +321,43 @@ const styles = StyleSheet.create({
     backgroundColor: '#162032',
   },
   fnKey: {
-    flex: 1.3,
+    flex: 1.35,
     flexDirection: 'row',
     gap: 3,
     backgroundColor: '#162032',
   },
   spaceKey: {
-    flex: 3.6,
+    flex: 3.4,
     backgroundColor: '#141E2E',
   },
   sendKey: {
-    flex: 1.65,
+    flex: 1.75,
     flexDirection: 'row',
     gap: 4,
     borderColor: 'transparent',
   },
   keyTxt: {
     color: '#E2E8F0',
-    fontSize: 11,
+    fontSize: 13.5,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
   fnKeyTxt: {
     color: '#94A3B8',
-    fontSize: 9,
+    fontSize: 10,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
   spaceTxt: {
     color: '#64748B',
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: '900',
     fontFamily: 'monospace',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
   },
   sendKeyTxt: {
     color: '#04100C',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '900',
     fontFamily: 'monospace',
   },
