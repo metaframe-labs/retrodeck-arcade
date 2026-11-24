@@ -2689,6 +2689,41 @@ export class RetroDeckOS implements ArcadeGameInstance {
     );
   }
 
+  /** Renders retro LCD antenna mast, 4 stepped cellular signal bars, and operator name */
+  private renderStatusLeft(ink: string): React.ReactNode {
+    const signalBars = (Math.floor(this.uptime / 4) + this.operatorIdx) % 7 === 0 ? 3 : 4;
+    const barHeights = [3, 5, 7, 9];
+
+    return (
+      <View style={styles.osBarLeft}>
+        <View style={styles.sigMeter}>
+          <View style={styles.sigAnt}>
+            <View style={[styles.sigAntWingL, { backgroundColor: ink }]} />
+            <View style={[styles.sigAntWingR, { backgroundColor: ink }]} />
+            <View style={[styles.sigAntBridge, { backgroundColor: ink }]} />
+            <View style={[styles.sigAntStem, { backgroundColor: ink }]} />
+          </View>
+          {barHeights.map((h, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.sigBar,
+                {
+                  height: h,
+                  backgroundColor: ink,
+                  opacity: idx < signalBars ? 1 : 0.25,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <Text style={[styles.osBarTxt, { color: ink }]} numberOfLines={1}>
+          {NOKIA_OPERATORS[this.operatorIdx]}
+        </Text>
+      </View>
+    );
+  }
+
   /** Renders live audio/radio badge, battery percentage, and 4-cell pixel LCD battery icon */
   private renderStatusRight(ink: string): React.ReactNode {
     const isMuted = RetroAudioEngine.getMuted() || NOKIA_PROFILES[this.profileIdx] === 'SILENT';
@@ -2771,9 +2806,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={[styles.container, { backgroundColor: bg }]}>
           <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
-            <Text style={[styles.osBarTxt, { color: bg }]}>
-              Ψ|||| {NOKIA_OPERATORS[this.operatorIdx]}
-            </Text>
+            {this.renderStatusLeft(bg)}
             <Text style={[styles.osBarTxt, { color: bg }]}>[KEYGUARD]</Text>
             {this.renderStatusRight(bg)}
           </View>
@@ -2836,11 +2869,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
       <View style={[styles.container, { backgroundColor: bg }]}>
         {/* OS Top Status Bar */}
         <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
-          <Text style={[styles.osBarTxt, { color: bg }]}>
-            {this.app === 'desktop'
-              ? `Ψ|||| ${NOKIA_OPERATORS[this.operatorIdx]}`
-              : `< ${this.app.toUpperCase()}`}
-          </Text>
+          {this.app === 'desktop' ? (
+            this.renderStatusLeft(bg)
+          ) : (
+            <Text style={[styles.osBarTxt, { color: bg }]}>{`< ${this.app.toUpperCase()}`}</Text>
+          )}
           <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
           {this.renderStatusRight(bg)}
         </View>
@@ -3998,6 +4031,53 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontWeight: '900',
     fontFamily: 'monospace',
+  },
+  osBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  sigMeter: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 1.5,
+    height: 10,
+  },
+  sigAnt: {
+    width: 7,
+    height: 10,
+    position: 'relative',
+  },
+  sigAntWingL: {
+    position: 'absolute',
+    top: 0,
+    left: 0.5,
+    width: 1.5,
+    height: 3,
+  },
+  sigAntWingR: {
+    position: 'absolute',
+    top: 0,
+    right: 0.5,
+    width: 1.5,
+    height: 3,
+  },
+  sigAntBridge: {
+    position: 'absolute',
+    top: 2,
+    left: 1.75,
+    width: 3.5,
+    height: 1.5,
+  },
+  sigAntStem: {
+    position: 'absolute',
+    top: 3,
+    left: 2.75,
+    width: 1.5,
+    height: 7,
+  },
+  sigBar: {
+    width: 2,
   },
   osBarRight: {
     flexDirection: 'row',
