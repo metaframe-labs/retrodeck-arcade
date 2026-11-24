@@ -1538,6 +1538,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private aiPrompt = '';
   private aiLoading = false;
   private aiStatus = 'READY';
+  private chatClearConfirm = false;
   private chatHistory: BYOKChatMessage[] = [];
   private chatLines: string[] = [
     'AI> WELCOME TO RETRODECK AI!',
@@ -2005,7 +2006,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return '[◀]/[▶]: Tune Station • [A]: Play/Stop • [▲]/[▼]: Vol • [B]: Desktop';
       case 'ai':
         return this.aiTab === 'chat'
-          ? '[▲]/[▼]: Scroll • [A]: Type/Send • [▶]: BYOK Setup • [B]: Exit'
+          ? '[▲]/[▼]: Scroll • [A]: Type • [◀]x2: Clear • [▶]: BYOK'
           : '[▲]/[▼]: Select • [◀]/[▶]: Provider • [A]: Edit Key/Model';
       case 'wap':
         return '[▲]/[▼]: Scroll Page • [◀]/[▶]: Bookmarks • [A]: Type URL / Go';
@@ -2750,9 +2751,26 @@ export class RetroDeckOS implements ArcadeGameInstance {
     return { displayText, actionLogs };
   }
 
+  private clearAiChat() {
+    this.chatHistory = [];
+    this.chatLines = [
+      'AI> CHAT CLEARED! READY.',
+      'AI> PRESS [A] TO TYPE OR [▶] FOR BYOK.',
+    ];
+    this.chatScroll = 0;
+    this.aiStatus = 'CLEARED';
+    this.chatClearConfirm = false;
+  }
+
   private async sendAiMessage() {
     const msg = this.aiPrompt.trim();
     if (!msg || this.aiLoading) return;
+    if (msg.toLowerCase() === '/clear' || msg.toLowerCase() === 'clear') {
+      this.aiPrompt = '';
+      this.clearAiChat();
+      this.cb.onPlaySound?.('die');
+      return;
+    }
     this.aiPrompt = '';
     this.appendChatLines('YOU>', msg);
     this.chatHistory.push({ role: 'user', content: msg });
@@ -3486,20 +3504,33 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'ai') {
       if (this.aiTab === 'chat') {
         if (dir === 'up') {
+          this.chatClearConfirm = false;
           this.chatScroll = Math.max(0, this.chatScroll - 1);
           return 'hit';
         }
         if (dir === 'down') {
+          this.chatClearConfirm = false;
           this.chatScroll = Math.min(Math.max(0, this.chatLines.length - 6), this.chatScroll + 1);
           return 'hit';
         }
+        if (dir === 'left') {
+          if (!this.chatClearConfirm) {
+            this.chatClearConfirm = true;
+            this.aiStatus = 'PRESS [◀] CLR';
+            return 'hit';
+          }
+          this.clearAiChat();
+          return 'die';
+        }
         if (dir === 'right') {
+          this.chatClearConfirm = false;
           this.aiTab = 'byok';
           this.byokRow = 0;
           this.kbdTarget = 'key';
           return 'hit';
         }
         if (pressA) {
+          this.chatClearConfirm = false;
           this.kbdTarget = 'chat';
           if (this.aiPrompt.trim().length > 0) {
             this.sendAiMessage();
