@@ -163,12 +163,16 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
       os.cycleWallpaperDim(1);
       os.cb.onPlaySound?.('hit');
     } else if (key === '0') {
-      os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+      if (os.wallpaperViewMode === 'preview') {
+        os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+      } else {
+        os.cycleWallpaperViewMode();
+      }
       os.cb.onPlaySound?.('hit');
     } else if (key === 'OK') {
       const nextId =
         os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
-      if (os.wallpaperId === nextId && nextId !== 'none') {
+      if (os.wallpaperViewMode === 'preview' && os.wallpaperId === nextId && nextId !== 'none') {
         os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
         os.cb.onPlaySound?.('hit');
         return;
@@ -1588,26 +1592,54 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   if (os.app === 'wallpapers') {
     const total = REAL_POSTCARDS.length + 1;
-    if (dir === 'left') {
-      os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
-      return 'hit';
-    }
-    if (dir === 'right') {
-      os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
-      return 'hit';
-    }
-    if (dir === 'up') {
-      os.cycleWallpaperDim(-1);
-      return 'hit';
-    }
-    if (dir === 'down') {
-      os.cycleWallpaperDim(1);
-      return 'hit';
+    if (os.wallpaperViewMode === 'grid3x2' || os.wallpaperViewMode === 'grid4x3') {
+      const cols = os.wallpaperViewMode === 'grid3x2' ? 3 : 4;
+      if (dir === 'left') {
+        os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
+        return 'hit';
+      }
+      if (dir === 'right') {
+        os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
+        return 'hit';
+      }
+      if (dir === 'up') {
+        if (os.wallpaperIdx >= cols) {
+          os.wallpaperIdx -= cols;
+        } else {
+          const col = os.wallpaperIdx % cols;
+          const lastRowBase = Math.floor((total - 1) / cols) * cols;
+          os.wallpaperIdx =
+            lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+        }
+        return 'hit';
+      }
+      if (dir === 'down') {
+        os.wallpaperIdx =
+          os.wallpaperIdx + cols < total ? os.wallpaperIdx + cols : os.wallpaperIdx % cols;
+        return 'hit';
+      }
+    } else {
+      if (dir === 'left') {
+        os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
+        return 'hit';
+      }
+      if (dir === 'right') {
+        os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
+        return 'hit';
+      }
+      if (dir === 'up') {
+        os.cycleWallpaperDim(-1);
+        return 'hit';
+      }
+      if (dir === 'down') {
+        os.cycleWallpaperDim(1);
+        return 'hit';
+      }
     }
     if (pressA) {
       const nextId =
         os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
-      if (os.wallpaperId === nextId && nextId !== 'none') {
+      if (os.wallpaperViewMode === 'preview' && os.wallpaperId === nextId && nextId !== 'none') {
         os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
         return 'hit';
       }

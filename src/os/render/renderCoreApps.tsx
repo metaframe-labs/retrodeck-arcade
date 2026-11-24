@@ -1134,7 +1134,172 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
   ];
   const dimText = dimLabels[os.wallpaperDimIdx] || dimLabels[1];
   const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
-  const cleanPreview = os.wallpaperCleanPreview;
+  const cleanPreview = os.wallpaperCleanPreview && os.wallpaperViewMode === 'preview';
+  const viewModeLabel =
+    os.wallpaperViewMode === 'grid3x2'
+      ? '3x2'
+      : os.wallpaperViewMode === 'grid4x3'
+      ? '4x3'
+      : pickLang(L, 'FULL', 'TAM');
+
+  // GRID MODES: 3x2 (6/page) or 4x3 (12/page) live pixel thumbnail gallery
+  if (os.wallpaperViewMode === 'grid3x2' || os.wallpaperViewMode === 'grid4x3') {
+    const is3x2 = os.wallpaperViewMode === 'grid3x2';
+    const cols = is3x2 ? 3 : 4;
+    const rows = is3x2 ? 2 : 3;
+    const pageSize = cols * rows;
+    const totalEntries = totalScenes + 1; // 0 = OFF, 1..N = scenes
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(os.wallpaperIdx / pageSize));
+    const pageStart = curPage * pageSize;
+
+    return (
+      <View style={[styles.deskGrid, { justifyContent: 'space-between' }]}>
+        {/* Top Bar with Tappable View Mode Switcher */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            backgroundColor: fg,
+            paddingHorizontal: 6,
+            paddingVertical: 2.5,
+          }}
+        >
+          <Text
+            style={{ fontFamily: monoFont, fontSize: 8.2, fontWeight: '900', color: bg, flex: 1 }}
+            numberOfLines={1}
+          >
+            {String(os.wallpaperIdx).padStart(2, '0')}/{totalScenes}{' '}
+            {previewCard ? previewCard.title : pickLang(L, 'OFF (SOLID)', 'KAPALI (DUZ)')}
+          </Text>
+          <Pressable
+            onPress={() => {
+              os.cycleWallpaperViewMode();
+              os.cb.onPlaySound?.('hit');
+            }}
+            style={{
+              backgroundColor: bg,
+              paddingHorizontal: 5,
+              paddingVertical: 1,
+              marginLeft: 4,
+            }}
+          >
+            <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+              [{viewModeLabel}]
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* Live Pixel Thumbnail Grid */}
+        <View style={{ flex: 1, gap: 3, paddingVertical: 2 }}>
+          {Array.from({ length: rows }, (_, r) => (
+            <View key={r} style={styles.deskRow}>
+              {Array.from({ length: cols }, (_, c) => {
+                const idx = pageStart + r * cols + c;
+                if (idx >= totalEntries) {
+                  return <View key={`sp-w-${c}`} style={styles.deskTileSpacer} />;
+                }
+                const card = idx === 0 ? null : REAL_POSTCARDS[idx - 1];
+                const sel = idx === os.wallpaperIdx;
+                const activeItem = card ? card.id === currentActiveId : currentActiveId === 'none';
+
+                return (
+                  <Pressable
+                    key={card ? card.id : '__none__'}
+                    onPress={() => {
+                      os.wallpaperIdx = idx;
+                      os.setWallpaperById(card ? card.id : 'none');
+                      os.smsBanner = card ? `[WP] ${card.title}` : `[WP] ${tOs('off', L)}`;
+                      os.smsBannerTimer = 2.0;
+                      os.cb.onPlaySound?.('powerup');
+                    }}
+                    style={{
+                      flex: 1,
+                      borderWidth: sel ? 2 : 1,
+                      borderColor: sel ? fg : hexWithAlpha(fg, 0.45),
+                      borderRadius: 3,
+                      overflow: 'hidden',
+                      backgroundColor: bg,
+                      position: 'relative',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                    }}
+                  >
+                    {card ? (
+                      <Image
+                        source={card.image}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: fg }}>
+                        OFF
+                      </Text>
+                    )}
+
+                    {/* Active/Selected Badge */}
+                    {(sel || activeItem) && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          backgroundColor: sel ? fg : hexWithAlpha(bg, 0.82),
+                          paddingHorizontal: 2,
+                          paddingVertical: 0.5,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: monoFont,
+                            fontSize: is3x2 ? 6.8 : 6,
+                            fontWeight: '900',
+                            color: sel ? bg : fg,
+                            textAlign: 'center',
+                          }}
+                          numberOfLines={1}
+                        >
+                          {activeItem ? '★ ' : ''}
+                          {card ? card.title : 'OFF'}
+                        </Text>
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* Bottom Tappable Page & Mode Strip */}
+        <Pressable
+          onPress={() => {
+            const nextPage = (curPage + 1) % totalPages;
+            os.wallpaperIdx = nextPage * pageSize;
+            os.cb.onPlaySound?.('hit');
+          }}
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: hexWithAlpha(fg, 0.5),
+            paddingHorizontal: 6,
+            paddingVertical: 1.5,
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(L, `PAGE ${curPage + 1}/${totalPages}`, `SAYFA ${curPage + 1}/${totalPages}`)}
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+            {pickLang(L, '[0] VIEW  •  [A] APPLY', '[0] GORUNUM  •  [A] SEC')}
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <Pressable
@@ -1230,6 +1395,23 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                 {isApplied ? tOs('active', L) : pickLang(L, '[A] SET', '[A] SEC')}
               </Text>
             </View>
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                os.cycleWallpaperViewMode();
+                os.cb.onPlaySound?.('hit');
+              }}
+              style={{
+                backgroundColor: bg,
+                paddingHorizontal: 4,
+                paddingVertical: 1,
+                marginLeft: 3,
+              }}
+            >
+              <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
+                [{viewModeLabel}]
+              </Text>
+            </Pressable>
           </View>
 
           {/* Center Card only when OFF (solid LCD mode) */}

@@ -379,6 +379,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS
   /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark
   /** @internal */ wallpaperCleanPreview = false;
+  /** @internal */ wallpaperViewMode: 'preview' | 'grid3x2' | 'grid4x3' = 'preview';
   /** @internal */ menuStyle: DesktopMenuStyle = 'grid';
   /** @internal */ formatSim: FormatSimState = createInitialFormatState();
   /** @internal */ postFormatWinStyle: PostFormatWinStyle | null = null;
@@ -669,8 +670,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
     this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
     this.wallpaperCleanPreview = false;
-    this.app = 'wallpapers';
     this.cb.onRequestKeyboard?.(false);
+    this.app = 'wallpapers';
+  }
+
+  /** @internal */ cycleWallpaperViewMode() {
+    const modes: ('preview' | 'grid3x2' | 'grid4x3')[] = ['preview', 'grid3x2', 'grid4x3'];
+    const cur = modes.indexOf(this.wallpaperViewMode);
+    this.wallpaperViewMode = modes[(cur + 1) % modes.length];
+    this.wallpaperCleanPreview = false;
   }
 
   /** @internal */ saveCustomContacts() {
