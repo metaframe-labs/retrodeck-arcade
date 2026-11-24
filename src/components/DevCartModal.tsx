@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { GAME_TEMPLATES, GameTemplate } from '../arcade/compiler/templates';
 import { compileCustomCartridge } from '../arcade/compiler/CartridgeCompiler';
 import { ArcadeCartridgeDef } from '../arcade/types';
+import { getAccentInk } from '../theme/palettes';
 
 interface DevCartModalProps {
   visible: boolean;
@@ -156,7 +157,10 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
         <View style={styles.titleInputWrap}>
           <Text style={styles.inputPrefix}>GAME TITLE:</Text>
           <TextInput
-            style={styles.titleInput}
+            style={[
+              styles.titleInput,
+              { color: accentColor, borderColor: `${accentColor}44` },
+            ]}
             value={cartTitle}
             onChangeText={setCartTitle}
             placeholder="Enter game title..."
@@ -166,13 +170,15 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
         </View>
 
         {/* Code Editor */}
-        <View style={styles.editorContainer}>
+        <View style={[styles.editorContainer, { borderColor: `${accentColor}44` }]}>
           <View style={styles.editorTopBar}>
             <Text style={styles.editorTitle}>Live Game Code Editor</Text>
-            <Text style={styles.editorMeta}>{code.length} Characters</Text>
+            <Text style={[styles.editorMeta, { color: accentColor }]}>
+              {code.length} Characters
+            </Text>
           </View>
           <TextInput
-            style={styles.editorInput}
+            style={[styles.editorInput, { color: accentColor }]}
             value={code}
             onChangeText={(txt) => {
               setCode(txt);
@@ -210,8 +216,8 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
               compiling && { opacity: 0.7 },
             ]}
           >
-            <Ionicons name="play" size={18} color="#000000" />
-            <Text style={styles.burnBtnText}>
+            <Ionicons name="play" size={18} color={getAccentInk(accentColor)} />
+            <Text style={[styles.burnBtnText, { color: getAccentInk(accentColor) }]}>
               {compiling ? 'PREPARING...' : 'INSERT CART & PLAY'}
             </Text>
           </Pressable>
