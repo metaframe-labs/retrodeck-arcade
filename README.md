@@ -7,14 +7,12 @@
 [![Expo](https://img.shields.io/badge/Expo-SDK_58-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.88-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-![Platforms](https://img.shields.io/badge/Platforms-iOS_%7C_Android_%7C_Web-0B1117?style=for-the-badge&logo=android&logoColor=9BBC0F)
-[![MetaFrame Labs](https://img.shields.io/badge/MetaFrame_Labs-v1.0.0-E5B869?style=for-the-badge&labelColor=0B1117)](https://www.metaframelabs.space/)
+[![MetaFrame Labs](https://img.shields.io/badge/MetaFrame_Labs-v1.0-E5B869?style=for-the-badge&labelColor=0B1117)](https://www.metaframelabs.space/)
 
-![Cartridges](https://img.shields.io/badge/Cartridges-100_%40_60_FPS-9BBC0F?style=flat-square&labelColor=0B1117)
-![Nokia 3310 OS](https://img.shields.io/badge/Nokia_3310_OS-17_Apps-9BBC0F?style=flat-square&labelColor=0B1117)
-![AI Orchestration](https://img.shields.io/badge/AI_Orchestration-9_Providers-B7FF00?style=flat-square&labelColor=0B1117)
-![Themes](https://img.shields.io/badge/Themes-100_Palettes-9BBC0F?style=flat-square&labelColor=0B1117)
-![i18n](https://img.shields.io/badge/i18n-EN_%7C_TR-38BDF8?style=flat-square&labelColor=0B1117)
+![Arcade](https://img.shields.io/badge/Arcade-100_Games_60_FPS-9BBC0F?style=flat-square&labelColor=0B1117)
+![Pocket OS](https://img.shields.io/badge/Pocket_OS-17_Nokia_Apps-9BBC0F?style=flat-square&labelColor=0B1117)
+![BYOK AI](https://img.shields.io/badge/BYOK_AI-9_Providers-B7FF00?style=flat-square&labelColor=0B1117)
+![i18n](https://img.shields.io/badge/Bilingual-EN_TR-38BDF8?style=flat-square&labelColor=0B1117)
 ![Zero WebView](https://img.shields.io/badge/Zero_WebView-Pure_TS_Engine-22C55E?style=flat-square&labelColor=0B1117)
 
 <br />
