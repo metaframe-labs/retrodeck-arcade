@@ -5,6 +5,8 @@ import * as Battery from 'expo-battery';
 import { Ionicons } from '@expo/vector-icons';
 
 const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
+const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v1';
+const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
 import {
   ArcadeCartridgeDef,
   ArcadeGameInstance,
@@ -62,6 +64,8 @@ type OsAppId =
   | 'calc'
   | 'clock'
   | 'paint'
+  | 'weather'
+  | 'notes'
   | 'stats'
   | 'term'
   | 'setup';
@@ -148,9 +152,145 @@ const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'calc', label: 'CALC', icon: 'calculator' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
   { id: 'paint', label: 'PAINT', icon: 'brush' },
+  { id: 'weather', label: 'WEATHER', icon: 'partly-sunny' },
+  { id: 'notes', label: 'NOTES', icon: 'document-text' },
   { id: 'term', label: 'SHELL', icon: 'terminal' },
   { id: 'stats', label: 'STATS', icon: 'bar-chart' },
   { id: 'setup', label: 'SETUP', icon: 'settings' },
+];
+
+const WEATHER_CITIES = [
+  'Istanbul',
+  'Ankara',
+  'Izmir',
+  'London',
+  'Tokyo',
+  'New York',
+  'Berlin',
+  'Seoul',
+];
+
+type WeatherSpriteKey = 'SUN' | 'CLOUD' | 'RAIN' | 'STORM' | 'SNOW';
+
+const WEATHER_SPRITES: Record<WeatherSpriteKey, PixelSpan[]> = {
+  SUN: buildPixelSpans(
+    [
+      '.......##.......',
+      '..#....##....#..',
+      '...#........#...',
+      '.....######.....',
+      '....########....',
+      '.##.########.##.',
+      '.##.########.##.',
+      '....########....',
+      '.....######.....',
+      '...#........#...',
+      '..#....##....#..',
+      '.......##.......',
+    ],
+    3,
+    48,
+    36
+  ),
+  CLOUD: buildPixelSpans(
+    [
+      '................',
+      '......####......',
+      '....########....',
+      '...##########...',
+      '.##############.',
+      '################',
+      '################',
+      '.##############.',
+      '................',
+      '................',
+      '................',
+      '................',
+    ],
+    3,
+    48,
+    36
+  ),
+  RAIN: buildPixelSpans(
+    [
+      '......####......',
+      '....########....',
+      '..############..',
+      '.##############.',
+      '.##############.',
+      '..############..',
+      '................',
+      '...#...#...#....',
+      '..#...#...#.....',
+      '...#...#...#....',
+      '..#...#...#.....',
+      '................',
+    ],
+    3,
+    48,
+    36
+  ),
+  STORM: buildPixelSpans(
+    [
+      '......####......',
+      '....########....',
+      '..############..',
+      '.##############.',
+      '..############..',
+      '.......###......',
+      '......###.......',
+      '.....######.....',
+      '.......###......',
+      '......##........',
+      '.....#..........',
+      '................',
+    ],
+    3,
+    48,
+    36
+  ),
+  SNOW: buildPixelSpans(
+    [
+      '......####......',
+      '....########....',
+      '..############..',
+      '.##############.',
+      '..############..',
+      '................',
+      '..#..#....#..#..',
+      '...##......##...',
+      '..#..#....#..#..',
+      '....#..##..#....',
+      '.....#....#.....',
+      '................',
+    ],
+    3,
+    48,
+    36
+  ),
+};
+
+function decodeWmoWeather(code: number): { label: string; sprite: WeatherSpriteKey } {
+  if (code === 0) return { label: 'CLEAR SKY', sprite: 'SUN' };
+  if (code <= 3) return { label: code === 1 ? 'MAINLY CLEAR' : 'CLOUDY', sprite: 'CLOUD' };
+  if (code === 45 || code === 48) return { label: 'FOGGY', sprite: 'CLOUD' };
+  if (code >= 51 && code <= 67) return { label: 'RAIN', sprite: 'RAIN' };
+  if (code >= 71 && code <= 77) return { label: 'SNOW', sprite: 'SNOW' };
+  if (code >= 80 && code <= 82) return { label: 'SHOWERS', sprite: 'RAIN' };
+  if (code >= 85 && code <= 86) return { label: 'SNOW SHWR', sprite: 'SNOW' };
+  if (code >= 95) return { label: 'THUNDERSTORM', sprite: 'STORM' };
+  return { label: 'OVERCAST', sprite: 'CLOUD' };
+}
+
+interface PixelNoteItem {
+  id: string;
+  text: string;
+  ts: string;
+}
+
+const DEFAULT_NOTES: PixelNoteItem[] = [
+  { id: '1', text: 'WELCOME TO RETRODECK NOTES!', ts: 'RD-OS' },
+  { id: '2', text: 'PRESS [A] OR [KBD] TO ADD NOTE', ts: 'TIP' },
 ];
 
 const WAP_BOOKMARKS = [
@@ -875,6 +1015,29 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private batteryCharging = false;
   private batteryPollTimer = 0;
 
+  // Live Weather state (Open-Meteo, zero API key required)
+  private weatherCityIdx = 0;
+  private weatherQuery = 'Istanbul';
+  private weatherLoading = false;
+  private weatherFetchedOnce = false;
+  private weatherError = '';
+  private weatherData: {
+    city: string;
+    country: string;
+    tempC: number;
+    feelsC: number;
+    humidity: number;
+    windKmh: number;
+    code: number;
+    daily: { minC: number; maxC: number; code: number }[];
+  } | null = null;
+
+  // Persistent Pixel Notepad state
+  private notes: PixelNoteItem[] = DEFAULT_NOTES.map((n) => ({ ...n }));
+  private noteIdx = 0;
+  private noteDraft = '';
+  private noteDeleteConfirm = false;
+
   constructor(cb: RetroDeckOSCallbacks) {
     this.cb = cb;
     this.clearCanvas();
@@ -886,6 +1049,23 @@ export class RetroDeckOS implements ArcadeGameInstance {
       .then((val) => {
         if (val === 'analog' || val === 'digital') {
           this.clockFace = val;
+        }
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(WEATHER_CITY_STORAGE_KEY)
+      .then((city) => {
+        if (city && city.trim()) {
+          this.weatherQuery = city.trim();
+        }
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(NOTES_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.notes = parsed;
+          }
         }
       })
       .catch(() => {});
@@ -1008,6 +1188,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit';
       case 'paint':
         return 'D-PAD: Cursor • [A]: Draw/Erase • [B]: Desktop';
+      case 'weather':
+        return '[◀]/[▶]: City • [▲]/[▼]: Refresh • [A]: Search City • [B]: Desktop';
+      case 'notes':
+        return '[▲]/[▼]: Browse Notes • [A]: New Note • [▶]x2: Delete • [B]: Desktop';
       case 'stats':
         return 'Viewing Arcade High Scores & Rank • [B]: Desktop';
       case 'term':
@@ -1038,6 +1222,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
         targetLabel: `RDSH ${this.termCwd}$`,
         value: this.termInput,
         placeholder: 'help, ls, neofetch, open snake, ai ...',
+        secure: false,
+      };
+    }
+    if (this.app === 'weather') {
+      return {
+        targetLabel: 'WEATHER CITY',
+        value: this.weatherQuery,
+        placeholder: 'Istanbul, Tokyo, London...',
+        secure: false,
+      };
+    }
+    if (this.app === 'notes') {
+      return {
+        targetLabel: 'NEW NOTE',
+        value: this.noteDraft,
+        placeholder: 'TYPE YOUR PIXEL NOTE...',
         secure: false,
       };
     }
@@ -1077,6 +1277,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.termInput = next;
       return;
     }
+    if (this.app === 'weather') {
+      this.weatherQuery = next;
+      return;
+    }
+    if (this.app === 'notes') {
+      this.noteDraft = next;
+      return;
+    }
     const pid = this.byokConfig.activeProvider;
     if (this.app === 'ai' && this.aiTab === 'byok' && this.kbdTarget === 'key') {
       this.byokConfig = {
@@ -1113,6 +1321,30 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.termInput = '';
       const s = this.execTermCmd(cmd);
       this.cb.onPlaySound?.(s);
+      return;
+    }
+    if (this.app === 'weather') {
+      this.cb.onRequestKeyboard?.(false);
+      this.fetchWeather(this.weatherQuery);
+      return;
+    }
+    if (this.app === 'notes') {
+      const text = this.noteDraft.trim();
+      if (text.length > 0) {
+        const d = new Date();
+        const hh = d.getHours().toString().padStart(2, '0');
+        const mm = d.getMinutes().toString().padStart(2, '0');
+        this.notes = [
+          { id: String(Date.now()), text, ts: `${hh}:${mm}` },
+          ...this.notes.slice(0, 29),
+        ];
+        this.noteIdx = 0;
+        this.noteDeleteConfirm = false;
+        this.saveNotes();
+        this.cb.onPlaySound?.('score');
+      }
+      this.noteDraft = '';
+      this.cb.onRequestKeyboard?.(false);
       return;
     }
     if (this.app === 'ai' && this.aiTab === 'byok') {
@@ -1245,8 +1477,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return;
     }
 
-    // Text input apps (AI, WAP, Terminal)
-    if (this.app === 'wap' || this.app === 'term' || this.app === 'ai') {
+    // Text input apps (AI, WAP, Terminal, Weather, Notes)
+    if (
+      this.app === 'wap' ||
+      this.app === 'term' ||
+      this.app === 'ai' ||
+      this.app === 'weather' ||
+      this.app === 'notes'
+    ) {
       const cur = this.getKeyboardBinding().value;
       if (key === 'DEL') this.setKeyboardText(cur.slice(0, -1));
       else if (key === 'CLR') this.setKeyboardText('');
@@ -1541,6 +1779,72 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
   }
 
+  private saveNotes() {
+    AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(this.notes)).catch(() => {});
+  }
+
+  private async fetchWeather(rawCity: string) {
+    if (this.weatherLoading) return;
+    const city = rawCity.trim() || 'Istanbul';
+    this.weatherQuery = city;
+    this.weatherLoading = true;
+    this.weatherError = '';
+    this.cb.onPlaySound?.('shoot');
+
+    try {
+      const geoUrl = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+        city
+      )}&count=1&language=en&format=json`;
+      const geoRes = await fetch(geoUrl);
+      const geoJson = await geoRes.json();
+      const loc = geoJson?.results?.[0];
+      if (!loc) {
+        this.weatherError = `CITY NOT FOUND: ${city.toUpperCase().slice(0, 14)}`;
+        this.cb.onPlaySound?.('die');
+        return;
+      }
+
+      const fcUrl = `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=4`;
+      const fcRes = await fetch(fcUrl);
+      const fcJson = await fcRes.json();
+      const cur = fcJson?.current;
+      const daily = fcJson?.daily;
+      if (!cur || !daily) {
+        this.weatherError = 'WEATHER FEED UNAVAILABLE';
+        this.cb.onPlaySound?.('die');
+        return;
+      }
+
+      const nextDaily: { minC: number; maxC: number; code: number }[] = [];
+      for (let i = 1; i <= 3; i++) {
+        nextDaily.push({
+          minC: Math.round(daily.temperature_2m_min?.[i] ?? cur.temperature_2m),
+          maxC: Math.round(daily.temperature_2m_max?.[i] ?? cur.temperature_2m),
+          code: Number(daily.weather_code?.[i] ?? cur.weather_code ?? 0),
+        });
+      }
+
+      this.weatherData = {
+        city: String(loc.name || city).toUpperCase(),
+        country: String(loc.country_code || '').toUpperCase(),
+        tempC: Math.round(cur.temperature_2m),
+        feelsC: Math.round(cur.apparent_temperature),
+        humidity: Math.round(cur.relative_humidity_2m),
+        windKmh: Math.round(cur.wind_speed_10m),
+        code: Number(cur.weather_code ?? 0),
+        daily: nextDaily,
+      };
+      this.weatherQuery = loc.name || city;
+      AsyncStorage.setItem(WEATHER_CITY_STORAGE_KEY, this.weatherQuery).catch(() => {});
+      this.cb.onPlaySound?.('powerup');
+    } catch {
+      this.weatherError = 'OFFLINE / CONNECTION ERROR';
+      this.cb.onPlaySound?.('die');
+    } finally {
+      this.weatherLoading = false;
+    }
+  }
+
   private cycleProvider(delta: number) {
     const idx = BYOK_PROVIDERS.findIndex((p) => p.id === this.byokConfig.activeProvider);
     const nextIdx = (idx + delta + BYOK_PROVIDERS.length) % BYOK_PROVIDERS.length;
@@ -1707,6 +2011,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         if (this.app === 'radio') {
           somaRadioService.fetchNowPlaying();
+        }
+        if (this.app === 'weather' && !this.weatherFetchedOnce) {
+          this.weatherFetchedOnce = true;
+          this.fetchWeather(this.weatherQuery);
+        }
+        if (this.app === 'notes') {
+          this.noteDeleteConfirm = false;
         }
         return 'score';
       }
@@ -2145,6 +2456,70 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (pressA) {
         this.paintGrid[this.paintR][this.paintC] = !this.paintGrid[this.paintR][this.paintC];
         return 'hit';
+      }
+      return null;
+    }
+
+    if (this.app === 'weather') {
+      if (dir === 'left') {
+        this.weatherCityIdx =
+          (this.weatherCityIdx + WEATHER_CITIES.length - 1) % WEATHER_CITIES.length;
+        this.weatherQuery = WEATHER_CITIES[this.weatherCityIdx];
+        this.fetchWeather(this.weatherQuery);
+        return 'hit';
+      }
+      if (dir === 'right') {
+        this.weatherCityIdx = (this.weatherCityIdx + 1) % WEATHER_CITIES.length;
+        this.weatherQuery = WEATHER_CITIES[this.weatherCityIdx];
+        this.fetchWeather(this.weatherQuery);
+        return 'hit';
+      }
+      if (dir === 'up' || dir === 'down') {
+        this.fetchWeather(this.weatherQuery);
+        return 'hit';
+      }
+      if (pressA) {
+        this.cb.onRequestKeyboard?.(true);
+        return 'score';
+      }
+      return null;
+    }
+
+    if (this.app === 'notes') {
+      if (dir === 'up') {
+        if (this.notes.length > 0) {
+          this.noteIdx = (this.noteIdx + this.notes.length - 1) % this.notes.length;
+        }
+        this.noteDeleteConfirm = false;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        if (this.notes.length > 0) {
+          this.noteIdx = (this.noteIdx + 1) % this.notes.length;
+        }
+        this.noteDeleteConfirm = false;
+        return 'hit';
+      }
+      if (dir === 'left') {
+        this.noteDeleteConfirm = false;
+        return 'hit';
+      }
+      if (dir === 'right') {
+        if (this.notes.length === 0) return 'hit';
+        if (!this.noteDeleteConfirm) {
+          this.noteDeleteConfirm = true;
+          return 'hit';
+        }
+        this.notes = this.notes.filter((_, idx) => idx !== this.noteIdx);
+        this.noteIdx = Math.min(this.noteIdx, Math.max(0, this.notes.length - 1));
+        this.noteDeleteConfirm = false;
+        this.saveNotes();
+        return 'explode';
+      }
+      if (pressA) {
+        this.noteDeleteConfirm = false;
+        this.cb.onRequestKeyboard?.(true);
+        return 'score';
       }
       return null;
     }
@@ -2907,6 +3282,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'calc' && this.renderCalc(fg, bg)}
           {this.app === 'clock' && this.renderClock(fg, bg)}
           {this.app === 'paint' && this.renderPaint(fg, bg)}
+          {this.app === 'weather' && this.renderWeather(fg, bg)}
+          {this.app === 'notes' && this.renderNotes(fg, bg)}
           {this.app === 'stats' && this.renderStats(fg, bg)}
           {this.app === 'term' && this.renderTerm(fg, bg)}
           {this.app === 'setup' && this.renderSetup(fg, bg)}
@@ -2923,6 +3300,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
               ? '[A] KBD/SEND   [◀/▶] TAB   [B] DESKTOP'
               : this.app === 'sms'
               ? '[A] SEND PIC-SMS TO GROQ/AI   [B] DESKTOP'
+              : this.app === 'weather'
+              ? '[◀/▶] CITY   [▲/▼] REFRESH   [A] SEARCH   [B] DESKTOP'
+              : this.app === 'notes'
+              ? '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP'
               : '[A] ACTION   [B] DESKTOP'}
           </Text>
         </View>
@@ -3887,6 +4268,183 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <Text style={[styles.miniHint, { color: fg }]}>
           POS ({this.paintC},{this.paintR}) • [A] TOGGLE PIXEL
         </Text>
+      </View>
+    );
+  }
+
+  private renderWeather(fg: string, bg: string) {
+    const data = this.weatherData;
+    const cond = data ? decodeWmoWeather(data.code) : { label: 'SYNCING...', sprite: 'CLOUD' as WeatherSpriteKey };
+    const spans = WEATHER_SPRITES[cond.sprite];
+    const dayTags = ['TOM', 'D+2', 'D+3'];
+
+    return (
+      <View style={styles.listWrap}>
+        <View style={[styles.compHeader, { marginBottom: 4 }]}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            {data ? `◀ ${data.city}${data.country ? `, ${data.country}` : ''} ▶` : `◀ ${this.weatherQuery.toUpperCase()} ▶`}
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {this.weatherLoading ? 'FETCH...' : 'OPEN-METEO'}
+          </Text>
+        </View>
+
+        {this.weatherError ? (
+          <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
+            <Text style={[styles.subHeader, { color: fg }]}>{this.weatherError}</Text>
+            <Text style={[styles.miniHint, { color: fg }]}>
+              [▲] RETRY   •   [◀/▶] CHANGE CITY   •   [A] KBD
+            </Text>
+          </View>
+        ) : !data ? (
+          <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
+            <Text style={[styles.subHeader, { color: fg }]}>
+              {this.weatherLoading ? 'LOADING WEATHER...' : 'PRESS [▲] TO FETCH'}
+            </Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'space-between' }}>
+            {/* Hero Current Forecast Box */}
+            <View
+              style={[
+                styles.swBox,
+                {
+                  borderColor: fg,
+                  width: '100%',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  paddingHorizontal: 10,
+                  paddingVertical: 8,
+                  marginBottom: 4,
+                },
+              ]}
+            >
+              <View style={{ width: 48, height: 36, position: 'relative' }}>
+                {spans.map((sp) => (
+                  <View
+                    key={sp.key}
+                    style={{
+                      position: 'absolute',
+                      left: sp.x,
+                      top: sp.y,
+                      width: sp.w,
+                      height: sp.h,
+                      backgroundColor: fg,
+                    }}
+                  />
+                ))}
+              </View>
+              <View style={{ alignItems: 'flex-end', flex: 1, marginLeft: 8 }}>
+                <Text style={[styles.clockBig, { color: fg, fontSize: 24, lineHeight: 26 }]}>
+                  {data.tempC}°C
+                </Text>
+                <Text style={[styles.swLbl, { color: fg }]}>{cond.label}</Text>
+                <Text style={[styles.miniHint, { color: fg, marginTop: 2 }]}>
+                  FL {data.feelsC}°  •  WIND {data.windKmh}KM/H  •  HUM {data.humidity}%
+                </Text>
+              </View>
+            </View>
+
+            {/* 3-Day Mini Forecast */}
+            <View style={{ flexDirection: 'row', gap: 4 }}>
+              {data.daily.map((d, i) => {
+                const dc = decodeWmoWeather(d.code);
+                return (
+                  <View
+                    key={i}
+                    style={{
+                      flex: 1,
+                      borderWidth: 1.5,
+                      borderColor: fg,
+                      paddingVertical: 4,
+                      paddingHorizontal: 4,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Text style={[styles.swLbl, { color: fg }]}>{dayTags[i]}</Text>
+                    <Text style={[styles.miniHint, { color: fg, marginTop: 1 }]} numberOfLines={1}>
+                      {dc.sprite}
+                    </Text>
+                    <Text style={[styles.swLbl, { color: fg, marginTop: 1 }]}>
+                      {d.minC}°/{d.maxC}°
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        )}
+      </View>
+    );
+  }
+
+  private renderNotes(fg: string, bg: string) {
+    const total = this.notes.length;
+    const selected = total > 0 ? this.notes[this.noteIdx] : null;
+    const start = Math.max(0, Math.min(this.noteIdx - 1, Math.max(0, total - 3)));
+    const visible = this.notes.slice(start, start + 3);
+
+    return (
+      <View style={styles.listWrap}>
+        <View style={[styles.compHeader, { marginBottom: 4 }]}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            PIXEL NOTES ({total})
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {this.noteDeleteConfirm ? 'PRESS [▶] CONFIRM DEL' : '[A] +NEW'}
+          </Text>
+        </View>
+
+        {/* Preview Box of Selected Note */}
+        <View
+          style={[
+            styles.swBox,
+            {
+              borderColor: fg,
+              width: '100%',
+              alignItems: 'flex-start',
+              paddingHorizontal: 8,
+              paddingVertical: 6,
+              marginBottom: 5,
+              minHeight: 46,
+              justifyContent: 'center',
+            },
+          ]}
+        >
+          {selected ? (
+            <>
+              <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 0 }]}>
+                [{selected.ts}] NOTE #{this.noteIdx + 1}
+              </Text>
+              <Text style={[styles.listTxt, { color: fg, flex: 0, marginTop: 2 }]} numberOfLines={2}>
+                {selected.text}
+              </Text>
+            </>
+          ) : (
+            <Text style={[styles.emptyTxt, { color: fg, marginTop: 0 }]}>
+              NO NOTES YET. PRESS [A] TO WRITE!
+            </Text>
+          )}
+        </View>
+
+        {/* Scrollable Note Index */}
+        {visible.map((note, idx) => {
+          const absIdx = start + idx;
+          const sel = absIdx === this.noteIdx;
+          return (
+            <View
+              key={note.id}
+              style={[styles.listRow, { backgroundColor: sel ? fg : 'transparent' }]}
+            >
+              <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+                {sel ? '> ' : '  '}
+                {note.text}
+              </Text>
+              <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>{note.ts}</Text>
+            </View>
+          );
+        })}
       </View>
     );
   }
