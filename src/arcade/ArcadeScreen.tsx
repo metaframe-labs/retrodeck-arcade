@@ -3,6 +3,7 @@ import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { ArcadeGameInstance, ArcadeStats } from './types';
 import { RetroPalette } from '../theme/palettes';
+import { useTranslation } from '../i18n/retroI18n';
 
 interface ArcadeScreenProps {
   game: ArcadeGameInstance;
@@ -37,6 +38,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   cartridgeReady = false,
   onStartCartridge,
 }) => {
+  const { tUi } = useTranslation();
   const [size, setSize] = useState({ w: 320, h: 240 });
 
   const handleLayout = (e: LayoutChangeEvent) => {
@@ -158,7 +160,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 ]}
               >
                 <Text style={[styles.scoreLabelTag, { color: palette.bezelAccent }]}>
-                  PTS
+                  {tUi('pts')}
                 </Text>
                 <Text
                   style={[
@@ -221,7 +223,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                   },
                 ]}
               >
-                ★ CARTRIDGE READY ★
+                {tUi('cartReady')}
               </Text>
               <Text
                 style={[
@@ -252,7 +254,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                     },
                   ]}
                 >
-                  PRESS [A] TO START
+                  {tUi('pressAStart')}
                 </Text>
               </Pressable>
               {stats.subMessage && (
@@ -278,7 +280,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                   },
                 ]}
               >
-                ★ HIGH SCORE: {stats.highScore.toString().padStart(6, '0')} ★
+                {tUi('highScoreBanner', { score: stats.highScore.toString().padStart(6, '0') })}
               </Text>
             </View>
           </View>
@@ -298,7 +300,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
             ]}
           >
             <Text style={[styles.overlayTitle, { color: palette.pixelOn }]}>
-              PAUSED
+              {tUi('paused')}
             </Text>
             <Text
               style={[
@@ -306,7 +308,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 palette.isLightLcd && { color: palette.textMuted },
               ]}
             >
-              TOUCH PLAY TO RESUME
+              {tUi('touchResume')}
             </Text>
           </View>
         )}
@@ -369,7 +371,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                     palette.isLightLcd && { color: palette.textMuted },
                   ]}
                 >
-                  FINAL SCORE
+                  {tUi('finalScore')}
                 </Text>
                 <Text
                   style={[
@@ -388,7 +390,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                       palette.isLightLcd && { color: palette.pixelOn },
                     ]}
                   >
-                    ★ BEST: {stats.highScore.toString().padStart(6, '0')} ★
+                    ★ {tUi('bestScore', { score: stats.highScore.toString().padStart(6, '0') })} ★
                   </Text>
                 )}
               </View>
@@ -424,7 +426,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                         },
                       ]}
                     >
-                      [A] RESTART
+                      [A] {tUi('menuRestart')}
                     </Text>
                   </Pressable>
 
@@ -456,7 +458,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                         },
                       ]}
                     >
-                      [B] EXIT OS
+                      [B] {tUi('menuExitOs')}
                     </Text>
                   </Pressable>
                 </View>

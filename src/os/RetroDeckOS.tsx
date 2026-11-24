@@ -160,9 +160,8 @@ import {
   wrapTextLines,
 } from './retroOsData';
 import {
-  LANG_STORAGE_KEY,
+  i18nService,
   RetroLang,
-  setRetroLang,
   tOs,
   pickLang,
 } from '../i18n/retroI18n';
@@ -211,7 +210,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     });
     if (this.smsList.length > 10) this.smsList.pop();
     this.smsIdx = 0;
-    this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
+    this.smsBanner = `✉ ${tOs('smsFailedPrefix', this.lang)}`;
     this.smsBannerTimer = 5.0;
     if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
     this.saveSmsList();
@@ -227,7 +226,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     });
     if (this.smsList.length > 10) this.smsList.pop();
     this.smsIdx = 0;
-    this.smsBanner = '✉ NEW SMS: WELCOME TO PRO!';
+    this.smsBanner = `✉ ${tOs('smsSuccessPrefix', this.lang)}`;
     this.smsBannerTimer = 5.0;
     if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
     this.saveSmsList();
@@ -495,31 +494,26 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
-    AsyncStorage.getItem(LANG_STORAGE_KEY)
-      .then((val) => {
-        if (val === 'en' || val === 'tr') {
-          this.lang = val;
-          setRetroLang(val);
-          if (this.chatHistory.length === 0 && this.chatLines.length <= 3) {
-            this.chatLines = [
-              tOs('aiWelcome1', val),
-              tOs('aiWelcome2', val),
-              tOs('aiWelcome3', val),
-            ];
-          }
-        }
-      })
-      .catch(() => {});
+    i18nService.hydrate().then((val) => {
+      this.lang = val;
+      if (this.chatHistory.length === 0 && this.chatLines.length <= 3) {
+        this.chatLines = [
+          tOs('aiWelcome1', val),
+          tOs('aiWelcome2', val),
+          tOs('aiWelcome3', val),
+        ];
+      }
+    });
   }
 
   /** @internal */ setLang(next: RetroLang) {
     this.lang = next === 'tr' ? 'tr' : 'en';
-    setRetroLang(this.lang);
-    AsyncStorage.setItem(LANG_STORAGE_KEY, this.lang).catch(() => {});
+    i18nService.setLang(this.lang, true);
   }
 
   /** @internal */ toggleLang() {
-    this.setLang(this.lang === 'en' ? 'tr' : 'en');
+    const next = i18nService.toggleLang();
+    this.lang = next;
   }
 
   /** @internal */ savePersonaHistories() {
@@ -626,16 +620,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public getCurrentTitle(): string {
-    if (this.keyLocked) return 'RD-OS KEYGUARD';
-    if (this.app === 'boot') return 'BIOS BOOT';
-    if (this.app === 'desktop') return 'RETRODECK OS';
+    if (this.keyLocked) return tOs('titleKeyguard', this.lang);
+    if (this.app === 'boot') return tOs('titleBoot', this.lang);
+    if (this.app === 'desktop') return tOs('titleDesktop', this.lang);
     if (this.app === 'radio') {
       const ch = somaRadioService.getChannel();
       return `FM ${ch.freq} // ${ch.name}`;
     }
-    if (this.app === 'synth') return 'RD COMPOSER';
-    if (this.app === 'sms') return 'RD PIC-SMS';
-    if (this.app === 'wap') return 'RETRO WAP 1.1';
+    if (this.app === 'synth') return tOs('titleSynth', this.lang);
+    if (this.app === 'sms') return tOs('titleSms', this.lang);
+    if (this.app === 'wap') return tOs('titleWap', this.lang);
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -713,11 +707,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ clearAiChat() {
     this.chatHistory = [];
     this.chatLines = [
-      pickLang(this.lang, 'AI> CHAT CLEARED! READY.', 'AI> SOHBET TEMIZLENDI! HAZIR.'),
-      pickLang(this.lang, 'AI> PRESS [A] TO TYPE OR [▶] FOR BYOK.', 'AI> YAZMAK ICIN [A] YA DA BYOK ICIN [▶] BAS.'),
+      tOs('aiCleared1', this.lang),
+      tOs('aiCleared2', this.lang),
     ];
     this.chatScroll = 0;
-    this.aiStatus = 'CLEARED';
+    this.aiStatus = tOs('cleared', this.lang);
     this.chatClearConfirm = false;
   }
 
@@ -838,16 +832,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={[styles.container, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={[styles.bootLogo, { color: fg }]}>RETRODECK OS</Text>
-          <Text style={[styles.bootSub, { color: fg }]}>RETRODECK OS KERNEL v1.2</Text>
+          <Text style={[styles.bootSub, { color: fg }]}>{tOs('bootSub', this.lang)}</Text>
           <View style={[styles.bootBar, { borderColor: fg }]}>
             <View style={{ width: `${pct}%`, height: '100%', backgroundColor: fg }} />
           </View>
           <Text style={[styles.bootLog, { color: fg }]}>
             {pct < 35
-              ? 'MEM CHECK: 64KB OK'
+              ? tOs('bootMemCheck', this.lang)
               : pct < 75
-              ? `MOUNTING ${this.cb.getCartridges().length} CARTS + BYOK...`
-              : 'STARTING DESKTOP...'}
+              ? tOs('bootMounting', { count: this.cb.getCartridges().length }, this.lang)
+              : tOs('bootStarting', this.lang)}
           </Text>
         </View>
       );

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from '../i18n/retroI18n';
 
 export type ArcadeButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b';
 
@@ -101,6 +102,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
   onHomePress,
   onToggleMute,
 }) => {
+  const { tUi } = useTranslation();
   const [pressed, setPressed] = useState<Record<ArcadeButton, boolean>>({
     up: false,
     down: false,
@@ -245,7 +247,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
   }> = [
     {
       key: 'select',
-      label: osMode ? 'DECK' : 'SELECT',
+      label: osMode ? tUi('btnDeck') : tUi('btnSelect'),
       icon: osMode ? 'keypad-outline' : 'albums-outline',
       onPress: () => {
         triggerHaptic();
@@ -254,7 +256,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
     },
     {
       key: 'ok',
-      label: 'OK',
+      label: tUi('btnOk'),
       icon: 'checkmark-circle-outline',
       active: pressed.a,
       onPressIn: () => handlePressIn('a'),
@@ -262,7 +264,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
     },
     {
       key: 'start',
-      label: !osMode && isPaused ? 'RESUME' : 'START',
+      label: !osMode && isPaused ? tUi('resume') : tUi('btnStart'),
       icon: !osMode && isPaused ? 'play' : 'play-skip-forward-outline',
       active: !osMode && isPaused,
       onPress: () => {
@@ -272,7 +274,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
     },
     {
       key: 'home',
-      label: osMode ? 'GAME' : 'HOME',
+      label: osMode ? tUi('btnGame') : tUi('btnHome'),
       icon: osMode ? 'game-controller-outline' : 'home-outline',
       onPress: () => {
         triggerHaptic();
@@ -304,7 +306,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             color={isMuted ? accentColor : '#94A3B8'}
           />
           <Text style={[styles.shoulderTxt, isMuted && { color: accentColor }]}>
-            {isMuted ? 'MUTED' : 'SFX'}
+            {isMuted ? tUi('btnMuted') : tUi('btnSfx')}
           </Text>
         </Pressable>
 
@@ -330,7 +332,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             color={turboActive ? accentColor : '#94A3B8'}
           />
           <Text style={[styles.shoulderTxt, turboActive && { color: accentColor }]}>
-            TURBO
+            {tUi('btnTurbo')}
           </Text>
           <Text style={[styles.shoulderTag, turboActive && { color: accentColor }]}>R</Text>
         </Pressable>

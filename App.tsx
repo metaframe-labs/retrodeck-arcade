@@ -36,6 +36,7 @@ import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
 import { RetroDeckOS } from './src/os/RetroDeckOS';
 import { revenueCatService, SubscriptionStatus } from './src/services/revenueCatService';
+import { useTranslation } from './src/i18n/retroI18n';
 
 const OS_GAMEPAD_LABELS = {
   left: '◀',
@@ -54,6 +55,14 @@ const OS_GAMEPAD_LABELS = {
 
 function RetroDeckConsole() {
   const insets = useSafeAreaInsets();
+  const { lang, tUi } = useTranslation();
+  const osGamepadLabels = {
+    ...OS_GAMEPAD_LABELS,
+    a: tUi('btnOk'),
+    b: tUi('numBack'),
+    aLabel: `A (${tUi('btnOk')})`,
+    bLabel: `B (${tUi('numBack')})`,
+  };
   const initialCart = ARCADE_CARTRIDGES.find((c) => c.id === 'bounce-retro') || ARCADE_CARTRIDGES[0];
   const [osMode, setOsMode] = useState(true);
   const [activeCart, setActiveCart] = useState<ArcadeCartridgeDef>(initialCart);
@@ -107,6 +116,10 @@ function RetroDeckConsole() {
   highScoresRef.current = highScores;
 
   const palette = RETRO_PALETTES[paletteId];
+
+  useEffect(() => {
+    osRef.current.lang = lang;
+  }, [lang]);
 
   useEffect(() => {
     inputRef.current = {
@@ -636,7 +649,7 @@ function RetroDeckConsole() {
             >
               <Ionicons name="albums" size={14} color={getAccentInk(palette.bezelAccent)} />
               <Text style={[styles.cartBtnText, { color: getAccentInk(palette.bezelAccent) }]}>
-                CARTS
+                {tUi('carts')}
               </Text>
             </Pressable>
           </View>
@@ -696,7 +709,7 @@ function RetroDeckConsole() {
               color={osMode ? palette.bezelAccent : '#CBD5E1'}
             />
             <Text style={[styles.toolText, osMode && { color: palette.bezelAccent }]}>
-              OS
+              {tUi('osBtn')}
             </Text>
           </Pressable>
 
@@ -730,7 +743,7 @@ function RetroDeckConsole() {
                 color={deckMode !== 'pad' ? palette.bezelAccent : '#CBD5E1'}
               />
               <Text style={[styles.toolText, deckMode !== 'pad' && { color: palette.bezelAccent }]}>
-                {deckMode === 'pad' ? 'NUM' : deckMode === 'num' ? 'KBD' : 'PAD'}
+                {deckMode === 'pad' ? 'NUM' : deckMode === 'num' ? tUi('numKbd') : tUi('kbdPad')}
               </Text>
             </Pressable>
           ) : (
@@ -751,7 +764,7 @@ function RetroDeckConsole() {
                 color={isPaused ? '#FF9F0A' : '#CBD5E1'}
               />
               <Text style={[styles.toolText, isPaused && { color: '#FF9F0A' }]}>
-                {isPaused ? 'RESUME' : 'PAUSE'}
+                {isPaused ? tUi('resume') : tUi('pause')}
               </Text>
             </Pressable>
           )}
@@ -767,7 +780,7 @@ function RetroDeckConsole() {
             ]}
           >
             <Ionicons name="refresh" size={14} color="#CBD5E1" />
-            <Text style={styles.toolText}>{osMode ? 'REBOOT' : 'RESET'}</Text>
+            <Text style={styles.toolText}>{osMode ? tUi('reboot') : tUi('reset')}</Text>
           </Pressable>
 
           <Pressable
@@ -787,7 +800,7 @@ function RetroDeckConsole() {
               color={scanlines ? palette.bezelAccent : '#CBD5E1'}
             />
             <Text style={[styles.toolText, scanlines && { color: palette.bezelAccent }]}>
-              CRT
+              {tUi('crt')}
             </Text>
           </Pressable>
 
@@ -802,7 +815,7 @@ function RetroDeckConsole() {
             ]}
           >
             <Ionicons name="albums-outline" size={14} color={palette.bezelAccent} />
-            <Text style={[styles.toolText, { color: palette.bezelAccent }]}>CARTS</Text>
+            <Text style={[styles.toolText, { color: palette.bezelAccent }]}>{tUi('carts')}</Text>
           </Pressable>
         </View>
 
@@ -842,10 +855,10 @@ function RetroDeckConsole() {
               />
               <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
                 {deckMode === 'kbd'
-                  ? 'QWERTY COMMUNICATOR DECK [TAP FOR PAD]'
+                  ? tUi('deckKbd')
                   : deckMode === 'num'
-                  ? '3310 NUMERIC KEYPAD [TAP FOR KBD]'
-                  : 'ARCADE CONTROLLER DECK [TAP FOR NUM]'}
+                  ? tUi('deckNum')
+                  : tUi('deckPad')}
               </Text>
             </Pressable>
             <View style={styles.speakerGrille}>
@@ -892,7 +905,7 @@ function RetroDeckConsole() {
               />
             ) : (
               <RetroKeypad
-                labels={osMode ? OS_GAMEPAD_LABELS : activeCart.gamepadLabels}
+                labels={osMode ? osGamepadLabels : activeCart.gamepadLabels}
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}

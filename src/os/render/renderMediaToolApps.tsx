@@ -16,6 +16,7 @@ import {
 } from '../retroOsData';
 import { renderAnalogDial } from './renderCoreApps';
 import { execPaintBarAction } from '../engine/retroOsInput';
+import { tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
@@ -52,7 +53,7 @@ export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
             { color: isPlaying ? bg : fg, fontWeight: '900' },
           ]}
         >
-          {isPlaying ? '● ON AIR' : isLoading ? '◌ TUNING...' : '○ STANDBY'} [{channel.freq}]
+          {isPlaying ? tOs('radioOnAir', os.lang) : isLoading ? tOs('radioTuning', os.lang) : tOs('radioStandby', os.lang)} [{channel.freq}]
         </Text>
         <Text
           style={[
@@ -127,7 +128,7 @@ export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
               { color: fg, fontSize: 7.5, fontWeight: '900' },
             ]}
           >
-            NOW PLAYING:
+            {tOs('radioNowPlaying', os.lang)}
           </Text>
           <Text
             style={[
@@ -136,7 +137,7 @@ export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
             ]}
             numberOfLines={1}
           >
-            {song?.title || (isPlaying ? 'LIVE STREAMING...' : 'PRESS [A] TO TUNE IN')}
+            {song?.title || (isPlaying ? tOs('radioStreaming', os.lang) : tOs('radioPressPlay', os.lang))}
           </Text>
           {song?.artist ? (
             <Text
@@ -146,7 +147,7 @@ export function renderRadio(os: RetroDeckOS, fg: string, bg: string) {
               ]}
               numberOfLines={1}
             >
-              BY: {song.artist}
+              {tOs('radioBy', os.lang)}: {song.artist}
             </Text>
           ) : null}
         </View>
@@ -317,13 +318,14 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
   const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
   const dateStr = `${days[d.getDay()]} ${String(d.getDate()).padStart(2, '0')} ${months[d.getMonth()]}`;
 
+  const L = os.lang;
   return (
     <View style={styles.listWrap}>
       <View style={styles.aiTabsRow}>
         {[
-          { id: 'clk', label: '1.CLOCK' },
-          { id: 'sw', label: '2.STOPWATCH' },
-          { id: 'cd', label: '3.TIMER' },
+          { id: 'clk', label: tOs('clockTabClk', L) },
+          { id: 'sw', label: tOs('clockTabSw', L) },
+          { id: 'cd', label: tOs('clockTabCd', L) },
         ].map((t) => {
           const active = os.clockTab === t.id;
           return (
@@ -350,7 +352,7 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
 
               {/* Digital & Date Side Readout */}
               <View style={{ alignItems: 'flex-start', justifyContent: 'center' }}>
-                <Text style={[styles.swLbl, { color: fg, opacity: 0.75 }]}>ANALOG WATCH</Text>
+                <Text style={[styles.swLbl, { color: fg, opacity: 0.75 }]}>{tOs('clockAnalogLbl', L)}</Text>
                 <Text style={[styles.swTime, { color: fg, fontSize: 16 }]}>
                   {hh}:{mm}:{ss}
                 </Text>
@@ -361,7 +363,7 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
             </View>
           ) : (
             <View style={[styles.swBox, { borderColor: fg }]}>
-              <Text style={[styles.swLbl, { color: fg }]}>DIGITAL WATCH</Text>
+              <Text style={[styles.swLbl, { color: fg }]}>{tOs('clockDigitalLbl', L)}</Text>
               <Text style={[styles.clockBig, { color: fg }]}>
                 {hh}:{mm}:{ss}
               </Text>
@@ -371,22 +373,22 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
             </View>
           )}
           <Text style={[styles.miniHint, { color: fg }]}>
-            [A] {os.clockFace === 'analog' ? 'DIGITAL' : 'ANALOG'} • [◀/▶] TABS • ALSO IN SETUP
+            {tOs('clockClkHint', { next: os.clockFace === 'analog' ? tOs('digital', L) : tOs('analog', L) }, L)}
           </Text>
         </View>
       ) : (
         <View style={styles.centerBox}>
           <Text style={[styles.clockDate, { color: fg }]}>
-            TIME {hh}:{mm}:{ss}
+            {tOs('clockTimeHdr', L)} {hh}:{mm}:{ss}
           </Text>
           {os.clockTab === 'sw' ? (
             <View style={[styles.swBox, { borderColor: fg }]}>
               <Text style={[styles.swLbl, { color: fg }]}>
-                STOPWATCH {os.swRunning ? '[RUN]' : '[STOP]'}
+                {tOs('clockSwHdr', L)} {os.swRunning ? tOs('clockRun', L) : tOs('clockStop', L)}
               </Text>
               <Text style={[styles.swTime, { color: fg }]}>{os.swTime.toFixed(2)}s</Text>
               {os.swLap > 0 && (
-                <Text style={[styles.swLap, { color: fg }]}>LAP: {os.swLap.toFixed(2)}s</Text>
+                <Text style={[styles.swLap, { color: fg }]}>{tOs('clockLap', L)}: {os.swLap.toFixed(2)}s</Text>
               )}
             </View>
           ) : (
@@ -401,8 +403,8 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
             >
               <Text style={[styles.swLbl, { color: os.cdAlarmActive ? bg : fg }]}>
                 {os.cdAlarmActive
-                  ? '((( TIME UP! ALARM )))'
-                  : `COUNTDOWN (${os.cdPresetSec}s)`}
+                  ? tOs('clockCdAlarm', L)
+                  : tOs('clockCdLabel', { sec: os.cdPresetSec }, L)}
               </Text>
               <Text style={[styles.swTime, { color: os.cdAlarmActive ? bg : fg }]}>
                 {os.cdRemaining.toFixed(1)}s
@@ -411,8 +413,8 @@ export function renderClock(os: RetroDeckOS, fg: string, bg: string) {
           )}
           <Text style={[styles.miniHint, { color: fg }]}>
             {os.clockTab === 'sw'
-              ? '[A] START/STOP • [▲] RESET • [▼] LAP'
-              : '[A] START/STOP • [▲] +15S • [▼] -5S'}
+              ? tOs('clockSwHint', L)
+              : tOs('clockCdHint', L)}
           </Text>
         </View>
       )}
@@ -433,14 +435,14 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
       <View style={styles.listWrap}>
         <View style={styles.compHeader}>
           <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-            TUNES ({os.synthListIdx + 1}/{os.songs.length})
+            {tOs('synthTunesTitle', { cur: os.synthListIdx + 1, total: os.songs.length }, os.lang)}
           </Text>
           <Text style={[styles.listMeta, { color: fg }]}>
             {os.synthClearConfirm
-              ? 'PRESS [▶] CONFIRM'
+              ? tOs('synthConfirmHdr', os.lang)
               : selCustom
-              ? '[▶]x2 CLEAR'
-              : '[A] SELECT'}
+              ? tOs('synthClearTag', os.lang)
+              : tOs('synthSelTag', os.lang)}
           </Text>
         </View>
 
@@ -462,7 +464,7 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
               >
                 <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
                   {String(realIdx + 1).padStart(2, '0')}. {s.title.trim()}
-                  {isRing ? ' [RING]' : ''}
+                  {isRing ? ` ${tOs('synthRingTag', os.lang)}` : ''}
                 </Text>
                 <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
                   {locked ? '[PRO]' : custom ? `${noteCount}N` : `${s.bpm}BPM`}
@@ -474,8 +476,8 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
 
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
           {os.synthClearConfirm
-            ? 'PRESS [▶] AGAIN TO CLEAR ALL NOTES!'
-            : '[▲/▼] SEL • [A] LOAD • [◀] RENAME • [▶]x2 CLR'}
+            ? tOs('synthConfirmClear', os.lang)
+            : tOs('synthListHint', os.lang)}
         </Text>
       </View>
     );
@@ -505,10 +507,10 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
       <View style={styles.compHeader}>
         <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
           ♪ {os.songIdx + 1}/{os.songs.length} {curSong.title.trim()}
-          {os.songIdx === os.ringtoneIdx ? ' [RING]' : ''}
+          {os.songIdx === os.ringtoneIdx ? ` ${tOs('synthRingTag', os.lang)}` : ''}
         </Text>
         <Text style={[styles.compBpm, { color: fg }]}>
-          {isLocked ? '[PRO]' : (os.melodyPlaying ? 'PLAYING' : (isCustom ? 'SAVED' : `${curSong.bpm}BPM`))}
+          {isLocked ? '[PRO]' : (os.melodyPlaying ? tOs('synthPlaying', os.lang) : (isCustom ? tOs('synthSaved', os.lang) : `${curSong.bpm}BPM`))}
         </Text>
       </View>
 
@@ -516,7 +518,7 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
         <View style={styles.compTokensWrap}>
           {isLocked ? (
             <Text style={[styles.compTokTxt, { color: fg }]}>
-              PRO REQUIRED TO COMPOSE & SAVE CUSTOM TUNES
+              {tOs('synthLockedMsg', os.lang)}
             </Text>
           ) : (
             <>
@@ -536,8 +538,8 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
               {tokens.length === 0 && (
                 <Text style={[styles.compTokTxt, { color: fg }]}>
                   {isCustom
-                    ? '(EMPTY SLOT - TAP NOTES TO COMPOSE & AUTO-SAVE)'
-                    : '(EMPTY - TAP NOTES BELOW TO COMPOSE)'}
+                    ? tOs('synthEmptyCustom', os.lang)
+                    : tOs('synthEmptyPreset', os.lang)}
                 </Text>
               )}
             </>
@@ -549,7 +551,7 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
         {COMPOSER_KEYS.map((item, idx) => {
           const sel = idx === os.synthIdx;
           const label =
-            item.token === 'PLAY' && os.melodyPlaying ? '■ STOP' : item.label;
+            item.token === 'PLAY' && os.melodyPlaying ? tOs('synthBtnStop', os.lang) : item.label;
           return (
             <View
               key={idx}
@@ -570,10 +572,18 @@ export function renderSynth(os: RetroDeckOS, fg: string, bg: string) {
 }
 
 export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
-  const barBtns = ['◀ ART', 'ART ▶', 'INV', 'CLR'];
+  const L = os.lang;
+  const barBtns = [
+    tOs('paintBtnPrev', L),
+    tOs('paintBtnNext', L),
+    tOs('paintBtnInv', L),
+    tOs('paintBtnClr', L),
+  ];
   const headerTag =
-    os.paintTitle === 'BLANK CANVAS' || os.paintTitle === 'CUSTOM ART'
-      ? os.paintTitle
+    os.paintTitle === 'BLANK CANVAS'
+      ? tOs('paintBlank', L)
+      : os.paintTitle === 'CUSTOM ART'
+      ? tOs('paintCustom', L)
       : `${os.paintTitle} (${os.paintArtIdx + 1}/${PAINT_ARTWORKS.length})`;
 
   return (
@@ -589,7 +599,7 @@ export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
       >
         <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>{headerTag}</Text>
         <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
-          {os.paintOnBar ? 'TOOLBAR' : `(${os.paintC},${os.paintR})`}
+          {os.paintOnBar ? tOs('paintToolbar', L) : `(${os.paintC},${os.paintR})`}
         </Text>
       </View>
 
@@ -656,10 +666,11 @@ export function renderPaint(os: RetroDeckOS, fg: string, bg: string) {
 }
 
 export function renderWeather(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
   const data = os.weatherData;
-  const cond = data ? decodeWmoWeather(data.code) : { label: 'SYNCING...', sprite: 'CLOUD' as WeatherSpriteKey };
+  const cond = data ? decodeWmoWeather(data.code) : { label: tOs('syncing', L), sprite: 'CLOUD' as WeatherSpriteKey };
   const spans = WEATHER_SPRITES[cond.sprite];
-  const dayTags = ['TOM', 'D+2', 'D+3'];
+  const dayTags = [tOs('weatherDay1', L), tOs('weatherDay2', L), tOs('weatherDay3', L)];
 
   return (
     <View style={styles.listWrap}>
@@ -672,7 +683,7 @@ export function renderWeather(os: RetroDeckOS, fg: string, bg: string) {
             : `◀ ${os.weatherQuery.toUpperCase()} ▶`}
         </Text>
         <Text style={[styles.listMeta, { color: fg }]}>
-          {os.weatherLoading ? 'FETCH...' : 'OPEN-METEO'}
+          {os.weatherLoading ? tOs('fetching', L) : 'OPEN-METEO'}
         </Text>
       </View>
 
@@ -680,13 +691,13 @@ export function renderWeather(os: RetroDeckOS, fg: string, bg: string) {
         <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
           <Text style={[styles.subHeader, { color: fg }]}>{os.weatherError}</Text>
           <Text style={[styles.miniHint, { color: fg }]}>
-            [▲] RETRY   •   [◀/▶] CHANGE CITY   •   [A] KBD
+            {tOs('weatherRetryHint', L)}
           </Text>
         </View>
       ) : !data ? (
         <View style={[styles.swBox, { borderColor: fg, flex: 1, justifyContent: 'center', width: '100%' }]}>
           <Text style={[styles.subHeader, { color: fg }]}>
-            {os.weatherLoading ? 'LOADING WEATHER...' : 'PRESS [▲] TO FETCH'}
+            {os.weatherLoading ? tOs('weatherLoadingMsg', L) : tOs('weatherPressFetch', L)}
           </Text>
         </View>
       ) : (
@@ -829,7 +840,7 @@ export function renderWeather(os: RetroDeckOS, fg: string, bg: string) {
                   </Text>
                   <Text style={[styles.swLbl, { color: boxFg }]}>{cond.label}</Text>
                   <Text style={[styles.miniHint, { color: boxFg, marginTop: 2 }]}>
-                    FL {data.feelsC}°  •  WIND {data.windKmh}KM/H  •  HUM {data.humidity}%
+                    {tOs('weatherStats', { feels: data.feelsC, wind: data.windKmh, hum: data.humidity }, L)}
                   </Text>
                 </View>
               </View>
@@ -870,6 +881,7 @@ export function renderWeather(os: RetroDeckOS, fg: string, bg: string) {
 }
 
 export function renderNotes(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
   const total = os.notes.length;
   const selected = total > 0 ? os.notes[os.noteIdx] : null;
   const start = Math.max(0, Math.min(os.noteIdx - 1, Math.max(0, total - 3)));
@@ -879,10 +891,10 @@ export function renderNotes(os: RetroDeckOS, fg: string, bg: string) {
     <View style={styles.listWrap}>
       <View style={[styles.compHeader, { marginBottom: 4 }]}>
         <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-          PIXEL NOTES ({total})
+          {tOs('notesTitle', { total }, L)}
         </Text>
         <Text style={[styles.listMeta, { color: fg }]}>
-          {os.noteDeleteConfirm ? 'PRESS [▶] CONFIRM DEL' : '[A] +NEW'}
+          {os.noteDeleteConfirm ? tOs('notesConfirmDel', L) : tOs('notesNewBtn', L)}
         </Text>
       </View>
 
@@ -905,7 +917,7 @@ export function renderNotes(os: RetroDeckOS, fg: string, bg: string) {
         {selected ? (
           <>
             <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 0 }]}>
-              [{selected.ts}] NOTE #{os.noteIdx + 1}
+              {tOs('notesItemTag', { ts: selected.ts, num: os.noteIdx + 1 }, L)}
             </Text>
             <Text style={[styles.listTxt, { color: fg, flex: 0, marginTop: 2 }]} numberOfLines={2}>
               {selected.text}
@@ -913,7 +925,7 @@ export function renderNotes(os: RetroDeckOS, fg: string, bg: string) {
           </>
         ) : (
           <Text style={[styles.emptyTxt, { color: fg, marginTop: 0 }]}>
-            NO NOTES YET. PRESS [A] TO WRITE!
+            {tOs('notesEmpty', L)}
           </Text>
         )}
       </View>
@@ -951,12 +963,12 @@ export function renderStats(os: RetroDeckOS, fg: string, _bg: string) {
   return (
     <View style={styles.listWrap}>
       <Text style={[styles.subHeader, { color: fg }]}>
-        PLAYED: {entries.length}/{carts.length}   TOTAL: {totalPts}
+        {tOs('statsHeader', { played: entries.length, total: carts.length, pts: totalPts }, os.lang)}
       </Text>
       <View style={[styles.statRule, { backgroundColor: fg }]} />
       {top4.length === 0 ? (
         <Text style={[styles.emptyTxt, { color: fg }]}>
-          NO HIGH SCORES YET. PLAY A GAME!
+          {tOs('statsEmpty', os.lang)}
         </Text>
       ) : (
         top4.map(([id, val], idx) => {
@@ -1022,7 +1034,7 @@ export function renderTerm(os: RetroDeckOS, fg: string, bg: string) {
       {/* Live Interactive Shell Prompt Bar */}
       <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
         <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
-          {`root@rd:${os.termCwd}$ ${os.termInput || '(PRESS [A]/[KBD] OR ◀/▶)_'}`}
+          {`root@rd:${os.termCwd}$ ${os.termInput || tOs('termPromptHint', os.lang)}`}
         </Text>
       </View>
     </View>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from '../i18n/retroI18n';
 
 interface RetroNumericDeckProps {
   accentColor: string;
@@ -51,6 +52,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   onSwitchMode,
   onKeySound,
 }) => {
+  const { tUi } = useTranslation();
   const tapHaptic = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -149,7 +151,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           ]}
         >
           <Ionicons name="backspace-outline" size={15} color="#E2E8F0" />
-          <Text style={styles.sideTxt}>DEL</Text>
+          <Text style={styles.sideTxt}>{tUi('numDel')}</Text>
         </Pressable>
 
         <Pressable
@@ -161,7 +163,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           ]}
         >
           <Ionicons name="return-down-back-outline" size={15} color="#E2E8F0" />
-          <Text style={styles.sideTxt}>BACK</Text>
+          <Text style={styles.sideTxt}>{tUi('numBack')}</Text>
         </Pressable>
 
         <Pressable
@@ -175,7 +177,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             pressed && { backgroundColor: `${accentColor}44` },
           ]}
         >
-          <Text style={[styles.okTxt, { color: accentColor }]}>OK</Text>
+          <Text style={[styles.okTxt, { color: accentColor }]}>{tUi('btnOk')}</Text>
         </Pressable>
 
         <Pressable
@@ -187,7 +189,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           ]}
         >
           <Ionicons name="keypad-outline" size={14} color={accentColor} />
-          <Text style={[styles.sideTxt, { color: accentColor }]}>KBD</Text>
+          <Text style={[styles.sideTxt, { color: accentColor }]}>{tUi('numKbd')}</Text>
         </Pressable>
       </View>
     </View>

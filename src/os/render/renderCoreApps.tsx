@@ -254,7 +254,7 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
   return (
     <View style={styles.listWrap}>
       <Text style={[styles.subHeader, { color: fg }]}>
-        CARTRIDGE BAY ({os.gameIdx + 1}/{carts.length})  ◀/▶ ±5
+        {tOs('arcadeHeader', { cur: os.gameIdx + 1, total: carts.length }, os.lang)}
       </Text>
       {slice.map((c, i) => {
         const realIdx = start + i;
@@ -369,7 +369,7 @@ export function renderThemes(os: RetroDeckOS, fg: string, bg: string) {
   return (
     <View style={styles.listWrap}>
       <Text style={[styles.subHeader, { color: fg }]}>
-        THEMES ({os.themeIdx + 1}/{PALETTE_ORDER.length})  ◀/▶ ±5
+        {tOs('themesHeader', { cur: os.themeIdx + 1, total: PALETTE_ORDER.length }, os.lang)}
       </Text>
       {slice.map((id, i) => {
         const realIdx = start + i;
@@ -404,7 +404,7 @@ export function renderThemes(os: RetroDeckOS, fg: string, bg: string) {
               </Text>
             </View>
             <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-              {active ? 'ACTIVE' : (locked ? '[PRO]' : t.category.slice(0, 6))}
+              {active ? tOs('active', os.lang) : (locked ? '[PRO]' : t.category.slice(0, 6))}
             </Text>
           </View>
         );
@@ -431,14 +431,14 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
     })),
     {
       id: 'restore',
-      label: 'RESTORE PURCHASES',
-      price: 'SYNC ACCOUNT',
+      label: tOs('proRestoreLabel', os.lang),
+      price: tOs('proRestoreSub', os.lang),
       badge: 'STORE',
     },
     {
       id: 'debug_reset',
-      label: 'REVOKE PRO (DEBUG)',
-      price: 'RESET TO FREE',
+      label: tOs('proRevokeLabel', os.lang),
+      price: tOs('proRevokeSub', os.lang),
       badge: 'DEV',
     },
   ];
@@ -448,7 +448,7 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
       {/* Header Bar */}
       <View style={[styles.compHeader, { marginBottom: 2, paddingBottom: 2, borderBottomWidth: 1, borderBottomColor: fg }]}>
         <Text style={[styles.subHeader, { color: fg, marginBottom: 0, fontSize: 10, letterSpacing: 1 }]}>
-          {isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE TO PRO'}
+          {isPro ? tOs('setupProActive', os.lang) : tOs('proTitleUpgrade', os.lang)}
         </Text>
         <Text style={[styles.listMeta, { color: fg, fontSize: 8 }]}>
           {os.proIdx + 1}/{menuItems.length}
@@ -477,8 +477,8 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
           numberOfLines={1}
         >
           {isPro
-            ? (expiration ? `PRO VALID UNTIL: ${new Date(expiration).toLocaleDateString()}` : 'LIFETIME ALL-ACCESS UNLOCKED')
-            : 'ALL 100 CARTS • DEV VAULT • PRO THEMES'}
+            ? (expiration ? `${tOs('active', os.lang)}: ${new Date(expiration).toLocaleDateString()}` : tOs('proHeaderLifetime', os.lang))
+            : tOs('proHeaderUnlockTag', os.lang)}
         </Text>
       </View>
 
@@ -564,10 +564,10 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
           {os.proStatusMsg
             ? os.proStatusMsg
             : (os.proIdx === 4
-                ? '[A] RESET PRO STATUS (DEBUG)'
+                ? tOs('proHintReset', os.lang)
                 : (os.proIdx === 3
-                    ? '[A] RESTORE PURCHASES'
-                    : (isPro ? '[A] PLAN DETAILS' : '[A] BUY SELECTED PLAN')))}
+                    ? tOs('proHintRestore', os.lang)
+                    : (isPro ? tOs('proHintDetails', os.lang) : tOs('proHintBuy', os.lang))))}
         </Text>
         <Text
           style={{
@@ -577,7 +577,7 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
             opacity: 0.8,
           }}
         >
-          [B] BACK
+          [B] {tOs('back', os.lang)}
         </Text>
       </View>
     </View>

@@ -21,6 +21,7 @@ import {
   getAccentInk,
   isPaletteProLocked,
 } from '../theme/palettes';
+import { tUi, useTranslation } from '../i18n/retroI18n';
 
 const FAV_THEMES_STORAGE_KEY = '@retrodeck8_fav_themes_v1';
 
@@ -83,12 +84,12 @@ const ThemeCard = React.memo<ThemeCardProps>(
           {isSelected ? (
             <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
               <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
-                ACTIVE
+                {tUi('themeActive')}
               </Text>
             </View>
           ) : isLocked ? (
             <View style={[styles.activeTag, { backgroundColor: '#F59E0B22', borderWidth: 1, borderColor: '#F59E0B' }]}>
-              <Text style={[styles.activeTagTxt, { color: '#F59E0B' }]}>PRO</Text>
+              <Text style={[styles.activeTagTxt, { color: '#F59E0B' }]}>{tUi('themePro')}</Text>
             </View>
           ) : null}
           <Pressable
@@ -165,6 +166,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
   onClose,
 }) => {
   const insets = useSafeAreaInsets();
+  const { tUi: translateUi } = useTranslation();
   const [category, setCategory] = useState<FilterTab>('ALL');
   const [favIds, setFavIds] = useState<string[]>([]);
 
@@ -229,9 +231,11 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
         <View style={[styles.header, { borderBottomColor: activePalette.surfaceBorder }]}>
           <View style={styles.headerLeft}>
             <Text style={[styles.eyebrow, { color: activePalette.bezelAccent }]}>
-              HARDWARE + LCD STUDIO
+              {translateUi('themeEyebrow')}
             </Text>
-            <Text style={styles.title}>THEMES ({PALETTE_ORDER.length})</Text>
+            <Text style={styles.title}>
+              {translateUi('themeTitle', { count: PALETTE_ORDER.length })}
+            </Text>
           </View>
 
           <View style={styles.headerActions}>
@@ -246,7 +250,9 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
               ]}
             >
               <Ionicons name="shuffle-outline" size={14} color={activePalette.bezelAccent} />
-              <Text style={[styles.cycleTxt, { color: activePalette.bezelAccent }]}>NEXT</Text>
+              <Text style={[styles.cycleTxt, { color: activePalette.bezelAccent }]}>
+                {translateUi('themeNext')}
+              </Text>
             </Pressable>
 
             <Pressable
@@ -264,7 +270,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                   { color: getAccentInk(activePalette.bezelAccent) },
                 ]}
               >
-                DONE
+                {translateUi('themeDone')}
               </Text>
             </Pressable>
           </View>
@@ -306,7 +312,11 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                       },
                     ]}
                   >
-                    {cat === 'FAVS' ? `★ FAVS (${favIds.length})` : cat}
+                    {cat === 'FAVS'
+                      ? translateUi('themeFavs', { count: favIds.length })
+                      : cat === 'ALL'
+                      ? translateUi('themeAll')
+                      : cat}
                   </Text>
                 </Pressable>
               );

@@ -1,61 +1,39 @@
 import { getProviderMeta, saveBYOKConfig } from '../../services/byokAiService';
 import { RetroAudioEngine } from '../../audio/RetroAudioEngine';
 import { DEFAULT_CUSTOM_TUNES, NOKIA_SONGS, REAL_POSTCARDS, POSTCARD_STAMPS } from '../retroOsData';
-import { pickLang } from '../../i18n/retroI18n';
+import { tKbd, tOs, type KeyboardStringKey } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
+
+const APP_HINT_KEYS: Record<string, KeyboardStringKey> = {
+  boot: 'hintBoot',
+  desktop: 'hintDesktop',
+  arcade: 'hintArcade',
+  radio: 'hintRadio',
+  wap: 'hintWap',
+  calc: 'hintCalc',
+  clock: 'hintClock',
+  synth: 'hintSynth',
+  phone: 'hintPhone',
+  sms: 'hintSms',
+  profiles: 'hintProfiles',
+  paint: 'hintPaint',
+  weather: 'hintWeather',
+  notes: 'hintNotes',
+  stats: 'hintStats',
+  term: 'hintTerm',
+  setup: 'hintSetup',
+  themes: 'hintThemes',
+  pro: 'hintPro',
+};
 
 export function getControlsHintImpl(os: RetroDeckOS): string {
   if (os.keyLocked) {
-    return os.unlockStage
-      ? 'NOW PRESS [▲] (STAR *) TO UNLOCK KEYGUARD!'
-      : 'KEYGUARD ACTIVE • PRESS [A] THEN [▲] (*) TO UNLOCK';
+    return tKbd(os.unlockStage ? 'hintLockedStage' : 'hintLocked', os.lang);
   }
-  switch (os.app) {
-    case 'boot':
-      return 'Booting RetroDeck OS... Press [A] to skip';
-    case 'desktop':
-      return 'D-PAD: Select Icon • [A]: Open • KBD: Keyboard';
-    case 'arcade':
-      return '[▲]/[▼]: Browse 100 Games • [A]: Launch • [B]: Desktop';
-    case 'radio':
-      return '[◀]/[▶]: Tune Station • [A]: Play/Stop • [▲]/[▼]: Vol • [B]: Desktop';
-    case 'ai':
-      return os.aiTab === 'chat'
-        ? '[▲]/[▼]: Scroll • [A]: Type • [◀]x2: Clear • [▶]: BYOK'
-        : '[▲]/[▼]: Select • [◀]/[▶]: Provider • [A]: Edit Key/Model';
-    case 'wap':
-      return '[▲]/[▼]: Scroll Page • [◀]/[▶]: Bookmarks • [A]: Type URL / Go';
-    case 'calc':
-      return 'D-PAD: Key • [A]: Press • [B]: Exit';
-    case 'clock':
-      return '[◀]/[▶]: Stopwatch/Timer • [A]: Start/Stop • [▲]/[▼]: Set/Reset';
-    case 'synth':
-      return 'D-PAD: Select Note/Play • [A]: Play/Add Note • [B]: Exit';
-    case 'phone':
-      return 'D-PAD: Keypad • [A]: Dial (*#0000# / LOCK) • [B]: Exit';
-    case 'sms':
-      return '[◀]/[▶]: Read • [▼]x2 or DEL: Delete • [A]: AI Reply';
-    case 'profiles':
-      return '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit';
-    case 'paint':
-      return 'D-PAD: Move Canvas / Bottom Toolbar • [A]: Draw Pixel or Run Button • [B]: Desktop';
-    case 'weather':
-      return '[◀]/[▶]: City • [▲]/[▼]: Refresh • [A]: Search City • [B]: Desktop';
-    case 'notes':
-      return '[▲]/[▼]: Browse Notes • [A]: New Note • [▶]x2: Delete • [B]: Desktop';
-    case 'stats':
-      return 'Viewing Arcade High Scores & Rank • [B]: Desktop';
-    case 'term':
-      return '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit';
-    case 'setup':
-      return '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop';
-    case 'themes':
-      return '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back';
-    case 'pro':
-      return '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back';
-    default:
-      return 'D-PAD: Navigate • [A]: Select • [B]: Back';
+  if (os.app === 'ai') {
+    return tKbd(os.aiTab === 'chat' ? 'hintAiChat' : 'hintAiByok', os.lang);
   }
+  return tKbd(APP_HINT_KEYS[os.app] || 'hintDefault', os.lang);
 }
 
 export function getKeyboardBindingImpl(os: RetroDeckOS): {
@@ -64,43 +42,44 @@ export function getKeyboardBindingImpl(os: RetroDeckOS): {
   placeholder: string;
   secure: boolean;
 } {
+  const L = os.lang;
   if (os.app === 'wap') {
     return {
-      targetLabel: 'WAP URL',
+      targetLabel: tKbd('lblWap', L),
       value: os.wapUrl,
-      placeholder: 'https://www.metaframelabs.space/',
+      placeholder: tKbd('phWap', L),
       secure: false,
     };
   }
   if (os.app === 'term') {
     return {
-      targetLabel: `RDSH ${os.termCwd}$`,
+      targetLabel: tKbd('lblTerm', { cwd: os.termCwd }, L),
       value: os.termInput,
-      placeholder: 'help, ls, neofetch, open snake, ai ...',
+      placeholder: tKbd('phTerm', L),
       secure: false,
     };
   }
   if (os.app === 'weather') {
     return {
-      targetLabel: 'WEATHER CITY',
+      targetLabel: tKbd('lblWeather', L),
       value: os.weatherQuery,
-      placeholder: 'Istanbul, Tokyo, London...',
+      placeholder: tKbd('phWeather', L),
       secure: false,
     };
   }
   if (os.app === 'notes') {
     return {
-      targetLabel: 'NEW NOTE',
+      targetLabel: tKbd('lblNote', L),
       value: os.noteDraft,
-      placeholder: 'TYPE YOUR PIXEL NOTE...',
+      placeholder: tKbd('phNote', L),
       secure: false,
     };
   }
   if (os.app === 'synth') {
     return {
-      targetLabel: 'TUNE NAME',
+      targetLabel: tKbd('lblTune', L),
       value: os.tuneNameDraft,
-      placeholder: 'MY TUNE NAME...',
+      placeholder: tKbd('phTune', L),
       secure: false,
     };
   }
@@ -108,16 +87,16 @@ export function getKeyboardBindingImpl(os: RetroDeckOS): {
     if (os.smsReplyTargetIdx !== null) {
       const target = os.smsList[os.smsReplyTargetIdx];
       return {
-        targetLabel: `REPLY ${target?.sender || 'SMS'}`.slice(0, 14),
+        targetLabel: tKbd('lblSmsReply', { sender: target?.sender || 'SMS' }, L).slice(0, 14),
         value: os.smsDraftText,
-        placeholder: 'TYPE YOUR REPLY...',
+        placeholder: tKbd('phSmsReply', L),
         secure: false,
       };
     }
     return {
-      targetLabel: 'POSTCARD MSG',
+      targetLabel: tKbd('lblPostcard', L),
       value: os.smsDraftText,
-      placeholder: 'WRITE POSTCARD MESSAGE...',
+      placeholder: tKbd('phPostcard', L),
       secure: false,
     };
   }
@@ -125,24 +104,24 @@ export function getKeyboardBindingImpl(os: RetroDeckOS): {
   const meta = getProviderMeta(pid);
   if (os.app === 'ai' && os.aiTab === 'byok' && os.kbdTarget === 'key') {
     return {
-      targetLabel: `${meta.shortName} KEY`,
+      targetLabel: tKbd('lblKey', { name: meta.shortName }, L),
       value: os.byokConfig.keys[pid] || '',
-      placeholder: meta.keyPlaceholder || 'PASTE API KEY...',
+      placeholder: meta.keyPlaceholder || tKbd('phKeyDefault', L),
       secure: false,
     };
   }
   if (os.app === 'ai' && os.aiTab === 'byok' && os.kbdTarget === 'model') {
     return {
-      targetLabel: `${meta.shortName} MDL`,
+      targetLabel: tKbd('lblModel', { name: meta.shortName }, L),
       value: os.byokConfig.models[pid] ?? meta.defaultModel,
       placeholder: meta.defaultModel,
       secure: false,
     };
   }
   return {
-    targetLabel: 'AI PROMPT',
+    targetLabel: tKbd('lblAi', L),
     value: os.aiPrompt,
-    placeholder: 'ASK RETRODECK AI...',
+    placeholder: tKbd('phAi', L),
     secure: false,
   };
 }
@@ -261,7 +240,7 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
       os.smsDraftText = '';
       os.smsReplyTargetIdx = null;
       if (replyText && target?.personaId) {
-        os.smsBanner = pickLang(os.lang, `SENT TO ${target.sender}!`, `${target.sender} GONDERILDI!`);
+        os.smsBanner = tOs('smsSentTo', { sender: target.sender }, os.lang);
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
         os.triggerLivePersonaSms(target.personaId, replyText);

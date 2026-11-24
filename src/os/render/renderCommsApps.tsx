@@ -14,7 +14,7 @@ import {
   REAL_POSTCARDS,
   wrapTextLines,
 } from '../retroOsData';
-import { pickLang, tOs } from '../../i18n/retroI18n';
+import { tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderWap(os: RetroDeckOS, fg: string, bg: string) {
@@ -38,7 +38,7 @@ export function renderWap(os: RetroDeckOS, fg: string, bg: string) {
         ]}
       >
         <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
-          {os.wapLoading ? 'WAP: CONNECTING...' : `WAP://${cleanHost}`}
+          {os.wapLoading ? tOs('wapConnecting', os.lang) : `WAP://${cleanHost}`}
         </Text>
         <Text style={[styles.aiPromptTxt, { color: bg }]}>
           {os.wapScroll + 1}/{os.wapLines.length}
@@ -55,13 +55,14 @@ export function renderWap(os: RetroDeckOS, fg: string, bg: string) {
       </View>
 
       <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-        [▲/▼] SCROLL • [◀/▶] SITES • [A/KBD] ENTER URL
+        {tOs('wapHint', os.lang)}
       </Text>
     </View>
   );
 }
 
 export function renderAiApp(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
   const pid = os.byokConfig.activeProvider;
   const meta = getProviderMeta(pid);
   const hasKey = !meta.requiresKey || Boolean(os.byokConfig.keys[pid]?.trim());
@@ -69,8 +70,8 @@ export function renderAiApp(os: RetroDeckOS, fg: string, bg: string) {
   const maskedKey = rawKey
     ? rawKey.length > 8
       ? `${rawKey.slice(0, 5)}...${rawKey.slice(-3)}`
-      : 'SET (***)'
-    : 'NOT SET [PRESS A]';
+      : tOs('aiSetMasked', L)
+    : tOs('aiNotSet', L);
 
   return (
     <View style={styles.listWrap}>
@@ -85,7 +86,7 @@ export function renderAiApp(os: RetroDeckOS, fg: string, bg: string) {
           ]}
         >
           <Text style={[styles.aiTabTxt, { color: os.aiTab === 'chat' ? bg : fg }]}>
-            1.CHAT ({meta.shortName})
+            {tOs('aiTabChatLabel', L)} ({meta.shortName})
           </Text>
         </View>
         <View
@@ -98,7 +99,7 @@ export function renderAiApp(os: RetroDeckOS, fg: string, bg: string) {
           ]}
         >
           <Text style={[styles.aiTabTxt, { color: os.aiTab === 'byok' ? bg : fg }]}>
-            2.BYOK [{hasKey ? 'KEY:OK' : 'NO KEY'}]
+            {tOs('aiTabByokLabel', L)} [{hasKey ? tOs('aiKeyOk', L) : tOs('aiNoKey', L)}]
           </Text>
         </View>
       </View>
@@ -116,18 +117,18 @@ export function renderAiApp(os: RetroDeckOS, fg: string, bg: string) {
           <View style={[styles.aiPromptBar, { borderColor: fg, backgroundColor: fg }]}>
             <Text style={[styles.aiPromptTxt, { color: bg }]} numberOfLines={1}>
               {os.aiLoading
-                ? `> [${meta.shortName} THINKING...]`
-                : `> ${os.aiPrompt || 'PRESS [KBD] OR [A] TO CHAT_'}`}
+                ? `> ${tOs('aiThinkingTag', { name: meta.shortName }, L)}`
+                : `> ${os.aiPrompt || tOs('aiPromptPlaceholder', L)}`}
             </Text>
           </View>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
           {[
-            `PROVIDER: < ${meta.name.toUpperCase()} >`,
-            `API KEY: ${maskedKey}`,
-            `MODEL: ${getProviderModel(pid, os.byokConfig)}`,
-            '>> BACK TO AI CHAT <<',
+            `${tOs('aiByokProvider', L)}: < ${meta.name.toUpperCase()} >`,
+            `${tOs('aiByokKey', L)}: ${maskedKey}`,
+            `${tOs('aiByokModel', L)}: ${getProviderModel(pid, os.byokConfig)}`,
+            tOs('aiByokBack', L),
           ].map((rowLabel, rIdx) => {
             const sel = rIdx === os.byokRow;
             return (
@@ -177,7 +178,7 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
           </Text>
         </View>
         <Text style={[styles.miniHint, { color: fg }]}>
-          [A] / [▼]: NEXT WARRANTY PAGE • [B]: EXIT
+          {tOs('phoneWarrantyHint', os.lang)}
         </Text>
       </View>
     );
@@ -189,10 +190,10 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
         <View style={[styles.swBox, { borderColor: fg, width: '90%' }]}>
           <Text style={[styles.swLbl, { color: fg, marginBottom: 4 }]}>
             {os.callState === 'ringing'
-              ? '((( INCOMING CALL )))'
+              ? tOs('phoneIncoming', os.lang)
               : os.callState === 'connected'
-              ? `CONNECTED 00:${String(Math.floor(os.callTimer)).padStart(2, '0')}`
-              : 'RETRODECK SERVICE'}
+              ? `${tOs('phoneConnected', os.lang)} 00:${String(Math.floor(os.callTimer)).padStart(2, '0')}`
+              : tOs('phoneService', os.lang)}
           </Text>
           <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
             {os.callTitle}
@@ -203,8 +204,8 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
         </View>
         <Text style={[styles.miniHint, { color: fg }]}>
           {os.callState === 'ringing'
-            ? '[A] ANSWER CALL   [B] REJECT'
-            : '[A] / [B] END / BACK'}
+            ? tOs('phoneRingHint', os.lang)
+            : tOs('phoneEndHint', os.lang)}
         </Text>
       </View>
     );
@@ -215,7 +216,7 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
     return (
       <View style={styles.calcWrap}>
         <View style={styles.compHeader}>
-          <Text style={[styles.compTitle, { color: fg }]}>RETRODECK DIALER</Text>
+          <Text style={[styles.compTitle, { color: fg }]}>{tOs('phoneDialTitle', os.lang)}</Text>
           <Text style={[styles.compBpm, { color: fg }]}>[NUM PAD]</Text>
         </View>
         <View
@@ -246,12 +247,12 @@ export function renderPhone(os: RetroDeckOS, fg: string, bg: string) {
           </Text>
           {!os.dialBuffer && (
             <Text style={[styles.miniHint, { color: fg, opacity: 0.75, marginTop: 4 }]}>
-              DIAL NUMBER OR *#0000# / *#06#
+              {tOs('phoneDialPrompt', os.lang)}
             </Text>
           )}
         </View>
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
-          [OK]: CALL   [DEL]: ERASE   [BACK]: DESKTOP
+          {tOs('phoneDialHint', os.lang)}
         </Text>
       </View>
     );
@@ -301,7 +302,7 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
       <View style={styles.listWrap}>
         <View style={styles.compHeader}>
           <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-            {isArtTab ? 'POSTCARD P1/2: SCENE' : 'POSTCARD P2/2: ICON'}
+            {tOs(isArtTab ? 'smsSceneHdr' : 'smsIconHdr', os.lang)}
           </Text>
           <Text style={[styles.compBpm, { color: fg }]}>
             {isArtTab
@@ -404,12 +405,12 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
         >
           <Ionicons name={stamp.icon} size={13} color={fg} />
           <Text style={[styles.smsBodyTxt, { color: fg, fontSize: 8.5, flex: 1, textAlign: 'left' }]} numberOfLines={2}>
-            {os.smsDraftText || '(PRESS [▲] OR [KBD] TO WRITE MESSAGE)'}
+            {os.smsDraftText || tOs('smsDraftPrompt', os.lang)}
           </Text>
         </View>
 
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 2 }]} numberOfLines={1}>
-          [◀/▶] PICK • [▼] {isArtTab ? 'ICONS (P2)' : 'SCENE (P1)'} • [▲] MSG • [A] SEND
+          {tOs('smsStudioHint', { nextTab: tOs(isArtTab ? 'smsStudioNextIcons' : 'smsStudioNextScene', os.lang) }, os.lang)}
         </Text>
       </View>
     );
@@ -420,7 +421,7 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
       <View style={[styles.listWrap, { justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={[styles.subHeader, { color: fg }]}>{tOs('inboxEmpty', os.lang)}</Text>
         <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>
-          {pickLang(os.lang, 'PRESS [▲] TO CREATE A POSTCARD', 'KARTPOSTAL OLUSTURMAK ICIN [▲] BAS')}
+          {tOs('smsCreatePostcardHint', os.lang)}
         </Text>
       </View>
     );
@@ -575,16 +576,17 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
         {os.smsBannerTimer > 0
           ? os.smsBanner
           : (os.smsDeleteConfirm
-              ? 'PRESS [▼] AGAIN TO CONFIRM DELETE!'
+              ? tOs('smsConfirmDown', os.lang)
               : msg.isLivePersona
-              ? '[▲] POSTCARD • [▼]/DEL DEL • [A] REPLY'
-              : '[▲] POSTCARD • [▼]/DEL DEL • [A] AI')}
+              ? tOs('smsActionLive', os.lang)
+              : tOs('smsActionPic', os.lang))}
       </Text>
     </View>
   );
 }
 
 export function renderProfiles(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
   const activeRing = os.songs[os.ringtoneIdx] || os.songs[0];
   const activeSms = NOKIA_SMS_TONES[os.smsToneIdx] || NOKIA_SMS_TONES[0];
   const activeKeyStyle =
@@ -595,17 +597,17 @@ export function renderProfiles(os: RetroDeckOS, fg: string, bg: string) {
   const volBar = '█'.repeat(bars) + '░'.repeat(10 - bars);
 
   const rows = [
-    `PROFILE: < ${NOKIA_PROFILES[os.profileIdx]} >`,
-    `VOLUME: < [${volBar}] ${volPct}% >`,
-    `RINGTONE: < ${activeRing.title.trim()} >`,
-    `SMS TONE: < ${activeSms.title} >`,
-    `KEY SOUND: < ${activeKeyStyle.name} >`,
-    `OPERATOR: < ${NOKIA_OPERATORS[os.operatorIdx]} >`,
-    `[A] LOCK KEYS • [◀/▶] TORCH: ${os.torchInvert ? 'ON' : 'OFF'}`,
+    `${tOs('profProfile', L)}: < ${NOKIA_PROFILES[os.profileIdx]} >`,
+    `${tOs('profVolume', L)}: < [${volBar}] ${volPct}% >`,
+    `${tOs('profRingtone', L)}: < ${activeRing.title.trim()} >`,
+    `${tOs('profSmsTone', L)}: < ${activeSms.title} >`,
+    `${tOs('profKeySfx', L)}: < ${activeKeyStyle.name} >`,
+    `${tOs('profOperator', L)}: < ${NOKIA_OPERATORS[os.operatorIdx]} >`,
+    `${tOs('profTorchLock', L)}: ${os.torchInvert ? tOs('on', L) : tOs('off', L)}`,
   ];
   return (
     <View style={styles.listWrap}>
-      <Text style={[styles.subHeader, { color: fg }]}>PROFILES & AUDIO</Text>
+      <Text style={[styles.subHeader, { color: fg }]}>{tOs('profHeader', L)}</Text>
       {rows.map((label, i) => {
         const sel = i === os.profRow;
         return (

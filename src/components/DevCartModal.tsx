@@ -16,6 +16,7 @@ import { GAME_TEMPLATES, GameTemplate } from '../arcade/compiler/templates';
 import { compileCustomCartridge } from '../arcade/compiler/CartridgeCompiler';
 import { ArcadeCartridgeDef } from '../arcade/types';
 import { getAccentInk } from '../theme/palettes';
+import { useTranslation } from '../i18n/retroI18n';
 
 interface DevCartModalProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
   onLoadCustomCartridge,
 }) => {
   const insets = useSafeAreaInsets();
+  const { tUi } = useTranslation();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(GAME_TEMPLATES[0].id);
   const [cartTitle, setCartTitle] = useState('CUSTOM GAME');
   const [code, setCode] = useState(GAME_TEMPLATES[0].code);
@@ -53,7 +55,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
       const result = compileCustomCartridge(code);
 
       if (!result.success || !result.game) {
-        setErrorMsg(result.error || 'Could not run game code. Please check syntax.');
+        setErrorMsg(result.error || tUi('devErrDefault'));
         setCompiling(false);
         return;
       }
@@ -106,10 +108,10 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
             <View style={styles.badgeRow}>
               <View style={[styles.led, { backgroundColor: accentColor }]} />
               <Text style={[styles.eyebrow, { color: accentColor }]}>
-                RETRODECK // GAME STUDIO
+                {tUi('devEyebrow')}
               </Text>
             </View>
-            <Text style={styles.title}>Design Your Own Game</Text>
+            <Text style={styles.title}>{tUi('devTitle')}</Text>
           </View>
 
           <Pressable onPress={onClose} style={styles.closeBtn}>
@@ -119,7 +121,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
 
         {/* Template Selector Bar */}
         <View style={styles.templateSection}>
-          <Text style={styles.sectionLabel}>READY-TO-PLAY TEMPLATES:</Text>
+          <Text style={styles.sectionLabel}>{tUi('devTemplates')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -155,7 +157,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
 
         {/* Cartridge Title Input */}
         <View style={styles.titleInputWrap}>
-          <Text style={styles.inputPrefix}>GAME TITLE:</Text>
+          <Text style={styles.inputPrefix}>{tUi('devGameTitleLbl')}</Text>
           <TextInput
             style={[
               styles.titleInput,
@@ -163,7 +165,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
             ]}
             value={cartTitle}
             onChangeText={setCartTitle}
-            placeholder="Enter game title..."
+            placeholder={tUi('devGameTitlePh')}
             placeholderTextColor="#64748B"
             autoCapitalize="characters"
           />
@@ -172,9 +174,9 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
         {/* Code Editor */}
         <View style={[styles.editorContainer, { borderColor: `${accentColor}44` }]}>
           <View style={styles.editorTopBar}>
-            <Text style={styles.editorTitle}>Live Game Code Editor</Text>
+            <Text style={styles.editorTitle}>{tUi('devEditorTitle')}</Text>
             <Text style={[styles.editorMeta, { color: accentColor }]}>
-              {code.length} Characters
+              {tUi('devEditorChars', { count: code.length })}
             </Text>
           </View>
           <TextInput
@@ -197,7 +199,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
           <View style={styles.errorBanner}>
             <View style={styles.errorHeader}>
               <Ionicons name="warning-outline" size={14} color="#FF0055" />
-              <Text style={styles.errorTitle}>CODE INSPECTION // ERROR DETECTED</Text>
+              <Text style={styles.errorTitle}>{tUi('devErrTitle')}</Text>
             </View>
             <Text style={styles.errorText} numberOfLines={4}>
               {errorMsg}
@@ -218,7 +220,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
           >
             <Ionicons name="play" size={18} color={getAccentInk(accentColor)} />
             <Text style={[styles.burnBtnText, { color: getAccentInk(accentColor) }]}>
-              {compiling ? 'PREPARING...' : 'INSERT CART & PLAY'}
+              {compiling ? tUi('devPreparing') : tUi('devInsertPlay')}
             </Text>
           </Pressable>
         </View>

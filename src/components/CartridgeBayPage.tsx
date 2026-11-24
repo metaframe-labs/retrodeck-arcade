@@ -14,6 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeCartridgeDef } from '../arcade/types';
 import { isCartridgeProLocked } from '../arcade/cartridges';
 import { getAccentInk } from '../theme/palettes';
+import { tUi, useTranslation } from '../i18n/retroI18n';
 
 const FAV_CARTS_STORAGE_KEY = '@retrodeck8_fav_carts_v1';
 
@@ -103,7 +104,7 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
           <View style={[styles.bestScorePill, { borderColor: `${accentColor}44` }]}>
             <Ionicons name="trophy-outline" size={10} color="#FFD700" />
             <Text style={styles.bestScoreText}>
-              BEST: {bestScore.toString().padStart(6, '0')}
+              {tUi('vaultBest', { score: bestScore.toString().padStart(6, '0') })}
             </Text>
           </View>
         </View>
@@ -112,19 +113,19 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
           <View style={[styles.activePill, { backgroundColor: accentColor }]}>
             <View style={[styles.activeDot, { backgroundColor: accentInk }]} />
             <Text style={[styles.activePillText, { color: accentInk }]}>
-              INSERTED (ACTIVE)
+              {tUi('vaultInserted')}
             </Text>
           </View>
         ) : isLocked ? (
           <View style={[styles.loadAction, { borderColor: '#F59E0B', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F59E0B18' }]}>
             <Text style={[styles.loadActionText, { color: '#F59E0B' }]}>
-              PRO REQUIRED
+              {tUi('vaultProReq')}
             </Text>
           </View>
         ) : (
           <View style={styles.loadAction}>
             <Text style={[styles.loadActionText, { color: accentColor }]}>
-              TAP TO LOAD
+              {tUi('vaultTapLoad')}
             </Text>
             <Ionicons name="arrow-forward" size={12} color={accentColor} />
           </View>
@@ -145,6 +146,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   onBack,
 }) => {
   const insets = useSafeAreaInsets();
+  const { lang, tUi: translateUi } = useTranslation();
   const [filter, setFilter] = useState<FilterCategory>('ALL');
   const [favIds, setFavIds] = useState<string[]>([]);
   const accentInk = useMemo(() => getAccentInk(accentColor), [accentColor]);
@@ -217,21 +219,23 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
           <View style={{ flex: 1 }}>
             <View style={styles.studioTagRow}>
               <Text style={[styles.studioTitle, { color: accentColor }]}>
-                CUSTOM GAME STUDIO
+                {translateUi('vaultStudioTitle')}
               </Text>
               <View style={styles.studioBadge}>
-                <Text style={styles.studioBadgeText}>{isPro ? 'CREATOR' : 'PRO'}</Text>
+                <Text style={styles.studioBadgeText}>
+                  {isPro ? translateUi('vaultStudioCreator') : translateUi('vaultStudioPro')}
+                </Text>
               </View>
             </View>
             <Text style={styles.studioSub}>
-              Pick a template or build your own custom retro game and play instantly
+              {translateUi('vaultStudioSub')}
             </Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={20} color={accentColor} />
       </Pressable>
     );
-  }, [accentColor, isPro, onOpenDevCart]);
+  }, [accentColor, isPro, onOpenDevCart, translateUi]);
 
   return (
     <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6 }]}>
@@ -239,19 +243,19 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
       <View style={styles.navBar}>
         <Pressable onPress={onBack} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={18} color="#F8FAFC" />
-          <Text style={styles.backBtnText}>CONSOLE</Text>
+          <Text style={styles.backBtnText}>{translateUi('vaultBack')}</Text>
         </Pressable>
 
         <View style={styles.titleCluster}>
           <Text style={[styles.eyebrow, { color: accentColor }]}>
-            RETRO ARCADE // 60 FPS
+            {translateUi('vaultEyebrow')}
           </Text>
-          <Text style={styles.title}>Cartridge Vault</Text>
+          <Text style={styles.title}>{translateUi('vaultTitle')}</Text>
         </View>
 
         <View style={[styles.countBadge, { borderColor: `${accentColor}55` }]}>
           <Text style={[styles.countText, { color: accentColor }]}>
-            {cartridges.length} CARTS
+            {translateUi('vaultCount', { count: cartridges.length })}
           </Text>
         </View>
       </View>
@@ -280,9 +284,9 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
               >
                 <Text style={[styles.filterChipText, isSelected && { color: accentColor }]}>
                   {cat === 'ALL'
-                    ? `ALL (${cartridges.length})`
+                    ? translateUi('vaultCatAll', { count: cartridges.length })
                     : cat === 'FAVS'
-                    ? `★ FAVS (${favIds.length})`
+                    ? translateUi('vaultCatFavs', { count: favIds.length })
                     : cat === 'NOKIA'
                     ? `NOKIA (${nokiaCount})`
                     : `ARCADE (${arcadeCount})`}
@@ -298,6 +302,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         data={filteredCartridges}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
+        extraData={lang}
         ListHeaderComponent={listHeader || undefined}
         initialNumToRender={8}
         maxToRenderPerBatch={8}
@@ -307,9 +312,9 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
             <Ionicons name="star-outline" size={28} color="#64748B" />
-            <Text style={styles.emptyTitle}>NO FAVORITE GAMES YET</Text>
+            <Text style={styles.emptyTitle}>{translateUi('vaultEmptyTitle')}</Text>
             <Text style={styles.emptySub}>
-              Tap the ★ icon on any cartridge to save it here.
+              {translateUi('vaultEmptySub')}
             </Text>
           </View>
         }

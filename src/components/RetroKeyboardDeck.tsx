@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from '../i18n/retroI18n';
 
 interface RetroKeyboardDeckProps {
   accentColor: string;
@@ -30,15 +31,18 @@ const ROW_SYM = ['-', '_', '.', '/', ':', '@', '?', '!'];
 export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
   accentColor,
   value,
-  placeholder = 'TYPE OR PASTE HERE...',
-  targetLabel = 'BUFFER',
+  placeholder,
+  targetLabel,
   secure = false,
   onChangeText,
   onSubmit,
   onSwitchToGamepad,
 }) => {
+  const { tUi } = useTranslation();
   const [shift, setShift] = useState(false);
   const [symMode, setSymMode] = useState(false);
+  const resolvedPlaceholder = placeholder ?? tUi('kbdPlaceholder');
+  const resolvedTargetLabel = targetLabel ?? tUi('kbdBuffer');
 
   const tapHaptic = () => {
     if (Platform.OS !== 'web') {
@@ -76,12 +80,12 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
       {/* Top Buffer Bar with Native Paste Support */}
       <View style={[styles.bufferBar, { borderColor: `${accentColor}66` }]}>
         <View style={[styles.targetTag, { backgroundColor: `${accentColor}22` }]}>
-          <Text style={[styles.targetTagTxt, { color: accentColor }]}>{targetLabel}</Text>
+          <Text style={[styles.targetTagTxt, { color: accentColor }]}>{resolvedTargetLabel}</Text>
         </View>
         <TextInput
           value={value}
           onChangeText={onChangeText}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           placeholderTextColor="#475569"
           secureTextEntry={secure}
           autoCapitalize="none"
@@ -91,7 +95,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
         />
         {value.length > 0 && (
           <Pressable onPress={handleClear} style={styles.clrMiniBtn}>
-            <Text style={styles.clrMiniTxt}>CLR</Text>
+            <Text style={styles.clrMiniTxt}>{tUi('kbdClr')}</Text>
           </Pressable>
         )}
       </View>
@@ -164,7 +168,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
             shift && { borderColor: accentColor, backgroundColor: `${accentColor}28` },
           ]}
         >
-          <Text style={[styles.keyTxt, shift && { color: accentColor }]}>SHIFT</Text>
+          <Text style={[styles.keyTxt, shift && { color: accentColor }]}>{tUi('kbdShift')}</Text>
         </Pressable>
 
         {ROW_3.map((k) => {
@@ -205,7 +209,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={[styles.keyCap, styles.fnKey, { borderColor: `${accentColor}66` }]}
         >
           <Ionicons name="game-controller-outline" size={14} color={accentColor} />
-          <Text style={[styles.fnKeyTxt, { color: accentColor }]}>PAD</Text>
+          <Text style={[styles.fnKeyTxt, { color: accentColor }]}>{tUi('kbdPad')}</Text>
         </Pressable>
 
         <Pressable
@@ -219,7 +223,7 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
             symMode && { borderColor: accentColor, backgroundColor: `${accentColor}22` },
           ]}
         >
-          <Text style={[styles.fnKeyTxt, symMode && { color: accentColor }]}>SYM</Text>
+          <Text style={[styles.fnKeyTxt, symMode && { color: accentColor }]}>{tUi('kbdSym')}</Text>
         </Pressable>
 
         <Pressable
@@ -230,14 +234,14 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
             pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
           ]}
         >
-          <Text style={styles.spaceTxt}>RETRODECK SPACE</Text>
+          <Text style={styles.spaceTxt}>{tUi('kbdSpace')}</Text>
         </Pressable>
 
         <Pressable
           onPress={handleEnter}
           style={[styles.keyCap, styles.sendKey, { backgroundColor: accentColor }]}
         >
-          <Text style={styles.sendKeyTxt}>SEND</Text>
+          <Text style={styles.sendKeyTxt}>{tUi('kbdSend')}</Text>
           <Ionicons name="return-down-back" size={15} color="#04100C" />
         </Pressable>
       </View>

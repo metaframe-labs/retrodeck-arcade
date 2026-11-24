@@ -713,7 +713,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         os.smsIdx = 0;
         os.smsDraftText = '';
         os.smsMode = 'inbox';
-        os.smsBanner = '✉ POSTCARD SENT!';
+        os.smsBanner = tOs('smsPostcardSent', os.lang);
         os.smsBannerTimer = 3.0;
         os.saveSmsList();
         os.playActiveSmsTone();
@@ -1403,13 +1403,13 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       if (os.proIdx === 3) {
         // Restore purchases
         os.proBusy = true;
-        os.proStatusMsg = 'RESTORING PURCHASES...';
+        os.proStatusMsg = tOs('proRestoring', os.lang);
         os.cb.onRestorePurchases?.().then((restored) => {
           os.proBusy = false;
-          os.proStatusMsg = restored ? 'PURCHASES RESTORED!' : 'NO PURCHASES FOUND.';
+          os.proStatusMsg = tOs(restored ? 'proRestored' : 'proNoPurchases', os.lang);
         }).catch(() => {
           os.proBusy = false;
-          os.proStatusMsg = 'RESTORE ERROR. TRY AGAIN.';
+          os.proStatusMsg = tOs('proRestoreErr', os.lang);
         });
         return 'powerup';
       }
@@ -1417,13 +1417,13 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       if (os.proIdx === 4) {
         // Debug: Revoke / Reset Purchases
         os.proBusy = true;
-        os.proStatusMsg = 'REVOKING PURCHASES...';
+        os.proStatusMsg = tOs('proRevoking', os.lang);
         os.cb.onResetProDebug?.().then(() => {
           os.proBusy = false;
-          os.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
+          os.proStatusMsg = tOs('proRevoked', os.lang);
         }).catch(() => {
           os.proBusy = false;
-          os.proStatusMsg = 'PURCHASES RESET (DEBUG OK)';
+          os.proStatusMsg = tOs('proRevoked', os.lang);
         });
         return 'die';
       }
@@ -1432,26 +1432,26 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       const targetType = packageTypes[os.proIdx];
       if (targetType) {
         if (isPro) {
-          os.proStatusMsg = 'PRO IS ALREADY ACTIVE!';
+          os.proStatusMsg = tOs('proAlreadyActive', os.lang);
           return 'score';
         }
         os.proBusy = true;
-        os.proStatusMsg = 'CONNECTING TO STORE...';
+        os.proStatusMsg = tOs('proPurchasing', { title: targetType.toUpperCase() }, os.lang);
         os.cb.onPurchasePackage?.(targetType).then((res) => {
           os.proBusy = false;
           if (res.success || res.isPro) {
-            os.proStatusMsg = 'WELCOME TO PRO!';
+            os.proStatusMsg = tOs('proActivated', os.lang);
             os.triggerPurchaseSuccessSms(targetType);
           } else if (res.userCancelled) {
-            os.proStatusMsg = 'TRANSACTION CANCELLED.';
+            os.proStatusMsg = tOs('proCancelled', os.lang);
             os.triggerPurchaseFailedSms('USER CANCELLED');
           } else {
-            os.proStatusMsg = 'TRANSACTION FAILED.';
+            os.proStatusMsg = tOs('proDeclined', os.lang);
             os.triggerPurchaseFailedSms('CARD DECLINED');
           }
         }).catch((err) => {
           os.proBusy = false;
-          os.proStatusMsg = 'PURCHASE ERROR.';
+          os.proStatusMsg = tOs('proStoreErr', os.lang);
           os.triggerPurchaseFailedSms(err?.message || 'STORE ERROR');
         });
         return 'powerup';
