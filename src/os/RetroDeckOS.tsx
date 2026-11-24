@@ -1500,6 +1500,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
     this.smsBannerTimer = 5.0;
+    if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
     this.saveSmsList();
     this.playActiveSmsTone();
   }
@@ -1515,6 +1516,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsIdx = 0;
     this.smsBanner = '✉ NEW SMS: WELCOME TO PRO!';
     this.smsBannerTimer = 5.0;
+    if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
     this.saveSmsList();
     this.playActiveSmsTone();
   }
@@ -1640,6 +1642,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private smsIdx = 0;
   private smsBanner = '';
   private smsBannerTimer = 0;
+  private unreadSmsCount = 0;
   private smsSendingAi = false;
   private smsDeleteConfirm = false;
   private smsMode: 'inbox' | 'compose' = 'inbox';
@@ -1858,6 +1861,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.smsIdx = 0;
       this.smsBanner = `✉ NEW SMS: ${persona.sender}`;
       this.smsBannerTimer = 4.5;
+      if (this.app !== 'sms' || this.keyLocked) this.unreadSmsCount += 1;
       this.saveSmsList();
       this.playActiveSmsTone();
       return true;
@@ -3003,6 +3007,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         if (this.app === 'sms') {
           this.smsDeleteConfirm = false;
+          this.unreadSmsCount = 0;
         }
         return 'score';
       }
@@ -4454,7 +4459,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     return (
       <View style={styles.osBarRight}>
-        {this.smsBannerTimer > 0 && (
+        {(this.smsBannerTimer > 0 || this.unreadSmsCount > 0) && (
           <Ionicons name="mail" size={10} color={ink} style={{ marginRight: 2 }} />
         )}
         {isPro && (
@@ -4565,6 +4570,34 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 </Text>
                 <Text style={[styles.swLap, { color: fg }]}>
                   KEYGUARD LOCKED ({NOKIA_PROFILES[this.profileIdx]})
+                </Text>
+              </View>
+            )}
+
+            {(this.unreadSmsCount > 0 || this.smsBannerTimer > 0) && (
+              <View
+                style={{
+                  marginTop: 8,
+                  backgroundColor: fg,
+                  paddingHorizontal: 10,
+                  paddingVertical: 3,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Ionicons name="mail" size={11} color={bg} />
+                <Text
+                  style={{
+                    color: bg,
+                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                    fontSize: 9,
+                    fontWeight: '900',
+                  }}
+                >
+                  {this.smsBannerTimer > 0
+                    ? this.smsBanner.replace('✉ ', '')
+                    : `${this.unreadSmsCount} NEW MESSAGE${this.unreadSmsCount > 1 ? 'S' : ''}`}
                 </Text>
               </View>
             )}
