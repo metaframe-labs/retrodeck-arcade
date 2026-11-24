@@ -1034,6 +1034,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private smsBanner = '';
   private smsBannerTimer = 0;
   private smsSendingAi = false;
+  private smsDeleteConfirm = false;
 
   private profRow = 0;
   private profileIdx = 0;
@@ -1216,7 +1217,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       case 'phone':
         return 'D-PAD: Keypad • [A]: Dial (*#0000# / LOCK) • [B]: Exit';
       case 'sms':
-        return '[◀]/[▶]: Picture SMS • [A]: Send to Groq/AI & Receive Pic-SMS!';
+        return '[◀]/[▶]: Read • [▼]x2 or DEL: Delete • [A]: AI Reply';
       case 'profiles':
         return '[▲]/[▼]: Select • [A]: Profile / Lock Keys / Torch • [B]: Exit';
       case 'paint':
@@ -1665,6 +1666,37 @@ export class RetroDeckOS implements ArcadeGameInstance {
       const s = this.executePhoneKey(key);
       if (s) this.cb.onPlaySound?.(s);
     }
+
+    // SMS App keypad shortcuts (DEL / CLR deletes active SMS, OK sends to AI)
+    if (this.app === 'sms') {
+      if (key === 'DEL' || key === 'CLR') {
+        if (this.smsList.length > 0) {
+          this.smsList = this.smsList.filter((_, idx) => idx !== this.smsIdx);
+          this.smsIdx = Math.min(this.smsIdx, Math.max(0, this.smsList.length - 1));
+          this.smsDeleteConfirm = false;
+          this.smsBanner = 'SMS DELETED!';
+          this.smsBannerTimer = 2.0;
+          this.cb.onPlaySound?.('die');
+        }
+        return;
+      }
+      if (key === '4') {
+        this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
+        this.smsDeleteConfirm = false;
+        this.cb.onPlaySound?.('hit');
+        return;
+      }
+      if (key === '6') {
+        this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
+        this.smsDeleteConfirm = false;
+        this.cb.onPlaySound?.('hit');
+        return;
+      }
+      if (key === 'OK') {
+        this.sendPictureSmsToAi();
+        return;
+      }
+    }
   }
 
   private appendChatLines(prefix: string, text: string) {
@@ -2061,6 +2093,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
         if (this.app === 'notes') {
           this.noteDeleteConfirm = false;
         }
+        if (this.app === 'sms') {
+          this.smsDeleteConfirm = false;
+        }
         return 'score';
       }
       return null;
@@ -2163,15 +2198,44 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'sms') {
-      if (dir === 'left' || dir === 'up') {
-        this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
+      if (dir === 'left') {
+        if (this.smsList.length > 0) {
+          this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
+        }
+        this.smsDeleteConfirm = false;
         return 'hit';
       }
-      if (dir === 'right' || dir === 'down') {
-        this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
+      if (dir === 'right') {
+        if (this.smsList.length > 0) {
+          this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
+        }
+        this.smsDeleteConfirm = false;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        // [▼] Request delete confirmation, then 2nd [▼] deletes message
+        if (this.smsList.length === 0) return 'hit';
+        if (!this.smsDeleteConfirm) {
+          this.smsDeleteConfirm = true;
+          this.smsBanner = 'PRESS [▼] AGAIN TO DELETE SMS!';
+          this.smsBannerTimer = 3.0;
+          return 'hit';
+        }
+        this.smsList = this.smsList.filter((_, idx) => idx !== this.smsIdx);
+        this.smsIdx = Math.min(this.smsIdx, Math.max(0, this.smsList.length - 1));
+        this.smsDeleteConfirm = false;
+        this.smsBanner = 'SMS DELETED!';
+        this.smsBannerTimer = 2.0;
+        return 'die';
+      }
+      if (dir === 'up') {
+        this.smsDeleteConfirm = false;
         return 'hit';
       }
       if (pressA) {
+        if (this.smsDeleteConfirm) {
+          this.smsDeleteConfirm = false;
+        }
         this.sendPictureSmsToAi();
         return null;
       }
@@ -3487,7 +3551,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
               : this.app === 'ai'
               ? '[A] KBD/SEND   [◀/▶] TAB   [B] DESKTOP'
               : this.app === 'sms'
-              ? '[A] SEND PIC-SMS TO GROQ/AI   [B] DESKTOP'
+              ? '[◀/▶] READ   [▼]x2/DEL DELETE   [A] AI REPLY   [B] DESKTOP'
               : this.app === 'weather'
               ? '[◀/▶] CITY   [▲/▼] REFRESH   [A] SEARCH   [B] DESKTOP'
               : this.app === 'notes'
@@ -4326,6 +4390,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderSms(fg: string, _bg: string) {
+    if (this.smsList.length === 0) {
+      return (
+        <View style={[styles.listWrap, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={[styles.subHeader, { color: fg }]}>INBOX EMPTY</Text>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 6 }]}>NO MESSAGES IN PIC-SMS STORAGE</Text>
+        </View>
+      );
+    }
     const msg = this.smsList[this.smsIdx] || this.smsList[0];
     const bannerSpans = PIC_BANNERS[msg.artKey] || PIC_BANNERS.COFFEE;
     const meta = getProviderMeta(this.byokConfig.activeProvider);
@@ -4336,7 +4408,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
           <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
             ✉ {this.smsIdx + 1}/{this.smsList.length} {msg.sender}
           </Text>
-          <Text style={[styles.compBpm, { color: fg }]}>[{msg.title}]</Text>
+          <Text style={[styles.compBpm, { color: fg }]}>
+            {this.smsDeleteConfirm ? '[CONFIRM DEL]' : `[${msg.title}]`}
+          </Text>
         </View>
 
         {/* Wide 72x20 (36x10 @ 2px) Authentic Nokia 3310 Picture Message Card */}
@@ -4375,7 +4449,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <Text style={[styles.miniHint, { color: fg, textAlign: 'center' }]} numberOfLines={1}>
           {this.smsBannerTimer > 0
             ? this.smsBanner
-            : `[A] SEND PIC-SMS TO ${meta.shortName} & GET REPLY`}
+            : (this.smsDeleteConfirm
+                ? 'PRESS [▼] AGAIN TO CONFIRM DELETE!'
+                : `[◀/▶] READ • [▼]/DEL: DELETE • [A] AI REPLY`)}
         </Text>
       </View>
     );
