@@ -48,6 +48,9 @@ export interface RetroDeckOSCallbacks {
   getScanlines: () => boolean;
   onRequestKeyboard?: (open: boolean) => void;
   onPlaySound?: (sound: ArcadeSound) => void;
+  getIsPro?: () => boolean;
+  onOpenPaywall?: () => void;
+  onOpenCustomerCenter?: () => void;
 }
 
 type OsAppId =
@@ -2567,8 +2570,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
 
     if (this.app === 'setup') {
-      if (dir === 'up') this.setupIdx = (this.setupIdx + 4) % 5;
-      if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % 5;
+      const isPro = this.cb.getIsPro?.() ?? false;
+      const totalSetupItems = 6;
+      if (dir === 'up') this.setupIdx = (this.setupIdx + totalSetupItems - 1) % totalSetupItems;
+      if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % totalSetupItems;
       if (dir === 'left' || dir === 'right') {
         if (this.setupIdx === 0) {
           this.cb.onCyclePalette();
@@ -2590,6 +2595,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
         else if (this.setupIdx === 2) this.toggleClockFace();
         else if (this.setupIdx === 3) this.cb.onOpenCartVault();
         else if (this.setupIdx === 4) {
+          if (isPro) {
+            this.cb.onOpenCustomerCenter?.();
+          } else {
+            this.cb.onOpenPaywall?.();
+          }
+          return 'powerup';
+        }
+        else if (this.setupIdx === 5) {
           this.app = 'boot';
           this.bootTimer = 0;
         }
@@ -3127,6 +3140,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderStatusRight(ink: string): React.ReactNode {
     const isMuted = RetroAudioEngine.getMuted() || NOKIA_PROFILES[this.profileIdx] === 'SILENT';
     const isRadio = somaRadioService.getIsPlaying();
+    const isPro = this.cb.getIsPro?.() ?? false;
     const pct = this.batteryPct;
     const filledCells =
       pct === null
@@ -3143,6 +3157,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     return (
       <View style={styles.osBarRight}>
+        {isPro && (
+          <Text style={[styles.osBarTxt, { color: ink, fontSize: 8 }]}>PRO</Text>
+        )}
         {isMuted && <Ionicons name="volume-mute" size={10} color={ink} />}
         {!isMuted && isRadio && <Ionicons name="musical-notes" size={10} color={ink} />}
         {this.batteryCharging && <Ionicons name="flash" size={9} color={ink} />}
@@ -4553,11 +4570,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   private renderSetup(fg: string, bg: string) {
+    const isPro = this.cb.getIsPro?.() ?? false;
     const items = [
       `PALETTE: ${this.cb.getPaletteName()}`,
       `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
       `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
       'OPEN FULL CARTRIDGE VAULT',
+      isPro ? '★ RETRODECK PRO: ACTIVE (MANAGE)' : '★ UPGRADE: RETRODECK PRO (PAYWALL)',
       'REBOOT RETRODECK OS',
     ];
     return (
@@ -4565,15 +4584,24 @@ export class RetroDeckOS implements ArcadeGameInstance {
         <Text style={[styles.subHeader, { color: fg }]}>SYSTEM PREFERENCES</Text>
         {items.map((label, i) => {
           const sel = i === this.setupIdx;
+          const isProRow = i === 4;
           return (
             <View
               key={label}
               style={[
                 styles.setupRow,
                 { borderColor: fg, backgroundColor: sel ? fg : 'transparent' },
+                isProRow && !sel && { borderColor: fg },
               ]}
             >
-              <Text style={[styles.setupTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
+              <Text
+                style={[
+                  styles.setupTxt,
+                  { color: sel ? bg : fg },
+                  isProRow && { fontWeight: '900' },
+                ]}
+                numberOfLines={1}
+              >
                 {sel ? '> ' : '  '}
                 {label}
               </Text>

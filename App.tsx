@@ -69,6 +69,8 @@ function RetroDeckConsole() {
   const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
   const [scanlines, setScanlines] = useState(false);
   const [isPro, setIsPro] = useState(false);
+  const isProRef = useRef(false);
+  isProRef.current = isPro;
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(() => RetroAudioEngine.getMuted());
   const [isBeeping, setIsBeeping] = useState(false);
@@ -395,6 +397,13 @@ function RetroDeckConsole() {
       getScanlines: () => scanlinesRef.current,
       onRequestKeyboard: (open) => setDeckMode(open ? 'kbd' : 'pad'),
       onPlaySound: (s) => handleSoundEvent(s),
+      getIsPro: () => isProRef.current,
+      onOpenPaywall: () => {
+        revenueCatService.presentPaywall();
+      },
+      onOpenCustomerCenter: () => {
+        revenueCatService.presentCustomerCenter();
+      },
     })
   );
 
@@ -513,40 +522,6 @@ function RetroDeckConsole() {
           </View>
 
           <View style={styles.topActions}>
-            {/* PRO / Paywall Badge Button (Compact Icon Pill) */}
-            <Pressable
-              hitSlop={{ top: 8, bottom: 8, left: 6, right: 6 }}
-              onPress={async () => {
-                handleSoundEvent('score');
-                if (isPro) {
-                  await revenueCatService.presentCustomerCenter();
-                } else {
-                  await revenueCatService.presentPaywall();
-                }
-              }}
-              style={[
-                styles.proBtn,
-                {
-                  backgroundColor: isPro ? `${palette.bezelAccent}33` : palette.surfaceBg,
-                  borderColor: isPro ? '#34D399' : `${palette.bezelAccent}88`,
-                },
-              ]}
-            >
-              <Ionicons
-                name={isPro ? 'shield-checkmark' : 'sparkles'}
-                size={13}
-                color={isPro ? '#34D399' : palette.bezelAccent}
-              />
-              <Text
-                style={[
-                  styles.proBtnText,
-                  { color: isPro ? '#34D399' : palette.bezelAccent },
-                ]}
-              >
-                PRO
-              </Text>
-            </Pressable>
-
             <Pressable
               onPress={() => {
                 setThemeModalVisible(true);
