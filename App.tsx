@@ -109,6 +109,14 @@ function RetroDeckConsole() {
   const palette = RETRO_PALETTES[paletteId];
 
   useEffect(() => {
+    inputRef.current = {
+      up: false,
+      down: false,
+      left: false,
+      right: false,
+      a: false,
+      b: false,
+    };
     osRef.current.setNumericDeckActive?.(deckMode === 'num');
   }, [deckMode]);
 
@@ -431,7 +439,17 @@ function RetroDeckConsole() {
       onToggleScanlines: () => handleToggleScanlines(),
       getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
-      onRequestKeyboard: (open) => setDeckMode(open ? 'kbd' : 'pad'),
+      onRequestKeyboard: (open) => {
+        inputRef.current = {
+          up: false,
+          down: false,
+          left: false,
+          right: false,
+          a: false,
+          b: false,
+        };
+        setDeckMode(open ? 'kbd' : 'pad');
+      },
       onPlaySound: (s) => handleSoundEvent(s),
       getIsPro: () => isProRef.current,
       onOpenPaywall: () => {
