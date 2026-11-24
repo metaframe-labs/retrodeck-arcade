@@ -298,8 +298,8 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
   const isAddRow = safeIdx === contacts.length;
   const selected = !isAddRow ? contacts[safeIdx] : null;
 
-  const visibleCount = 3;
-  const start = Math.max(0, Math.min(safeIdx - 1, Math.max(0, totalRows - visibleCount)));
+  const visibleCount = 6;
+  const start = Math.max(0, Math.min(safeIdx - 2, Math.max(0, totalRows - visibleCount)));
   const windowIndices = Array.from(
     { length: Math.min(visibleCount, totalRows - start) },
     (_, i) => start + i
@@ -307,9 +307,9 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
 
   return (
     <View style={styles.listWrap}>
-      <View style={[styles.compHeader, { marginBottom: 4 }]}>
+      <View style={[styles.compHeader, { marginBottom: 3 }]}>
         <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-          {tOs('contactsTitle', { total: contacts.length }, L)}
+          {tOs('contactsTitle', { total: contacts.length }, L)} ({safeIdx + 1}/{totalRows})
         </Text>
         <Text style={[styles.listMeta, { color: fg }]}>
           {os.contactDeleteConfirm ? tOs('contactsConfirmDel', L) : tOs('contactsNewBtn', L)}
@@ -325,9 +325,9 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
             width: '100%',
             alignItems: 'flex-start',
             paddingHorizontal: 8,
-            paddingVertical: 5,
+            paddingVertical: 4,
             marginBottom: 4,
-            minHeight: 46,
+            minHeight: 40,
             justifyContent: 'center',
           },
         ]}
@@ -364,24 +364,33 @@ export function renderContacts(os: RetroDeckOS, fg: string, bg: string) {
       </View>
 
       {/* Scrollable Phonebook Index */}
-      {windowIndices.map((absIdx) => {
-        const sel = absIdx === safeIdx;
-        const c = absIdx < contacts.length ? contacts[absIdx] : null;
-        return (
-          <View
-            key={c ? c.id : '__add_contact__'}
-            style={[styles.listRow, { backgroundColor: sel ? fg : 'transparent' }]}
-          >
-            <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-              {sel ? '> ' : '  '}
-              {c ? c.name : tOs('contactsAddRow', L)}
-            </Text>
-            <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-              {c ? (c.isCustom ? tOs('contactsCustomTag', L) : c.tag) : '+NEW'}
-            </Text>
-          </View>
-        );
-      })}
+      <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+        {windowIndices.map((absIdx) => {
+          const sel = absIdx === safeIdx;
+          const c = absIdx < contacts.length ? contacts[absIdx] : null;
+          return (
+            <View
+              key={c ? c.id : '__add_contact__'}
+              style={[
+                styles.listRow,
+                {
+                  backgroundColor: sel ? fg : 'transparent',
+                  paddingVertical: 2,
+                  marginBottom: 1.5,
+                },
+              ]}
+            >
+              <Text style={[styles.listTxt, { color: sel ? bg : fg, fontSize: 9.5 }]} numberOfLines={1}>
+                {sel ? '> ' : '  '}
+                {c ? c.name : tOs('contactsAddRow', L)}
+              </Text>
+              <Text style={[styles.listMeta, { color: sel ? bg : fg, fontSize: 8.5 }]}>
+                {c ? (c.isCustom ? tOs('contactsCustomTag', L) : c.tag) : '+NEW'}
+              </Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
