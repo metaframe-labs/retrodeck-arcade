@@ -10,6 +10,7 @@ const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
 const MY_TUNES_STORAGE_KEY = '@retrodeck8_custom_tunes_v1';
 const SMS_TONE_STORAGE_KEY = '@retrodeck8_sms_tone_v1';
 const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
+const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
 
 const DEFAULT_CUSTOM_TUNES: NokiaSong[] = [
   { title: 'MY TUNE 1', bpm: 140, notes: '' },
@@ -916,7 +917,73 @@ interface NokiaPicSms {
   postcardId?: string;
   stampEmoji?: string;
   stampLabel?: string;
+  isLivePersona?: boolean;
+  personaId?: string;
 }
+
+interface LiveSmsPersona {
+  id: string;
+  sender: string;
+  tag: string;
+  instruction: string;
+}
+
+const LIVE_SMS_PERSONAS: LiveSmsPersona[] = [
+  {
+    id: 'kanka',
+    sender: 'MERT (KANKA)',
+    tag: 'SMS',
+    instruction: 'Sen kullanıcının yakın Türk arkadaşısın (Mert). Halısaha, akşam buluşma, kahve, oyun veya günlük komik bir olay hakkında çok doğal, samimi, sokak ağzıyla kısa bir SMS yaz (max 100 karakter, asla AI olduğunu belli etme).',
+  },
+  {
+    id: 'anne',
+    sender: 'ANNEM',
+    tag: 'AILE',
+    instruction: 'Sen kullanıcının Türk annesisin. Akşam kaçta geleceğini sor, yemek yaptığını söyle veya üstünü sıkı giy gibi çok doğal, samimi bir anne SMSi yaz (max 100 karakter, asla AI olduğunu belli etme).',
+  },
+  {
+    id: 'kurye',
+    sender: 'JET-KARGO',
+    tag: 'KARGO',
+    instruction: 'Sen kargo kuryesisin. Kapıda olduğunu, zili çaldığını veya paketi komşuya/güvenliğe bırakabileceğini yazan çok gerçekçi kısa bir kargo SMSi yaz (max 100 karakter, örnek 4 haneli teslimat kodu da verebilirsin).',
+  },
+  {
+    id: 'patron',
+    sender: 'SELIM BEY',
+    tag: 'IS',
+    instruction: 'Sen iş yerindeki müdürsün. Toplantının saati değiştiğini veya sunum/rapor dosyasını soran gerçekçi, kibar ama hafif aceleci kısa bir iş SMSi yaz (max 100 karakter).',
+  },
+  {
+    id: 'flort',
+    sender: '+90 532 *** 18',
+    tag: 'SMS',
+    instruction: 'Sen eski bir flört veya uzun zamandır yazmayan gizemli bir tanıdıksın. "Geçen gün o şarkıyı duydum aklıma sen geldin" veya "hala aynı yerde misin?" gibi merak uyandıran gerçekçi kısa bir SMS yaz (max 100 karakter).',
+  },
+  {
+    id: 'operator_ad',
+    sender: 'RD-CELL',
+    tag: 'REKLAM',
+    instruction: 'Sen bir GSM operatörüsün. Kullanıcıya özel internet/dakika paketi kampanyası (örneğin 10GB 129TL gibi) sunan, sonunda "Ret: B001" yazan çok gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+  },
+  {
+    id: 'pizza_ad',
+    sender: 'PIZZA-3310',
+    tag: 'KAMPANYA',
+    instruction: 'Sen bir pizzacısın. Bugüne özel "1 orta boy pizza alana 2.si bedava" veya %40 indirim kodu veren, sonunda "B014" yazan iştah açıcı gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+  },
+  {
+    id: 'bank_ad',
+    sender: 'RD-BANK',
+    tag: 'FINANS',
+    instruction: 'Sen bir bankasın. "Size özel faizsiz taksitli nakit fırsatınız hazır" tarzında sonunda "B002" yazan çok gerçekçi bir banka kampanya SMSi yaz (max 105 karakter).',
+  },
+  {
+    id: 'market_ad',
+    sender: 'PIXEL-MALL',
+    tag: 'INDIRIM',
+    instruction: 'Sen bir giyim/teknoloji mağazasısın. "Hafta sonu tüm ürünlerde 3 AL 2 ÖDE fırsatı başladı!" tarzında sonunda "B042" yazan gerçekçi bir reklam SMSi yaz (max 105 karakter).',
+  },
+];
 
 const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'istanbul', title: 'ISTANBUL', image: require('../../assets/postcards/istanbul.jpg') },
@@ -1552,6 +1619,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private smsArtIdx = 0;
   private smsStampIdx = 0;
   private smsDraftText = '';
+  private smsReplyTargetIdx: number | null = null;
+  private liveAiSmsEnabled = true;
+  private liveSmsTimer = 80;
+  private liveSmsFetching = false;
 
   private profRow = 0;
   private profileIdx = 0;
@@ -1657,6 +1728,66 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(LIVE_AI_SMS_STORAGE_KEY)
+      .then((val) => {
+        if (val === '0' || val === '1') {
+          this.liveAiSmsEnabled = val === '1';
+        }
+      })
+      .catch(() => {});
+  }
+
+  private toggleLiveAiSms() {
+    this.liveAiSmsEnabled = !this.liveAiSmsEnabled;
+    AsyncStorage.setItem(LIVE_AI_SMS_STORAGE_KEY, this.liveAiSmsEnabled ? '1' : '0').catch(() => {});
+  }
+
+  private async triggerLivePersonaSms(forcedPersonaId?: string, userReply?: string): Promise<boolean> {
+    if (this.liveSmsFetching) return false;
+    const meta = getProviderMeta(this.byokConfig.activeProvider);
+    const hasKey =
+      !meta.requiresKey || Boolean(this.byokConfig.keys[this.byokConfig.activeProvider]?.trim());
+    if (!hasKey) return false;
+
+    const persona =
+      (forcedPersonaId ? LIVE_SMS_PERSONAS.find((p) => p.id === forcedPersonaId) : null) ||
+      LIVE_SMS_PERSONAS[Math.floor(Math.random() * LIVE_SMS_PERSONAS.length)];
+
+    this.liveSmsFetching = true;
+    try {
+      const prompt = userReply
+        ? `${persona.instruction}\n\nKullanıcı sana az önce şu cevabı yazdı: "${userReply}". Karakterinden hiç çıkmadan buna çok doğal, kısa bir SMS cevabı yaz (sadece SMS metnini döndür, tırnak işareti koyma).`
+        : `${persona.instruction}\n\nSadece gönderilecek ham SMS metnini yaz (başlık, tırnak işareti veya açıklama ekleme).`;
+
+      const raw = await callBYOKAIChat([{ role: 'user', content: prompt }], this.byokConfig);
+      const cleaned = stripMarkdownForLcd(raw)
+        .replace(/^["']|["']$/g, '')
+        .replace(/\n+/g, ' ')
+        .trim()
+        .slice(0, 130);
+
+      if (!cleaned) return false;
+
+      this.smsList.unshift({
+        sender: persona.sender,
+        title: persona.tag,
+        text: cleaned,
+        artKey: 'SMILE',
+        isLivePersona: true,
+        personaId: persona.id,
+      });
+      if (this.smsList.length > 25) this.smsList.pop();
+      this.smsIdx = 0;
+      this.smsBanner = `✉ NEW SMS: ${persona.sender}`;
+      this.smsBannerTimer = 4.5;
+      this.saveSmsList();
+      this.playActiveSmsTone();
+      return true;
+    } catch {
+      return false;
+    } finally {
+      this.liveSmsFetching = false;
+    }
   }
 
   private saveSmsList() {
@@ -1867,6 +1998,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
       };
     }
     if (this.app === 'sms') {
+      if (this.smsReplyTargetIdx !== null) {
+        const target = this.smsList[this.smsReplyTargetIdx];
+        return {
+          targetLabel: `REPLY ${target?.sender || 'SMS'}`.slice(0, 14),
+          value: this.smsDraftText,
+          placeholder: 'TYPE YOUR REPLY...',
+          secure: false,
+        };
+      }
       return {
         targetLabel: 'POSTCARD MSG',
         value: this.smsDraftText,
@@ -1923,6 +2063,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return;
     }
     if (this.app === 'sms') {
+      if (this.smsReplyTargetIdx !== null) {
+        this.smsDraftText = next.slice(0, 120);
+        return;
+      }
       this.smsDraftText = next.toUpperCase().slice(0, 82);
       if (this.smsMode !== 'compose') this.smsMode = 'compose';
       return;
@@ -2004,6 +2148,19 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
     if (this.app === 'sms') {
       this.cb.onRequestKeyboard?.(false);
+      if (this.smsReplyTargetIdx !== null) {
+        const target = this.smsList[this.smsReplyTargetIdx];
+        const replyText = this.smsDraftText.trim();
+        this.smsDraftText = '';
+        this.smsReplyTargetIdx = null;
+        if (replyText && target?.personaId) {
+          this.smsBanner = `SENT TO ${target.sender}!`;
+          this.smsBannerTimer = 3.0;
+          this.cb.onPlaySound?.('score');
+          this.triggerLivePersonaSms(target.personaId, replyText);
+        }
+        return;
+      }
       this.smsMode = 'compose';
       return;
     }
@@ -2613,6 +2770,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.smsBannerTimer -= dt;
     }
 
+    // Background Live AI Persona & Ad SMS scheduler (only fires if BYOK key is configured)
+    if (this.liveAiSmsEnabled && this.app !== 'boot' && !this.liveSmsFetching) {
+      this.liveSmsTimer -= dt;
+      if (this.liveSmsTimer <= 0) {
+        this.liveSmsTimer = 135 + Math.random() * 145; // Next SMS in ~2.2 - 4.6 mins
+        this.triggerLivePersonaSms();
+      }
+    }
+
     if (this.melodyPlaying) {
       this.melodyTimer += dt;
       if (this.melodyTimer >= this.melodyDuration) {
@@ -2964,6 +3130,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         if (this.smsList.length === 0) {
           this.smsMode = 'compose';
+          return 'score';
+        }
+        const curMsg = this.smsList[this.smsIdx];
+        if (curMsg?.isLivePersona && curMsg.personaId) {
+          this.smsReplyTargetIdx = this.smsIdx;
+          this.smsDraftText = '';
+          this.cb.onRequestKeyboard?.(true);
           return 'score';
         }
         this.sendPictureSmsToAi();
@@ -3470,7 +3643,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'setup') {
       const isPro = this.cb.getIsPro?.() ?? false;
-      const totalSetupItems = 6;
+      const totalSetupItems = 7;
       if (dir === 'up') this.setupIdx = (this.setupIdx + totalSetupItems - 1) % totalSetupItems;
       if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % totalSetupItems;
       if (dir === 'left' || dir === 'right') {
@@ -3484,6 +3657,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         if (this.setupIdx === 3) {
           this.toggleClockFace();
+          return 'score';
+        }
+        if (this.setupIdx === 4) {
+          this.toggleLiveAiSms();
           return 'score';
         }
       }
@@ -3504,8 +3681,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
         else if (this.setupIdx === 2) this.cb.onToggleScanlines();
         else if (this.setupIdx === 3) this.toggleClockFace();
-        else if (this.setupIdx === 4) this.cb.onOpenCartVault();
-        else if (this.setupIdx === 5) {
+        else if (this.setupIdx === 4) this.toggleLiveAiSms();
+        else if (this.setupIdx === 5) this.cb.onOpenCartVault();
+        else if (this.setupIdx === 6) {
           this.app = 'boot';
           this.bootTimer = 0;
         }
@@ -3953,6 +4131,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
       this.triggerPurchaseSuccessSms('LIFETIME');
       this.pushTermLines(['SENT WELCOME PRO SMS TO 3310!']);
       return 'powerup';
+    }
+
+    if (bin === 'livesms') {
+      this.pushTermLines(['FETCHING LIVE AI SMS...']);
+      this.triggerLivePersonaSms().then((ok) => {
+        if (!ok) {
+          this.pushTermLines(['ADD BYOK API KEY IN CHAT FIRST!']);
+        }
+      });
+      return 'score';
     }
 
     if (bin === 'lock') {
@@ -5503,6 +5691,28 @@ export class RetroDeckOS implements ArcadeGameInstance {
               </Text>
             </View>
           </View>
+        ) : msg.isLivePersona ? (
+          /* Authentic Plain-Text Real SMS Bubble */
+          <View
+            style={[
+              styles.compStaff,
+              {
+                borderColor: fg,
+                alignItems: 'flex-start',
+                justifyContent: 'center',
+                paddingHorizontal: 10,
+                paddingVertical: 8,
+                gap: 6,
+              },
+            ]}
+          >
+            <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
+              FROM: {msg.sender}
+            </Text>
+            <Text style={[styles.smsBodyTxt, { color: fg, textAlign: 'left', fontSize: 10.5, lineHeight: 14 }]} numberOfLines={5}>
+              {msg.text}
+            </Text>
+          </View>
         ) : (
           /* Classic Nokia 3310 Picture Message Card */
           <View
@@ -5565,7 +5775,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ? this.smsBanner
             : (this.smsDeleteConfirm
                 ? 'PRESS [▼] AGAIN TO CONFIRM DELETE!'
-                : `[▲] NEW POSTCARD • [▼]/DEL DELETE • [A] AI`)}
+                : msg.isLivePersona
+                ? '[▲] POSTCARD • [▼]/DEL DEL • [A] REPLY'
+                : '[▲] POSTCARD • [▼]/DEL DEL • [A] AI')}
         </Text>
       </View>
     );
@@ -6031,6 +6243,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       `PALETTE: ${this.cb.getPaletteName()}`,
       `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
       `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
+      `LIVE AI SMS: ${this.liveAiSmsEnabled ? 'ON' : 'OFF'}`,
       'OPEN FULL CARTRIDGE VAULT',
       'REBOOT RETRODECK OS',
     ];
