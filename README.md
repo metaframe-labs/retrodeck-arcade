@@ -1,164 +1,65 @@
-# RetroDeck Arcade & RetroDeck OS v1.2 (Nokia 3310 Edition)
+# RetroDeck OS & Arcade
 
-**100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • 9-Provider BYOK AI • Live WAP 1.1 Browser • Real-Time Piezo Ringtone Synthesizer**
+**100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • 100 Hardware & LCD Themes • Live SomaFM Radio • 9-Provider BYOK AI**
 
-Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebViews, pure TypeScript deterministic 60 FPS engine running inside a 320×240 monochrome dot-matrix LCD screen, complete with a full **Nokia 3310 Operating System (`RetroDeck OS v1.2`)**, hot-swappable **Gamepad ↔ Communicator QWERTY Keyboard Deck**, **100 playable arcade cartridges**, **12 persistent hardware themes**, and a live in-app **Custom Game Studio** compiler.
+Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebViews, pure TypeScript deterministic 60 FPS engine running inside a 320×240 monochrome / phosphor dot-matrix LCD screen, complete with a full **Nokia 3310 Operating System (`RetroDeck OS`)**, a 3-mode hot-swappable **Gamepad (`PAD`) ↔ Nokia 3×4 Numeric (`NUM`) ↔ Communicator QWERTY (`KBD`)** deck, **100 playable 60 FPS cartridges**, **100 persistent full-hardware themes**, **live SomaFM streaming radio**, **★ Favorites** across both games and themes, and an in-app **Custom Game Studio** compiler.
 
 ---
 
-## 📱 RetroDeck OS v1.2 (Nokia 3310 Desktop Environment)
+## 📱 RetroDeck OS (Nokia 3310 Desktop Environment)
 
-Boot straight into an authentic **Nokia 3310 LCD Operating System** (`src/os/RetroDeckOS.tsx`) with a 12-app (4×3) icon grid, BIOS memory check, signal/battery status bar, operator logos (`NOKIA`, `TRKCELL`, `TELSIM`, `CYBER`, `RD-OS 1.2`), and full D-Pad + tactile QWERTY keyboard control:
+Boot straight into an authentic **Nokia 3310 LCD Operating System** (`src/os/RetroDeckOS.tsx`) with a 12-app (4×3) icon grid, BIOS memory check, signal/battery status bar, operator logos (`NOKIA`, `TRKCELL`, `TELSIM`, `CYBER`, `RD-OS 1.2`), and seamless D-Pad, 3×4 Numeric Keypad, or QWERTY keyboard control:
 
 | Icon | App | Description |
 | :--- | :--- | :--- |
-| 🎮 | **`GAMES`** | Browse and hot-boot all **100 built-in 60 FPS retro cartridges** with persistent high scores. |
+| 🎮 | **`GAMES`** | Browse and hot-boot all **100 built-in 60 FPS retro cartridges** with persistent high scores and **★ Favorites**. |
+| 📻 | **`RADIO`** | **Live SomaFM Streaming Radio** (`src/services/somaRadioService.ts`) — Streams **10 iconic SomaFM channels** (`Space Station`, `DEF CON Radio`, `Groove Salad`, `Vaporwaves`, `Secret Agent`, `Cliqhop IDM`, `Synphaera`, `Drone Zone`, `Lush`, `Suburbs of Goa`) with live *Now Playing* metadata, dynamic spectrum visualizer, independent volume control, and continuous background playback across the OS. |
 | 💬 | **`CHAT`** | **9-Provider BYOK AI Client** inside the monochrome LCD (`Groq`, `OpenAI`, `Anthropic Claude`, `Google Gemini`, `DeepSeek`, `Mistral`, `xAI Grok`, `OpenRouter`, `Together AI`). |
-| 🌐 | **`WAP`** | **Nokia WAP 1.1 Web Browser** — Connects to live HTTPS websites with a `Nokia3330/1.0 (RetroDeckOS WAP 1.1)` User-Agent, parses semantic HTML into 33-column monochrome WML cards, defaults to `https://www.metaframelabs.space/`, and includes quick bookmarks (`Hacker News`, `CNN Lite`, `Wikipedia Nokia 3310`, `GitHub`). |
+| 🌐 | **`WAP`** | **Nokia WAP 1.1 Web Browser** — Connects to live HTTPS websites with a `Nokia3330/1.0 (RetroDeckOS WAP 1.1)` User-Agent, parses semantic HTML into 33-column monochrome WML cards, defaults to `https://www.metaframelabs.space/`, and includes quick bookmarks. |
 | 🎵 | **`MUSIC`** | **Nokia 3310 Ringtone Composer & Jukebox** — Real-time square-wave piezo buzzer synthesizer supporting Nokia Composer notation (`8e2 8d2 4f#1 4g#1...`), **16 iconic ringtones**, live note composing, and one-tap **`★ RING`** assignment. |
-| 📞 | **`PHONE`** | **Nokia 3310 Dialer & Secret Service Codes** — Synthesized DTMF keypad tones, Incoming Call simulator (`RING`), and authentic Nokia service codes: `*#0000#` (Firmware Version), `*#06#` (IMEI Serial), `*#92702689#` (`*#WAR0ANTY#` 5-page Serial / Made Date / Purchasing / Repaired / Live Life Timer menu), `*#7780#`, and `*#7370#`. |
-| ✉️ | **`SMS`** | **Nokia 3310 Picture Messages (`Pic-SMS`) + Live AI Replies** — 12 iconic 72×20 monochrome pixel-art banners (`COFFEE`, `SMILE`, `COOL`, `WINK`, `HEART`, `SAD`, `CAT`, `ALIEN`, `SKULL`, `MUSIC`, `CAKE`, `SNAKE`). Press **`[A]`** to transmit a Picture SMS to Groq/BYOK AI and receive an AI-written 3310 SMS reply with a context-matched pixel banner and Morse `"S-M-S"` (`... -- ...`) alert tone! |
-| 🔔 | **`PROFILE`** | **Nokia Profiles, Ringtones & Keyguard** — Switch between `GENERAL`, `SILENT`, `MEETING`, and `OUTDOOR` profiles, preview and assign from **16 Ringtones** and **5 SMS Alert Tones**, change Operator Logos, toggle **LCD Torch Invert**, or activate the **Keyguard (`*` to unlock)** with a floating digital clock screensaver. |
-| 🧮 | **`CALC`** | **3310 Calculator & Currency Converter (`FX`)** — Full arithmetic calculator plus instant currency conversion (`USD ↔ EUR`, `USD ↔ TRY`). |
-| ⏱️ | **`CLOCK`** | **Stopwatch & Countdown Timer** — Precision lap stopwatch and programmable countdown timer that triggers your active Nokia 3310 ringtone when time is up. |
+| 📞 | **`PHONE`** | **Nokia 3310 Dialer & Secret Service Codes** — Live DTMF keypad tones, clean large-digit view in `NUM` mode (or 4×4 grid in `PAD` mode), Incoming Call simulator (`RING`), and authentic Nokia codes: `*#0000#`, `*#06#`, `*#92702689#` (5-page `*#WAR0ANTY#` menu), `*#7780#`, `*#7370#`. |
+| ✉️ | **`SMS`** | **Nokia 3310 Picture Messages (`Pic-SMS`) + Live AI Replies** — 12 iconic 72×20 monochrome pixel-art banners (`COFFEE`, `SMILE`, `COOL`, `WINK`, `HEART`, `SAD`, `CAT`, `ALIEN`, `SKULL`, `MUSIC`, `CAKE`, `SNAKE`) + AI Pic-SMS replies with Morse `"S-M-S"` (`... -- ...`) alert tone. |
+| 🔔 | **`PROFILE`** | **Nokia Profiles, Key Sounds, Master Volume & Keyguard** — Switch profiles (`GENERAL`, `SILENT`, `MEETING`, `OUTDOOR`), pick **16 Ringtones**, **5 SMS Tones**, **6 Keypad Sound Styles** (`RETRO DEFAULT`, `MECH THOCK`, `GB BLIP`, `3310 SOFT`, `SOFT POP`, `MUTE KEYS`), adjust **0–100% Master Volume**, invert LCD torch, or engage the **Keyguard (`[A]` then `[▲]` to unlock)** with floating **Analog / Digital Clock** screensaver. |
+| 🧮 | **`CALC`** | **3310 Pocket Calculator** — Precision arithmetic (`+`, `-`, `×`, `÷`, `.`, `DEL`, `C`, `=`) with a touchable single-row operator bar and physical `NUM` keypad integration. |
+| ⏱️ | **`CLOCK`** | **Analog & Digital Watch + Stopwatch + Timer** — 3-tab timepiece (`1.CLOCK`, `2.STOPWATCH`, `3.TIMER`) featuring a live rotating circular **Analog Clock** dial (or **Digital** watch), lap stopwatch, and countdown alarm. |
 | 🖌️ | **`PAINT`** | **16×10 Monochrome Pixel Art Studio** — Draw and toggle dot-matrix pixel sprites directly on the LCD. |
-| 💻 | **`SHELL`** | **Interactive Unix / RetroDeck Shell (`rdsh`)** — Real CLI terminal with a pixel-art handheld console `neofetch` emblem and commands: `help`, `neofetch`, `ls`, `cd`, `pwd`, `cat`, `top`, `free`, `uname`, `whoami`, `date`, `uptime`, `open <game>`, `randgame`, `play <song>`, `ringtones`, `ringtone <name>`, `stop`, `wap <url>`, `curl <url>`, `ai <prompt>`, `stats`, `theme`, `lock`, `clear`, `reboot`. |
-| ⚙️ | **`SETUP`** | Cycle hardware color palettes, CRT scanlines, audio mute, random cartridge boot, or launch the **Custom Game Studio (`DEV CART`)**. |
+| ⚙️ | **`SETUP`** | Cycle hardware palettes, toggle **CRT Scanlines**, switch **Clock Face (`ANALOG` / `DIGITAL`)**, open **Cartridge Vault**, or reboot RetroDeck OS. Built-in **`SHELL` (`rdsh`)** CLI is also accessible via desktop / OS. |
 
 ---
 
-## 🔔 16 Synthesized Nokia 3310 Ringtones & 5 SMS Tones
+## 🎮 3-Mode Hardware Deck (`PAD` ↔ `NUM` ↔ `KBD`)
 
-Zero external audio files — every sound effect, keypad beep, and melody is mathematically synthesized on-the-fly into 8-bit 22,050 Hz PCM RIFF WAV buffers (`src/audio/RetroAudioEngine.ts`):
+Switch instantly between three tactile hardware bottom decks in `App.tsx`:
+1. **`PAD` (`RetroKeypad`):** Classic 360° D-pad + `A` / `B` arcade controls with crisp haptic feedback and edge-debounced menu navigation.
+2. **`NUM` (`RetroNumericDeck`):** Authentic Nokia 3×4 numeric matrix (`0–9`, `*`, `#`) topped with a `[ ◀ ▲ ▼ ▶ ]` Nokia Navi-Row plus `DEL`, `BACK`, `OK`, and `KBD` — interactively dials Phone numbers with DTMF tones, enters Calculator digits, tunes SomaFM presets (`1–0`), and navigates every OS screen.
+3. **`KBD` (`RetroKeyboardDeck`):** Full QWERTY communicator deck with native paste bar for AI Chat, BYOK keys, WAP URLs, and Terminal commands.
 
-- **16 Ringtones:** `NOKIA TUNE` (*Grande Valse*), `KICK RING 3310`, `HURDY GURDY`, `ESPAGNOLE`, `BADINERIE BACH`, `VALKYRIES 3310`, `WILLIAM TELL`, `CITY BIRD 3310`, `GROOVY BLUE`, `TETRIS 3310`, `MARIO BROS`, `STAR WARS`, `AXEL F 3310`, `MISSION 3310`, `PAC-MAN`, and `CUSTOM 3310`.
-- **5 SMS Alert Tones:** `SPECIAL (MORSE SMS ... -- ...)`, `STANDARD BEEP 2X`, `ASCENDING ALERT`, `COIN DROP`, `DOUBLE CHIME`.
+---
+
+## 🎨 100 Hardware & LCD Themes (`Theme Studio`)
+
+All **100 unique themes** (`src/theme/palettes.ts` & `src/components/ThemePickerModal.tsx`) theme both the dot-matrix LCD **and** the entire handheld console hardware (chassis, deck, bezel, LEDs, toolbar, tactile keys, and Custom Game Studio code editor), persisted via `AsyncStorage` alongside **★ Favorites** (`★ FAVS`):
+
+- **Categories:** `HANDHELD`, `CRT`, `NEON`, `STUDIO`, `PAPER`, plus `★ FAVS` & `ALL`.
+- **Highlights:** `ORIGINAL GB`, `NOKIA 3310`, `PLAYDATE CRANK`, `FAMICOM 1983`, `ATOMIC PURPLE`, `ANALOGUE GOLD`, `CASIO G-SHOCK`, `SEGA VMU`, `GAME & WATCH 80`, `ATARI LYNX 89`, `SEGA GAME GEAR`, `PALM PILOT 97`, `BLACKBERRY 9000`, `THINKPAD IBM`, `PICO-8 FANTASY`, `COMMODORE 64`, `AMIGA 500 1.3`, `AMSTRAD CPC 464`, `NeXT CUBE 1988`, `SHARP X68000`, `OP-1 SYNTH`, `ROLAND TR-808`, `AKAI MPC 3000`, `McINTOSH TUBE`, `NIXIE IN-18`, `COCKPIT EFIS`, `SONAR U-BOAT`, `GRUVBOX WARM`, `TOKYO NIGHT`, `CATPPUCCIN MOCHA`, `SAKURA PAPER`, `E-INK KINDLE`, `MACINTOSH 1984`, `CYANOTYPE 1842`, `POLAROID SX-70`, and more — **100 unique themes total**.
+
+---
+
+## 🔔 8-Bit Synthesized Audio Engine (`src/audio/RetroAudioEngine.ts`)
+
+Zero bundled audio assets — every sound effect, keypad click, DTMF tone, and Nokia ringtone is synthesized in real time into 8-bit 22,050 Hz PCM RIFF WAV buffers with hardware-reliable logarithmic PCM amplitude scaling (`0–100%` Master Volume):
+
+- **6 Key Sound Styles:** `RETRO DEFAULT`, `MECH THOCK`, `GB BLIP`, `3310 SOFT`, `SOFT POP`, `MUTE KEYS`
+- **16 Nokia Ringtones & 5 SMS Alert Tones**
 
 ---
 
 ## 🕹️ 100 Built-In 60 FPS Retro Arcade Cartridges
 
-All 100 cartridges (`src/arcade/games/*.tsx` & `src/arcade/cartridges.ts`) run natively at 60 FPS with zero canvas or WebView dependencies:
+All 100 cartridges (`src/arcade/games/*.tsx` & `src/arcade/cartridges.ts`) feature a unified **Cartridge Ready** launch screen, global **Game Over** (`[A] RESTART` / `[B] EXIT OS`) overlay, virtualized **Cartridge Vault (`FlatList` + `★ FAVS`)**, persistent high scores, and pixel-art sprites (including Nokia 3310 pixel-art spaceships & multi-level boss progression in **Space Impact Cyber**):
 
-1. **Nokia 3310 Snake DX** (`snake`)
-2. **Nokia Bounce DX** (`bounce`)
-3. **Nokia Rapid Roll** (`rapidroll`)
-4. **Space Impact Cyber** (`spaceimpact`)
-5. **Cyber-Breakout DX** (`breakout`)
-6. **Cyber-Pong 1972** (`pong`)
-7. **Tetri-Matrix DX** (`tetris`)
-8. **Galactic Invaders** (`invaders`)
-9. **Cyber-Hopper (Frogger)** (`frogger`)
-10. **Flappy Vector** (`flappy`)
-11. **Cyber-Runner 2099** (`runner`)
-12. **Asteroid Sturm** (`asteroids`)
-13. **2048 Logic Grid** (`grid2048`)
-14. **Mine-Sweeper Matrix** (`minesweeper`)
-15. **Pac-Maze Cyber** (`pacman`)
-16. **Turbo Outrun 84** (`racer`)
-17. **Helicopter Cave** (`heli`)
-18. **Tron Lightcycles** (`tron`)
-19. **Memory Matrix** (`memory`)
-20. **Whack-A-Bot** (`whack`)
-21. **Lunar Lander 79** (`lander`)
-22. **Centipede Matrix** (`centipede`)
-23. **Doodle Jump DX** (`doodle`)
-24. **Missile Command** (`missile`)
-25. **Simon Echo** (`simon`)
-26. **Sokoban Warehouse** (`sokoban`)
-27. **Connect-4 Matrix** (`connect4`)
-28. **Duck Hunt Target** (`duckhunt`)
-29. **Tower Stacker** (`stacker`)
-30. **Lights Out Grid** (`lightsout`)
-31. **Bomber-Grid DX** (`bomber`)
-32. **Pinball Matrix** (`pinball`)
-33. **15-Slide Puzzle** (`slide15`)
-34. **Tic-Tac-Toe AI** (`tictactoe`)
-35. **Space Defender** (`defender`)
-36. **Gravity Guy Runner** (`gravity`)
-37. **Fruit Catcher** (`catcher`)
-38. **Mastermind Cipher** (`mastermind`)
-39. **Penalty Shootout** (`penalty`)
-40. **Rogue Dungeon** (`dungeon`)
-41. **Qix Territory** (`qix`)
-42. **Balloon Fight DX** (`balloon`)
-43. **Elevator Action** (`elevator`)
-44. **Dig Dug Deep** (`digdug`)
-45. **Arkanoid Boss** (`arkboss`)
-46. **Timber Chop** (`timber`)
-47. **Bubble Shooter** (`bubble`)
-48. **Rhythm Beat 8-Bit** (`rhythm`)
-49. **Blackjack 21** (`blackjack`)
-50. **Wolf3D Raycaster** (`raycast`)
-51. **Galaga Swarm** (`galaga`)
-52. **Q*bert Pyramid** (`qbert`)
-53. **Boulder Dash** (`boulder`)
-54. **Paperboy Courier** (`paperboy`)
-55. **Tempest Tube** (`tempest`)
-56. **Joust Knights** (`joust`)
-57. **Spy Hunter Pursuit** (`spyhunter`)
-58. **BurgerTime Chef** (`burgertime`)
-59. **Tapper Saloon** (`tapper`)
-60. **Punch-Out!! Boxing** (`punchout`)
-61. **Sudoku 4×4 Matrix** (`sudoku`)
-62. **Battleship Radar** (`battleship`)
-63. **Reversi / Othello** (`reversi`)
-64. **Checkers Draughts** (`checkers`)
-65. **Hangman Terminal** (`hangman`)
-66. **Video Poker Jacks+** (`videopoker`)
-67. **Slot Machine 777** (`slots`)
-68. **SkiFree Slalom** (`skifree`)
-69. **4-Lane Air Hockey** (`airhockey`)
-70. **Scorched Artillery** (`artillery`)
-71. **Tower of Hanoi** (`hanoi`)
-72. **Nonogram Picross** (`nonogram`)
-73. **SameGame Collapse** (`samegame`)
-74. **Peg Solitaire** (`pegsolitaire`)
-75. **100m Sprint Track** (`trackfield`)
-76. **Retro Skeet Shoot** (`skeet`)
-77. **Submarine Depth Charge** (`subhunt`)
-78. **Snake vs Blocks** (`snakeblocks`)
-79. **2-Car Lane Switch** (`twocars`)
-80. **Conway's Game of Life** (`gameoflife`)
-81. **Pipe Connect Plumber** (`pipeconnect`)
-82. **Sokoban Ice Puzzle** (`icepuzzle`)
-83. **Wordle 5-Letter** (`wordle`)
-84. **Bulls & Cows** (`bullscows`)
-85. **Memory Match Pairs** (`matchpairs`)
-86. **Mini Golf 9-Hole** (`minigolf`)
-87. **8-Bit Bowling** (`bowling`)
-88. **Retro Darts 301** (`darts`)
-89. **Archery Target Wind** (`archery`)
-90. **Retro Fishing Pond** (`fishing`)
-91. **Pocket Chess AI** (`chess`)
-92. **Backgammon Duel** (`backgammon`)
-93. **Mahjong Solitaire** (`mahjong`)
-94. **Klondike Solitaire** (`solitaire`)
-95. **Dominoes Chain** (`dominoes`)
-96. **Ludo / Pachisi** (`ludo`)
-97. **Snakes & Ladders** (`snakesladders`)
-98. **Yahtzee Dice Poker** (`yahtzee`)
-99. ** Nim Strategy Stones** (`nim`)
-100. **Mancala Kalah** (`mancala`)
-
----
-
-## 🎨 12 Persistent Retro Hardware Themes
-
-All color palettes (`src/theme/palettes.ts`) and CRT scanline settings persist automatically via `AsyncStorage` across the OS desktop and all 100 games:
-
-1. **Nokia 3310 LCD** (`#94B07C` / `#172616`)
-2. **Phosphor Green CRT** (`#00FFAA` / `#040B08`)
-3. **Amber Terminal CRT** (`#FFB000` / `#100900`)
-4. **Game Boy DMG-01** (`#8BAC0F` / `#0F380F`)
-5. **Virtual Boy Red** (`#FF003C` / `#0D0104`)
-6. **OLED Pure Mono** (`#FFFFFF` / `#000000`)
-7. **Nokia 3510i Ice Blue** (`#C8ECFF` / `#081C30`)
-8. **Casio Illuminator Cyan** (`#00F5D4` / `#031816`)
-9. **Commodore 64 Blue** (`#A5A5FF` / `#3535C0`)
-10. **IBM 5151 Paper White** (`#E6E1D6` / `#1E1D1A`)
-11. **Synthwave 1984 Magenta** (`#FF55FF` / `#120424`)
-12. **Solarized Dark** (`#93A1A1` / `#002B36`)
+- **Nokia Classics & Retro Favorites:** `Nokia 3310 Snake DX`, `Nokia Bounce DX`, `Nokia Rapid Roll`, `Space Impact Cyber`, `Tetri-Matrix DX`, `Pac-Maze Cyber`, `Galactic Invaders`, `Breakout DX`, `Asteroids`, `Lunar Lander 79`, `Frogger`, `Flappy Vector`, `Wolf3D Raycaster`, `Tron Lightcycles`, `Rogue Dungeon`, `Pocket Chess AI`, `Nonogram Picross`, `Wordle 5-Letter`, `2048 Logic Grid`, `Mine-Sweeper Matrix`, and **80 more**!
+- **Custom Game Studio (`DevCartModal`):** Write and compile custom retro cartridges live inside the app using theme-synced syntax coloring and templates.
 
 ---
 
