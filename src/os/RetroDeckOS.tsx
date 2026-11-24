@@ -928,7 +928,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.smsList.unshift({
       sender: 'RETRODECK-VIP',
       title: 'PRO ACTIVATED!',
-      text: `CONGRATS! RETRODECK PRO (${planName.toUpperCase()}) IS NOW ACTIVE! ALL 100 CARTS, DEV VAULT & UNLIMITED AI UNLOCKED!`,
+      text: `CONGRATS! RETRODECK PRO (${planName.toUpperCase()}) IS NOW ACTIVE! ALL 100 CARTS, DEV VAULT & PRO THEMES UNLOCKED!`,
       artKey: 'COOL',
     });
     if (this.smsList.length > 10) this.smsList.pop();
@@ -4978,7 +4978,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           >
             {isPro
               ? (expiration ? `PRO VALID UNTIL: ${new Date(expiration).toLocaleDateString()}` : 'LIFETIME ALL-ACCESS UNLOCKED')
-              : 'ALL 100 CARTS • UNLIMITED AI • DEV VAULT'}
+              : 'ALL 100 CARTS • DEV VAULT • PRO THEMES'}
           </Text>
         </View>
 
