@@ -2585,6 +2585,162 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.chatScroll = Math.max(0, this.chatLines.length - 6);
   }
 
+  private executeAiActions(rawReply: string): { displayText: string; actionLogs: string[] } {
+    const actionLogs: string[] = [];
+    const regex = /\[\[ACTION:([A-Z_]+)(?:\|([^\]]*))?\]\]/gi;
+    const matches = Array.from(rawReply.matchAll(regex));
+    const displayText = rawReply.replace(regex, '').replace(/\n{3,}/g, '\n\n').trim();
+
+    const isPro = this.cb.getIsPro?.() ?? false;
+    const carts = this.cb.getCartridges();
+
+    for (const m of matches) {
+      const cmd = (m[1] || '').toUpperCase();
+      const arg = (m[2] || '').trim();
+
+      if (cmd === 'OPEN_APP') {
+        const target = arg.toLowerCase() as OsAppId;
+        const validApps: OsAppId[] = [
+          'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'sms',
+          'profiles', 'calc', 'clock', 'paint', 'weather', 'notes',
+          'stats', 'term', 'setup', 'themes', 'pro',
+        ];
+        if (validApps.includes(target)) {
+          actionLogs.push(`OPENING ${target.toUpperCase()}...`);
+          setTimeout(() => {
+            this.app = target;
+            if (target === 'radio') somaRadioService.fetchNowPlaying();
+            if (target === 'themes') {
+              const curId = this.cb.getPaletteId?.();
+              const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
+              this.themeIdx = idx >= 0 ? idx : 0;
+            }
+            this.cb.onRequestKeyboard?.(false);
+            this.cb.onPlaySound?.('powerup');
+          }, 550);
+        }
+      } else if (cmd === 'PLAY_GAME') {
+        const q = arg.toLowerCase();
+        const found = carts.find(
+          (c) => c.id.toLowerCase().includes(q) || c.title.toLowerCase().includes(q)
+        );
+        if (found) {
+          if (isCartridgeProLocked(found.id, isPro)) {
+            actionLogs.push(`LOCKED: ${found.title} (PRO)`);
+            setTimeout(() => {
+              this.openProScreen('PRO REQUIRED FOR THIS GAME!');
+              this.cb.onPlaySound?.('die');
+            }, 550);
+          } else {
+            actionLogs.push(`LAUNCHING ${found.title}`);
+            setTimeout(() => {
+              this.cb.onRequestKeyboard?.(false);
+              this.cb.onLaunchGame(found);
+            }, 600);
+          }
+        }
+      } else if (cmd === 'SET_THEME') {
+        const q = arg.toLowerCase().replace(/\s+/g, '_');
+        const foundId = PALETTE_ORDER.find((id) => {
+          const p = RETRO_PALETTES[id];
+          return id === q || id.includes(q) || p.name.toLowerCase().includes(arg.toLowerCase());
+        });
+        if (foundId) {
+          if (isPaletteProLocked(foundId, isPro)) {
+            actionLogs.push(`THEME ${RETRO_PALETTES[foundId].name} REQUIRES PRO`);
+            setTimeout(() => {
+              this.openProScreen('PRO REQUIRED FOR THIS THEME!');
+              this.cb.onPlaySound?.('die');
+            }, 550);
+          } else {
+            this.cb.onSelectPalette?.(foundId);
+            actionLogs.push(`THEME -> ${RETRO_PALETTES[foundId].name}`);
+          }
+        }
+      } else if (cmd === 'CYCLE_THEME') {
+        this.cb.onCyclePalette();
+        actionLogs.push(`THEME -> ${this.cb.getPaletteName()}`);
+      } else if (cmd === 'RADIO') {
+        const sub = arg.toUpperCase();
+        if (sub === 'PLAY') {
+          somaRadioService.playCurrentChannel();
+          actionLogs.push('RADIO: PLAYING');
+        } else if (sub === 'STOP') {
+          somaRadioService.stop();
+          actionLogs.push('RADIO: STOPPED');
+        } else if (sub === 'NEXT') {
+          somaRadioService.nextChannel();
+          somaRadioService.playCurrentChannel();
+          actionLogs.push(`RADIO -> ${somaRadioService.getChannel().name}`);
+        } else if (sub === 'PREV') {
+          somaRadioService.prevChannel();
+          somaRadioService.playCurrentChannel();
+          actionLogs.push(`RADIO -> ${somaRadioService.getChannel().name}`);
+        }
+      } else if (cmd === 'WEATHER') {
+        const city = arg || this.weatherQuery;
+        this.weatherQuery = city;
+        AsyncStorage.setItem(WEATHER_CITY_STORAGE_KEY, city).catch(() => {});
+        this.fetchWeather(city);
+        actionLogs.push(`WEATHER -> ${city.toUpperCase()}`);
+        setTimeout(() => {
+          this.app = 'weather';
+          this.cb.onRequestKeyboard?.(false);
+        }, 550);
+      } else if (cmd === 'ADD_NOTE' && arg) {
+        const d = new Date();
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        this.notes = [{ id: String(Date.now()), text: arg, ts: `${hh}:${mm}` }, ...this.notes.slice(0, 29)];
+        this.noteIdx = 0;
+        this.saveNotes();
+        actionLogs.push(`NOTE SAVED!`);
+      } else if (cmd === 'SCANLINES') {
+        const sub = arg.toUpperCase();
+        const cur = this.cb.getScanlines();
+        if (sub === 'TOGGLE' || (sub === 'ON' && !cur) || (sub === 'OFF' && cur)) {
+          this.cb.onToggleScanlines();
+          actionLogs.push(`SCANLINES: ${!cur ? 'ON' : 'OFF'}`);
+        }
+      } else if (cmd === 'MUTE') {
+        const mute = arg.toUpperCase() === 'ON';
+        RetroAudioEngine.setMuted(mute);
+        actionLogs.push(`AUDIO: ${mute ? 'MUTED' : 'UNMUTED'}`);
+      } else if (cmd === 'PLAY_SONG') {
+        const q = arg.toLowerCase();
+        const song = this.songs.find((s) => s.title.toLowerCase().includes(q)) || this.songs[0];
+        if (song && song.notes) {
+          RetroAudioEngine.playNokiaMelody(song.notes, song.bpm);
+          actionLogs.push(`PLAYING ${song.title.trim()}`);
+        }
+      } else if (cmd === 'STOP_AUDIO') {
+        this.melodyPlaying = false;
+        RetroAudioEngine.stopNokiaMelody();
+        somaRadioService.stop();
+        actionLogs.push('AUDIO STOPPED');
+      } else if (cmd === 'LIVE_SMS') {
+        this.triggerLivePersonaSms();
+        actionLogs.push('INCOMING SMS TRIGGERED');
+      } else if (cmd === 'LOCK') {
+        actionLogs.push('LOCKING KEYGUARD...');
+        setTimeout(() => {
+          this.keyLocked = true;
+          this.unlockStage = false;
+          this.cb.onRequestKeyboard?.(false);
+        }, 550);
+      } else if (cmd === 'REBOOT') {
+        actionLogs.push('REBOOTING OS...');
+        setTimeout(() => {
+          this.app = 'boot';
+          this.bootTimer = 0;
+          this.cb.onRequestKeyboard?.(false);
+        }, 600);
+      }
+    }
+
+    return { displayText, actionLogs };
+  }
+
   private async sendAiMessage() {
     const msg = this.aiPrompt.trim();
     if (!msg || this.aiLoading) return;
@@ -2600,10 +2756,41 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.cb.onPlaySound?.('shoot');
 
     try {
-      const reply = await callBYOKAIChat(this.chatHistory, this.byokConfig);
-      const clean = reply.trim() || '(EMPTY)';
-      this.chatHistory.push({ role: 'assistant', content: clean });
-      this.appendChatLines('AI>', clean);
+      const sysGuide =
+        `Sen RetroDeck OS el konsolunun dahili AI asistanisin. Kullanicinin cihazini dogrudan kontrol edebilirsin.\n` +
+        `Mevcut durum: Tema=${this.cb.getPaletteName()}, Pro=${this.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${this.cb.getScanlines() ? 'ON' : 'OFF'}.\n` +
+        `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
+        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
+        `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
+        `[[ACTION:CYCLE_THEME]]\n` +
+        `[[ACTION:RADIO|PLAY|STOP|NEXT|PREV]]\n` +
+        `[[ACTION:WEATHER|<sehir>]]\n` +
+        `[[ACTION:ADD_NOTE|<not metni>]]\n` +
+        `[[ACTION:SCANLINES|ON|OFF|TOGGLE]]\n` +
+        `[[ACTION:MUTE|ON|OFF]]\n` +
+        `[[ACTION:PLAY_SONG|<melodi adi>]]\n` +
+        `[[ACTION:STOP_AUDIO]]\n` +
+        `[[ACTION:LIVE_SMS]]\n` +
+        `[[ACTION:LOCK]]\n` +
+        `[[ACTION:REBOOT]]\n` +
+        `Kisa, net ve yardimsever cevap ver. Islem gerekmiyorsa hic ACTION etiketi ekleme.`;
+
+      const payload: BYOKChatMessage[] = [
+        { role: 'user', content: sysGuide },
+        ...this.chatHistory,
+      ];
+
+      const reply = await callBYOKAIChat(payload, this.byokConfig);
+      const rawClean = reply.trim() || '(EMPTY)';
+      const { displayText, actionLogs } = this.executeAiActions(rawClean);
+      const shown = displayText || (actionLogs.length > 0 ? 'DONE!' : '(EMPTY)');
+
+      this.chatHistory.push({ role: 'assistant', content: shown });
+      this.appendChatLines('AI>', shown);
+      for (const log of actionLogs) {
+        this.appendChatLines('OS>', log);
+      }
       this.aiStatus = 'OK';
       this.cb.onPlaySound?.('powerup');
     } catch (err: any) {
