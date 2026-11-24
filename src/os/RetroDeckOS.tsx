@@ -920,6 +920,7 @@ interface NokiaPicSms {
 
 const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'istanbul', title: 'ISTANBUL', image: require('../../assets/postcards/istanbul.jpg') },
+  { id: 'cappadocia', title: 'CAPPADOCIA', image: require('../../assets/postcards/cappadocia.jpg') },
   { id: 'paris', title: 'PARIS', image: require('../../assets/postcards/paris.jpg') },
   { id: 'tokyo', title: 'TOKYO NIGHT', image: require('../../assets/postcards/tokyo.jpg') },
   { id: 'venice', title: 'VENICE', image: require('../../assets/postcards/venice.jpg') },
