@@ -861,7 +861,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const bg = this.torchInvert ? palette.pixelOn : palette.screenBg;
 
     if (this.app === 'boot') {
-      const pct = Math.min(100, Math.floor((this.bootTimer / 1.4) * 100));
+      const pct = Math.min(100, Math.floor((this.bootTimer / 3.2) * 100));
       return (
         <View style={[styles.container, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={[styles.bootLogo, { color: fg }]}>RETRODECK OS</Text>

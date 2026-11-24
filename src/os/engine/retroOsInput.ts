@@ -475,7 +475,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   // Boot sequence
   if (os.app === 'boot') {
     os.bootTimer += dt;
-    if (os.bootTimer >= 1.5 || pressA || pressB) {
+    if (os.bootTimer >= 3.5 || pressA || pressB) {
       os.app = 'desktop';
       return 'powerup';
     }
