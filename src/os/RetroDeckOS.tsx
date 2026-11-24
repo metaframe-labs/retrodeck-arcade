@@ -507,7 +507,23 @@ const DIAL_KEYS = [
 ];
 
 const NOKIA_PROFILES = ['GENERAL', 'SILENT', 'MEETING', 'OUTDOOR'];
-const NOKIA_OPERATORS = ['NOKIA', 'TRKCELL', 'TELSIM', 'CYBER', 'RD-OS 1.2'];
+const NOKIA_OPERATORS = [
+  'RETRODECK',
+  'AT&T',
+  'T-MOBILE',
+  'VERIZON',
+  'VODAFONE',
+  'ORANGE',
+  'DOCOMO',
+  'SOFTBANK',
+  'O2 UK',
+  'TELEKOM',
+  'SWISSCOM',
+  'TRKCELL',
+  'TELSIM',
+  'ARIA',
+  'CYBERNET',
+];
 
 interface NokiaSong {
   title: string;
@@ -914,16 +930,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public getCurrentTitle(): string {
-    if (this.keyLocked) return '3310 KEYGUARD';
+    if (this.keyLocked) return 'RD-OS KEYGUARD';
     if (this.app === 'boot') return 'BIOS BOOT';
     if (this.app === 'desktop') return 'RETRODECK OS';
     if (this.app === 'radio') {
       const ch = somaRadioService.getChannel();
       return `FM ${ch.freq} // ${ch.name}`;
     }
-    if (this.app === 'synth') return '3310 COMPOSER';
-    if (this.app === 'sms') return '3310 PIC-SMS';
-    if (this.app === 'wap') return 'NOKIA WAP 1.1';
+    if (this.app === 'synth') return 'RD COMPOSER';
+    if (this.app === 'sms') return 'RD PIC-SMS';
+    if (this.app === 'wap') return 'RETRO WAP 1.1';
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -1100,7 +1116,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (k === 'RING') {
       const activeRing = this.songs[this.ringtoneIdx] || this.songs[0];
       this.callState = 'ringing';
-      this.callTitle = 'NOKIA 3310 CALLING';
+      this.callTitle = 'RETRODECK CALLING';
       this.callSub = `♪ ${activeRing.title.trim()}`;
       RetroAudioEngine.playNokiaMelody(activeRing.notes, activeRing.bpm);
       return null;
@@ -2706,7 +2722,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 {this.renderAnalogDial(fg, 76)}
                 <View style={{ alignItems: 'flex-start' }}>
                   <Text style={[styles.swLbl, { color: fg }]}>
-                    {NOKIA_OPERATORS[this.operatorIdx]} // 3310
+                    {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
                   </Text>
                   <Text style={[styles.swTime, { color: fg, fontSize: 16, marginVertical: 2 }]}>
                     {hh}:{mm}:{ss}
@@ -2719,7 +2735,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
             ) : (
               <View style={[styles.swBox, { borderColor: fg, paddingHorizontal: 22, paddingVertical: 10 }]}>
                 <Text style={[styles.swLbl, { color: fg }]}>
-                  {NOKIA_OPERATORS[this.operatorIdx]} // 3310
+                  {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
                 </Text>
                 <Text style={[styles.clockBig, { color: fg }]}>
                   {hh}:{mm}:{ss}
@@ -3170,7 +3186,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={styles.calcWrap}>
           <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]}>NOKIA CALC</Text>
+            <Text style={[styles.compTitle, { color: fg }]}>RETRODECK CALC</Text>
             <Text style={[styles.compBpm, { color: fg }]}>
               {this.calcOp ? `[OP: ${this.calcOp}]` : '[NUM PAD]'}
             </Text>
@@ -3511,7 +3527,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 ? '((( INCOMING CALL )))'
                 : this.callState === 'connected'
                 ? `CONNECTED 00:${String(Math.floor(this.callTimer)).padStart(2, '0')}`
-                : 'NOKIA 3310 SERVICE'}
+                : 'RETRODECK SERVICE'}
             </Text>
             <Text style={[styles.calcNum, { color: fg, textAlign: 'center' }]}>
               {this.callTitle}
@@ -3534,7 +3550,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       return (
         <View style={styles.calcWrap}>
           <View style={styles.compHeader}>
-            <Text style={[styles.compTitle, { color: fg }]}>NOKIA 3310 DIALER</Text>
+            <Text style={[styles.compTitle, { color: fg }]}>RETRODECK DIALER</Text>
             <Text style={[styles.compBpm, { color: fg }]}>[NUM PAD]</Text>
           </View>
           <View
@@ -3685,7 +3701,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     ];
     return (
       <View style={styles.listWrap}>
-        <Text style={[styles.subHeader, { color: fg }]}>3310 PROFILES & AUDIO</Text>
+        <Text style={[styles.subHeader, { color: fg }]}>PROFILES & AUDIO</Text>
         {rows.map((label, i) => {
           const sel = i === this.profRow;
           return (
