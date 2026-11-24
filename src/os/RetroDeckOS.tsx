@@ -5,7 +5,7 @@ import * as Battery from 'expo-battery';
 import { Ionicons } from '@expo/vector-icons';
 
 const CLOCK_FACE_STORAGE_KEY = '@retrodeck8_clock_face_v1';
-const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v1';
+const WEATHER_CITY_STORAGE_KEY = '@retrodeck8_weather_city_v2';
 const NOTES_STORAGE_KEY = '@retrodeck8_notes_v1';
 import {
   ArcadeCartridgeDef,
@@ -160,9 +160,10 @@ const DESKTOP_ICONS: DesktopIcon[] = [
 ];
 
 const WEATHER_CITIES = [
+  'Palo Alto',
+  'Mountain View',
   'Istanbul',
   'Ankara',
-  'Izmir',
   'London',
   'Tokyo',
   'New York',
@@ -1017,12 +1018,13 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Live Weather state (Open-Meteo, zero API key required)
   private weatherCityIdx = 0;
-  private weatherQuery = 'Istanbul';
+  private weatherQuery = 'Palo Alto';
   private weatherLoading = false;
   private weatherFetchedOnce = false;
   private weatherError = '';
   private weatherData: {
     city: string;
+    region: string;
     country: string;
     tempC: number;
     feelsC: number;
@@ -1785,7 +1787,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private async fetchWeather(rawCity: string) {
     if (this.weatherLoading) return;
-    const city = rawCity.trim() || 'Istanbul';
+    let city = rawCity.trim() || 'Palo Alto';
+    if (/^(silicon valley|silikon vadisi)$/i.test(city)) {
+      city = 'Palo Alto';
+    }
     this.weatherQuery = city;
     this.weatherLoading = true;
     this.weatherError = '';
@@ -1824,8 +1829,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
         });
       }
 
+      const regionLabel =
+        String(loc.admin1 || '').toLowerCase() === 'california' ? 'CA' : '';
+
       this.weatherData = {
         city: String(loc.name || city).toUpperCase(),
+        region: regionLabel,
         country: String(loc.country_code || '').toUpperCase(),
         tempC: Math.round(cur.temperature_2m),
         feelsC: Math.round(cur.apparent_temperature),
@@ -4282,7 +4291,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
       <View style={styles.listWrap}>
         <View style={[styles.compHeader, { marginBottom: 4 }]}>
           <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
-            {data ? `◀ ${data.city}${data.country ? `, ${data.country}` : ''} ▶` : `◀ ${this.weatherQuery.toUpperCase()} ▶`}
+            {data
+              ? `◀ ${data.city}${data.region ? `, ${data.region}` : ''}${
+                  data.country ? `, ${data.country}` : ''
+                } ▶`
+              : `◀ ${this.weatherQuery.toUpperCase()} ▶`}
           </Text>
           <Text style={[styles.listMeta, { color: fg }]}>
             {this.weatherLoading ? 'FETCH...' : 'OPEN-METEO'}
