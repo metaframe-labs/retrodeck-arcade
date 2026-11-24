@@ -1681,13 +1681,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
         return;
       }
       if (key === '4') {
-        this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
+        if (this.smsList.length > 0) {
+          this.smsIdx = (this.smsIdx + this.smsList.length - 1) % this.smsList.length;
+        }
         this.smsDeleteConfirm = false;
         this.cb.onPlaySound?.('hit');
         return;
       }
       if (key === '6') {
-        this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
+        if (this.smsList.length > 0) {
+          this.smsIdx = (this.smsIdx + 1) % this.smsList.length;
+        }
         this.smsDeleteConfirm = false;
         this.cb.onPlaySound?.('hit');
         return;
@@ -1743,6 +1747,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private async sendPictureSmsToAi() {
     if (this.smsSendingAi) return;
     const cur = this.smsList[this.smsIdx];
+    if (!cur) {
+      this.smsBanner = 'INBOX EMPTY!';
+      this.smsBannerTimer = 2.0;
+      this.cb.onPlaySound?.('hit');
+      return;
+    }
     const meta = getProviderMeta(this.byokConfig.activeProvider);
     const hasKey =
       !meta.requiresKey || Boolean(this.byokConfig.keys[this.byokConfig.activeProvider]?.trim());
