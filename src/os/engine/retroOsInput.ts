@@ -24,6 +24,13 @@ import {
 } from '../retroOsData';
 import { tOs } from '../../i18n/retroI18n';
 import { rollAutonomousSmsIntervalSec } from './autonomousSmsSim';
+import {
+  dismissPostFormatWinActivation,
+  openFormatSimulator,
+  startPostFormatWinCountdownOnDesktopEntry,
+  syncPostFormatWinTimer,
+  updateFormatSimFrame,
+} from './formatSimEngine';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | null {
@@ -83,16 +90,22 @@ export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | n
     os.callSub = '3310 ROM SETTINGS OK';
     os.dialBuffer = '';
   } else if (os.dialBuffer === '*#7370#') {
-    os.callState = 'info';
-    os.callTitle = 'DEEP FORMAT 3310';
-    os.callSub = '100 CARTS VERIFIED';
     os.dialBuffer = '';
+    os.callState = 'idle';
+    openFormatSimulator(os, 2, true);
+    return 'explode';
   }
   return null;
 }
 
 export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
   os.idleTimer = 0;
+
+  // "Press any key to continue." on Windows Activation Easter Egg screen
+  if (os.postFormatWinActivationScreen) {
+    dismissPostFormatWinActivation(os);
+    return;
+  }
 
   // Keyguard unlock support
   if (os.keyLocked) {
@@ -110,16 +123,79 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
 
   // Global BACK action
   if (key === 'BACK') {
+    if (os.app === 'format') {
+      const s = updateFormatSimFrame(os, 0, null, false, true);
+      if (s) os.cb.onPlaySound?.(s);
+      return;
+    }
     if (os.app === 'phone' && os.callState !== 'idle') {
       os.callState = 'idle';
       RetroAudioEngine.stopNokiaMelody();
       os.cb.onPlaySound?.('hit');
       return;
     }
+    if (os.app === 'wallpapers' && os.wallpaperCleanPreview) {
+      os.wallpaperCleanPreview = false;
+      os.cb.onPlaySound?.('hit');
+      return;
+    }
     if (os.app !== 'desktop') {
+      os.wallpaperCleanPreview = false;
       os.app = 'desktop';
       os.cb.onPlaySound?.('hit');
     }
+    return;
+  }
+
+  // Wallpaper Gallery numeric keypad support (4/6/*/# scene, 2/8 contrast dim, 0 clean preview, OK apply)
+  if (os.app === 'wallpapers') {
+    const total = REAL_POSTCARDS.length + 1;
+    if (key === '4' || key === '*') {
+      os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '6' || key === '#') {
+      os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '2') {
+      os.cycleWallpaperDim(-1);
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '8') {
+      os.cycleWallpaperDim(1);
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '0') {
+      os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === 'OK') {
+      const nextId =
+        os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
+      if (os.wallpaperId === nextId && nextId !== 'none') {
+        os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+        os.cb.onPlaySound?.('hit');
+        return;
+      }
+      os.setWallpaperById(nextId);
+      const card = os.getActiveWallpaper();
+      os.smsBanner = card ? `[WP] ${card.title}` : `[WP] ${tOs('off', os.lang)}`;
+      os.smsBannerTimer = 2.0;
+      os.cb.onPlaySound?.('powerup');
+    }
+    return;
+  }
+
+  // Format Simulator numeric keypad support (2/8 up/down, 4/6/*/# toggle, OK confirm/smack)
+  if (os.app === 'format') {
+    const dir =
+      key === '2'
+        ? 'up'
+        : key === '8'
+        ? 'down'
+        : key === '4' || key === '*'
+        ? 'left'
+        : key === '6' || key === '#'
+        ? 'right'
+        : null;
+    const s = updateFormatSimFrame(os, 0, dir, key === 'OK', false);
+    if (s) os.cb.onPlaySound?.(s);
     return;
   }
 
@@ -208,7 +284,18 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
   // Desktop: OK opens highlighted app; digits jump straight to Phone dialer like Nokia 3310!
   if (os.app === 'desktop') {
     if (key === 'OK') {
-      os.app = DESKTOP_ICONS[os.deskIdx].id;
+      const nextApp = DESKTOP_ICONS[os.deskIdx].id;
+      if (nextApp === 'wallpapers') {
+        os.openWallpaperGallery();
+        os.cb.onPlaySound?.('score');
+        return;
+      }
+      if (nextApp === 'format') {
+        openFormatSimulator(os, 0, false);
+        os.cb.onPlaySound?.('explode');
+        return;
+      }
+      os.app = nextApp;
       if (os.app === 'radio') somaRadioService.fetchNowPlaying();
       os.cb.onPlaySound?.('score');
       return;
@@ -448,8 +535,17 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     os.smsBannerTimer -= dt;
   }
 
+  // Wall-clock check for the 45-second post-format Windows 98 / XP trial across all OS screens & Keyguard
+  syncPostFormatWinTimer(os, Date.now(), true);
+
   // Autonomous SMS Simulation scheduler: starts AFTER first user interaction, random 30–90s interval
-  if (os.liveAiSmsEnabled && os.hasUserInteracted && os.app !== 'boot' && !os.liveSmsFetching) {
+  if (
+    os.liveAiSmsEnabled &&
+    os.hasUserInteracted &&
+    os.app !== 'boot' &&
+    !os.postFormatWinActivationScreen &&
+    !os.liveSmsFetching
+  ) {
     os.liveSmsTimer -= dt;
     if (os.liveSmsTimer <= 0) {
       os.liveSmsTimer = rollAutonomousSmsIntervalSec();
@@ -470,6 +566,23 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   os.prevA = input.a;
   os.prevB = input.b;
 
+  // Windows Activation Easter Egg screen: "Press any key to continue." -> Nokia Startup Tune!
+  if (os.postFormatWinActivationScreen) {
+    const pressUpEdge = input.up && !os.prevUp;
+    const pressDownEdge = input.down && !os.prevDown;
+    const pressLeftEdge = input.left && !os.prevLeft;
+    const pressRightEdge = input.right && !os.prevRight;
+    os.prevUp = input.up;
+    os.prevDown = input.down;
+    os.prevLeft = input.left;
+    os.prevRight = input.right;
+
+    if (pressA || pressB || pressUpEdge || pressDownEdge || pressLeftEdge || pressRightEdge) {
+      dismissPostFormatWinActivation(os);
+    }
+    return null;
+  }
+
   const anyInput =
     input.up || input.down || input.left || input.right || pressA || pressB;
 
@@ -478,6 +591,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     os.bootTimer += dt;
     if (os.bootTimer >= 3.5 || pressA || pressB) {
       os.app = 'desktop';
+      if (os.postFormatWinStyle && os.postFormatWinPendingBoot) {
+        startPostFormatWinCountdownOnDesktopEntry(os);
+        return null;
+      }
       return 'powerup';
     }
     return null;
@@ -516,8 +633,12 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     }
   }
 
-  // Global B = return to desktop from any sub-app (except synth list -> back to pad)
-  if (os.app !== 'desktop' && pressB) {
+  // Global B = return to desktop from any sub-app (except synth list / sms compose / format wizard / clean wallpaper preview)
+  if (os.app !== 'desktop' && os.app !== 'format' && pressB) {
+    if (os.app === 'wallpapers' && os.wallpaperCleanPreview) {
+      os.wallpaperCleanPreview = false;
+      return 'hit';
+    }
     if (os.app === 'synth' && os.synthMode === 'list') {
       os.synthMode = 'pad';
       os.synthClearConfirm = false;
@@ -586,7 +707,16 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (dir) return 'hit';
 
     if (pressA) {
-      os.app = DESKTOP_ICONS[os.deskIdx].id;
+      const targetApp = DESKTOP_ICONS[os.deskIdx].id;
+      if (targetApp === 'wallpapers') {
+        os.openWallpaperGallery();
+        return 'score';
+      }
+      if (targetApp === 'format') {
+        openFormatSimulator(os, 0, false);
+        return 'explode';
+      }
+      os.app = targetApp;
       if (os.app === 'ai') {
         os.kbdTarget = 'chat';
       }
@@ -1427,8 +1557,46 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     return null;
   }
 
+  if (os.app === 'wallpapers') {
+    const total = REAL_POSTCARDS.length + 1;
+    if (dir === 'left') {
+      os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
+      return 'hit';
+    }
+    if (dir === 'right') {
+      os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
+      return 'hit';
+    }
+    if (dir === 'up') {
+      os.cycleWallpaperDim(-1);
+      return 'hit';
+    }
+    if (dir === 'down') {
+      os.cycleWallpaperDim(1);
+      return 'hit';
+    }
+    if (pressA) {
+      const nextId =
+        os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
+      if (os.wallpaperId === nextId && nextId !== 'none') {
+        os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+        return 'hit';
+      }
+      os.setWallpaperById(nextId);
+      const card = os.getActiveWallpaper();
+      os.smsBanner = card ? `[WP] ${card.title}` : `[WP] ${tOs('off', os.lang)}`;
+      os.smsBannerTimer = 2.2;
+      return 'powerup';
+    }
+    return null;
+  }
+
+  if (os.app === 'format') {
+    return updateFormatSimFrame(os, dt, dir, pressA, pressB);
+  }
+
   if (os.app === 'setup') {
-    const totalSetupItems = 8;
+    const totalSetupItems = 10;
     if (dir === 'up') os.setupIdx = (os.setupIdx + totalSetupItems - 1) % totalSetupItems;
     if (dir === 'down') os.setupIdx = (os.setupIdx + 1) % totalSetupItems;
     if (dir === 'left' || dir === 'right') {
@@ -1437,18 +1605,22 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'score';
       }
       if (os.setupIdx === 2) {
-        os.cb.onToggleScanlines();
+        os.cycleWallpaper(dir === 'left' ? -1 : 1);
         return 'score';
       }
       if (os.setupIdx === 3) {
-        os.toggleClockFace();
+        os.cb.onToggleScanlines();
         return 'score';
       }
       if (os.setupIdx === 4) {
-        os.toggleLiveAiSms();
+        os.toggleClockFace();
         return 'score';
       }
       if (os.setupIdx === 5) {
+        os.toggleLiveAiSms();
+        return 'score';
+      }
+      if (os.setupIdx === 6) {
         os.toggleLang();
         return 'score';
       }
@@ -1460,22 +1632,26 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         os.proIdx = 0;
         os.proStatusMsg = '';
         return 'powerup';
-      }
-      else if (os.setupIdx === 1) {
+      } else if (os.setupIdx === 1) {
         const curId = os.cb.getPaletteId?.();
         const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
         os.themeIdx = idx >= 0 ? idx : 0;
         os.app = 'themes';
         return 'score';
-      }
-      else if (os.setupIdx === 2) os.cb.onToggleScanlines();
-      else if (os.setupIdx === 3) os.toggleClockFace();
-      else if (os.setupIdx === 4) os.toggleLiveAiSms();
-      else if (os.setupIdx === 5) os.toggleLang();
-      else if (os.setupIdx === 6) os.cb.onOpenCartVault();
-      else if (os.setupIdx === 7) {
+      } else if (os.setupIdx === 2) {
+        os.openWallpaperGallery();
+        return 'score';
+      } else if (os.setupIdx === 3) os.cb.onToggleScanlines();
+      else if (os.setupIdx === 4) os.toggleClockFace();
+      else if (os.setupIdx === 5) os.toggleLiveAiSms();
+      else if (os.setupIdx === 6) os.toggleLang();
+      else if (os.setupIdx === 7) os.cb.onOpenCartVault();
+      else if (os.setupIdx === 8) {
         os.app = 'boot';
         os.bootTimer = 0;
+      } else if (os.setupIdx === 9) {
+        openFormatSimulator(os, 0, false);
+        return 'explode';
       }
       return 'powerup';
     }

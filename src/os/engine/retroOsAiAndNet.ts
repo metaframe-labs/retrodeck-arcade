@@ -412,7 +412,7 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
       const validApps: OsAppId[] = [
         'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'contacts', 'sms',
         'profiles', 'calc', 'clock', 'paint', 'weather', 'notes',
-        'stats', 'term', 'setup', 'themes', 'pro',
+        'stats', 'term', 'setup', 'wallpapers', 'format', 'themes', 'pro',
       ];
       if (validApps.includes(target)) {
         actionLogs.push(`OPENING ${target.toUpperCase()}...`);

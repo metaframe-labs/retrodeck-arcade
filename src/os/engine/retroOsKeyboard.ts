@@ -23,6 +23,8 @@ const APP_HINT_KEYS: Record<string, KeyboardStringKey> = {
   stats: 'hintStats',
   term: 'hintTerm',
   setup: 'hintSetup',
+  wallpapers: 'hintWallpapers',
+  format: 'hintFormat',
   themes: 'hintThemes',
   pro: 'hintPro',
 };

@@ -23,6 +23,8 @@ export const trLocale: LocaleBundle = {
     term: 'KONSOL',
     stats: 'SKOR',
     setup: 'AYAR',
+    wallpapers: 'DUVAR',
+    format: 'FORMAT',
   },
   os: {
     // Boot & Titles
@@ -36,18 +38,22 @@ export const trLocale: LocaleBundle = {
     titleSynth: 'RD BESTECI',
     titleSms: 'RD SMS [SIM]',
     titleWap: 'RETRO WAP 1.1',
+    titleWallpapers: 'DUVAR KAGITLARI',
+    titleFormat: 'FORMAT SIM [C:]',
 
     // Setup
     setupTitle: 'SISTEM AYARLARI',
     setupProActive: '★ RETRODECK PRO: AKTIF',
     setupProUpgrade: '★ YUKSELT: RETRODECK PRO',
     setupPalette: 'PALET',
+    setupWallpaper: 'DUVAR KAGIDI',
     setupScanlines: 'CRT TARAMA',
     setupClockFace: 'SAAT TIPI',
     setupLiveSms: 'OTONOM SIM-SMS',
     setupLanguage: 'DIL: TURKCE (TR)',
     setupVault: 'TUM OYUN KARTUSLARI',
     setupReboot: 'SISTEMI YENIDEN BASLAT',
+    setupFormatSim: 'SISTEME FORMAT AT [SIM]',
     on: 'ACIK',
     off: 'KAPALI',
     analog: 'ANALOG',
@@ -84,6 +90,8 @@ export const trLocale: LocaleBundle = {
     footerNotes: '[A] YENI NOT   [▲/▼] SEC   [▶]x2 SIL   [B] ANA EKRAN',
     footerPaint: '[A] CIZ / SEC   [YON] TUVAL & ARAC   [B] CIKIS',
     footerContacts: '[A] ARA   [▶] SMS AT   [◀]x2 SIL   [KBD] +YENI   [B] CIKIS',
+    footerWallpapers: '[◀/▶] 20 SAHNE   [▲/▼] UYUM   [A] SEC/TAM EKRAN   [B] CIKIS',
+    footerFormat: '[▲/▼] MOD   [◀/▶] D: YEDEK   [A] ILERI/TOKAT   [B] GERI',
     footerDefault: '[A] ISLEM   [B] ANA EKRAN',
 
     // AI Chat
@@ -160,7 +168,7 @@ export const trLocale: LocaleBundle = {
 
     // Phone & Profiles
     phoneDialTitle: 'RETRODECK TELEFON',
-    phoneDialPrompt: 'NUMARA GIR VEYA *#0000# / *#06#',
+    phoneDialPrompt: 'NUMARA GIR VEYA *#0000# / *#7370#',
     phoneDialHint: '[OK]: ARA   [DEL]: SIL   [BACK]: ANA EKRAN',
     phoneIncoming: '((( GELEN ARAMA )))',
     phoneConnected: 'BAGLANDI',
@@ -284,6 +292,8 @@ export const trLocale: LocaleBundle = {
     hintStats: 'Arcade Rekorlari & Istatistik • [B]: Ana Ekran',
     hintTerm: '[A]: Calistir / KBD • [◀]/[▶]: Gecmis • [▲]/[▼]: Kaydir • [B]: Cikis',
     hintSetup: '[▲]/[▼]: Ayar • [A]: Ac/Degistir • [B]: Ana Ekran',
+    hintWallpapers: '[◀]/[▶]: 20 Piksel Sahne Gez • [▲]/[▼]: Karartma • [A]: Uygula • [B]: Geri',
+    hintFormat: '[▲]/[▼]: Mod • [◀]/[▶]: D: Yedek • [A]: Baslat / Kasaya Vur • [B]: Geri',
     hintThemes: '[▲]/[▼]: Temalar • [◀]/[▶]: ±5 • [A]: Uygula • [B]: Geri',
     hintPro: '[▲]/[▼]: Plan Sec • [A]: Satin Al / Geri Yukle • [B]: Geri',
     hintDefault: 'YON: Gezin • [A]: Sec • [B]: Geri',

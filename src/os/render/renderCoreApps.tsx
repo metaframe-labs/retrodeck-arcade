@@ -1,13 +1,13 @@
 import React from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Text, Platform, Image, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { isCartridgeProLocked } from '../../arcade/cartridges';
 import { PALETTE_ORDER, RETRO_PALETTES, isPaletteProLocked } from '../../theme/palettes';
 import { RetroAudioEngine, KEYPAD_SOUND_STYLES } from '../../audio/RetroAudioEngine';
 import { somaRadioService } from '../../services/somaRadioService';
 import { styles } from '../retroOsStyles';
-import { DESKTOP_ICONS, NOKIA_OPERATORS, NOKIA_PROFILES } from '../retroOsData';
-import { getDesktopLabel, tOs } from '../../i18n/retroI18n';
+import { DESKTOP_ICONS, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS } from '../retroOsData';
+import { getDesktopLabel, pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderAnalogDial(fg: string, dialSize = 84) {
@@ -206,9 +206,157 @@ export function renderStatusRight(os: RetroDeckOS, ink: string): React.ReactNode
 export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   const cols = 4;
   const rows = Math.ceil(DESKTOP_ICONS.length / cols);
+  const winStyle = os.postFormatWinStyle;
+
+  if (winStyle) {
+    const isXp = winStyle === 'winxp';
+    const selHighlight = isXp ? '#2B65CE' : '#000080';
+    return (
+      <View style={[styles.deskGrid, { position: 'relative' }]}>
+        {/* Windows XP Bliss Rolling Green Meadow Backdrop */}
+        {isXp && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: -8,
+              right: -8,
+              bottom: -6,
+              height: 54,
+              overflow: 'hidden',
+            }}
+          >
+            <View
+              style={{
+                position: 'absolute',
+                left: -28,
+                right: 50,
+                bottom: -24,
+                height: 66,
+                borderRadius: 90,
+                backgroundColor: '#4CB635',
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                left: 70,
+                right: -34,
+                bottom: -28,
+                height: 62,
+                borderRadius: 90,
+                backgroundColor: '#3B9626',
+              }}
+            />
+          </View>
+        )}
+
+        {Array.from({ length: rows }, (_, r) => (
+          <View key={r} style={styles.deskRow}>
+            {Array.from({ length: cols }, (_, c) => {
+              const idx = r * cols + c;
+              const item = DESKTOP_ICONS[idx];
+              if (!item) {
+                return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
+              }
+              const sel = idx === os.deskIdx;
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderRadius: 2,
+                    borderWidth: sel ? 1 : 0,
+                    borderStyle: sel && !isXp ? 'dotted' : 'solid',
+                    borderColor: sel ? '#FFFFFF' : 'transparent',
+                    backgroundColor: sel ? `${selHighlight}CC` : 'transparent',
+                    paddingVertical: 1,
+                  }}
+                >
+                  <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons
+                      name={item.icon}
+                      size={14}
+                      color={sel ? '#FEF08A' : '#FFFFFF'}
+                    />
+                    {/* Classic tiny Windows desktop shortcut arrow badge */}
+                    <View
+                      style={{
+                        position: 'absolute',
+                        left: -5,
+                        bottom: -1,
+                        width: 6,
+                        height: 6,
+                        backgroundColor: '#FFFFFF',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 5, fontWeight: '900', color: '#000000', lineHeight: 6 }}>
+                        ↗
+                      </Text>
+                    </View>
+                  </View>
+                  <Text
+                    style={[
+                      styles.deskLbl,
+                      {
+                        color: '#FFFFFF',
+                        backgroundColor: sel ? selHighlight : 'transparent',
+                        paddingHorizontal: 2,
+                        marginTop: 1,
+                        fontSize: 7,
+                      },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  const activeWall = os.getActiveWallpaper();
 
   return (
-    <View style={styles.deskGrid}>
+    <View style={[styles.deskGrid, { position: 'relative' }]}>
+      {activeWall && (
+        <>
+          <Image
+            source={activeWall.image}
+            style={{
+              position: 'absolute',
+              left: -8,
+              right: -8,
+              top: -6,
+              bottom: -6,
+              width: undefined,
+              height: undefined,
+            }}
+            resizeMode="cover"
+          />
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              left: -8,
+              right: -8,
+              top: -6,
+              bottom: -6,
+              backgroundColor: bg,
+              opacity: os.getWallpaperDimOpacity(),
+            }}
+          />
+        </>
+      )}
+
       {Array.from({ length: rows }, (_, r) => (
         <View key={r} style={styles.deskRow}>
           {Array.from({ length: cols }, (_, c) => {
@@ -224,10 +372,16 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 key={item.id}
                 style={[
                   styles.deskTile,
-                  {
-                    borderColor: fg,
-                    backgroundColor: sel ? fg : 'transparent',
-                  },
+                  activeWall
+                    ? {
+                        borderWidth: 1.5,
+                        borderColor: sel ? fg : hexWithAlpha(fg, 0.85),
+                        backgroundColor: sel ? fg : hexWithAlpha(bg, 0.72),
+                      }
+                    : {
+                        borderColor: fg,
+                        backgroundColor: sel ? fg : 'transparent',
+                      },
                 ]}
               >
                 <Ionicons name={item.icon} size={DESKTOP_ICONS.length > 16 ? 13 : 16} color={iconColor} />
@@ -285,15 +439,18 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
 export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
   const isPro = os.cb.getIsPro?.() ?? false;
   const L = os.lang;
+  const activeWall = os.getActiveWallpaper();
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
     `${tOs('setupPalette', L)}: ${os.cb.getPaletteName()}`,
+    `${tOs('setupWallpaper', L)}: ${activeWall ? activeWall.title : tOs('off', L)}`,
     `${tOs('setupScanlines', L)}: ${os.cb.getScanlines() ? tOs('on', L) : tOs('off', L)}`,
     `${tOs('setupClockFace', L)}: ${os.clockFace === 'analog' ? tOs('analog', L) : tOs('digital', L)}`,
     `${tOs('setupLiveSms', L)}: ${os.liveAiSmsEnabled ? tOs('on', L) : tOs('off', L)}`,
     tOs('setupLanguage', L),
     tOs('setupVault', L),
     tOs('setupReboot', L),
+    tOs('setupFormatSim', L),
   ];
 
   // Virtual windowed scroll: show 5 items tightly and naturally stacked
@@ -356,6 +513,199 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
         </Text>
       </View>
     </View>
+  );
+}
+
+export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
+  const L = os.lang;
+  const totalScenes = REAL_POSTCARDS.length;
+  const isNone = os.wallpaperIdx === 0;
+  const previewCard = isNone ? null : REAL_POSTCARDS[os.wallpaperIdx - 1] || REAL_POSTCARDS[0];
+  const currentActiveId = os.wallpaperId || 'none';
+  const isApplied = isNone
+    ? currentActiveId === 'none'
+    : previewCard?.id === currentActiveId;
+
+  const dimLabels = [
+    pickLang(L, 'VIVID (18%)', 'CANLI (%18)'),
+    pickLang(L, 'BALANCED (36%)', 'DENGELI (%36)'),
+    pickLang(L, 'THEME TINT (56%)', 'TEMA TONU (%56)'),
+  ];
+  const dimText = dimLabels[os.wallpaperDimIdx] || dimLabels[1];
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+  const cleanPreview = os.wallpaperCleanPreview;
+
+  return (
+    <Pressable
+      onPress={() => {
+        os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+        os.cb.onPlaySound?.('hit');
+      }}
+      style={[styles.listWrap, { position: 'relative', justifyContent: 'space-between' }]}
+    >
+      {/* Full-Bleed Pixel Art Scene Preview */}
+      {previewCard && (
+        <>
+          <Image
+            source={previewCard.image}
+            style={{
+              position: 'absolute',
+              left: -8,
+              right: -8,
+              top: -6,
+              bottom: -6,
+              width: undefined,
+              height: undefined,
+            }}
+            resizeMode="cover"
+          />
+          {!cleanPreview && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                left: -8,
+                right: -8,
+                top: -6,
+                bottom: -6,
+                backgroundColor: bg,
+                opacity: os.getWallpaperDimOpacity(),
+              }}
+            />
+          )}
+        </>
+      )}
+
+      {/* In clean preview mode with an image, hide ALL buttons, headers, and overlays */}
+      {cleanPreview && previewCard ? null : (
+        <>
+          {/* Top Floating Scene Selector Pill (Matched to Active Theme Palette!) */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: fg,
+              borderWidth: 1.5,
+              borderColor: fg,
+              paddingHorizontal: 6,
+              paddingVertical: 3,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: monoFont,
+                fontSize: 8.8,
+                fontWeight: '900',
+                color: bg,
+                flex: 1,
+              }}
+              numberOfLines={1}
+            >
+              ◀ {String(os.wallpaperIdx).padStart(2, '0')}/{totalScenes}{' '}
+              {previewCard
+                ? previewCard.title
+                : pickLang(L, 'OFF (SOLID LCD)', 'KAPALI (TEMA RENGI)')}{' '}
+              ▶
+            </Text>
+            <View
+              style={{
+                backgroundColor: isApplied ? bg : 'transparent',
+                borderWidth: 1,
+                borderColor: bg,
+                paddingHorizontal: 4,
+                paddingVertical: 1,
+                marginLeft: 4,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 7.5,
+                  fontWeight: '900',
+                  color: isApplied ? fg : bg,
+                }}
+              >
+                {isApplied ? tOs('active', L) : pickLang(L, '[A] SET', '[A] SEC')}
+              </Text>
+            </View>
+          </View>
+
+          {/* Center Card only when OFF (solid LCD mode) */}
+          {!previewCard && (
+            <View
+              style={{
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: fg,
+                paddingVertical: 18,
+                paddingHorizontal: 10,
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              <Ionicons name="image-outline" size={24} color={fg} />
+              <Text style={{ fontFamily: monoFont, fontSize: 9.5, fontWeight: '900', color: fg }}>
+                {pickLang(L, 'SOLID PALETTE MODE', 'KLASIK DUZ LCD MODU')}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 8,
+                  fontWeight: '800',
+                  color: fg,
+                  opacity: 0.8,
+                  textAlign: 'center',
+                }}
+              >
+                {pickLang(
+                  L,
+                  'PRESS [◀ / ▶] TO PREVIEW 20 PIXEL SCENES',
+                  '20 PIKSEL SAHNEYI GORMEK ICIN [◀ / ▶] BAS'
+                )}
+              </Text>
+            </View>
+          )}
+
+          {/* Bottom Floating Theme-Matched Dim / Pure Preview Control Strip */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: previewCard ? hexWithAlpha(bg, 0.82) : 'transparent',
+              borderWidth: 1.5,
+              borderColor: fg,
+              paddingHorizontal: 6,
+              paddingVertical: 2.5,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: monoFont,
+                fontSize: 7.5,
+                fontWeight: '900',
+                color: fg,
+              }}
+            >
+              ▲/▼ {pickLang(L, 'TINT:', 'UYUM:')} {dimText}
+            </Text>
+            <Text
+              style={{
+                fontFamily: monoFont,
+                fontSize: 7.5,
+                fontWeight: '900',
+                color: fg,
+              }}
+            >
+              {isApplied && previewCard
+                ? pickLang(L, '[A]/TAP FULLSCREEN', '[A]/DOKUN TAM EKRAN')
+                : pickLang(L, '[A] APPLY', '[A] UYGULA')}
+            </Text>
+          </View>
+        </>
+      )}
+    </Pressable>
   );
 }
 

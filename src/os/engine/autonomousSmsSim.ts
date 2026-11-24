@@ -33,7 +33,7 @@ export interface AutonomousSimState {
   personas: Record<string, PersonaSimState>;
   lastActiveAtMs: number;
   lastOsEvent?: {
-    type: 'HIGH_SCORE' | 'PRO_UNLOCKED' | 'LATE_NIGHT';
+    type: 'HIGH_SCORE' | 'PRO_UNLOCKED' | 'LATE_NIGHT' | 'FORMAT_COMPLETE';
     detail: string;
     atMs: number;
   };
@@ -288,6 +288,9 @@ export function selectAutonomousSimTurn(
       pState.mood = activeMood;
     } else if (sim.lastOsEvent && Date.now() - sim.lastOsEvent.atMs < 180_000) {
       if (sim.lastOsEvent.type === 'HIGH_SCORE' && chosenPersona.id === 'kanka') {
+        activeMood = 'DRAMATIC';
+        pState.mood = activeMood;
+      } else if (sim.lastOsEvent.type === 'FORMAT_COMPLETE' && chosenPersona.id === 'kanka') {
         activeMood = 'DRAMATIC';
         pState.mood = activeMood;
       } else if (sim.lastOsEvent.type === 'PRO_UNLOCKED') {

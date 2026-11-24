@@ -47,6 +47,8 @@ export interface RetroDeckOSCallbacks {
   onOpenCartVault: () => void;
   onCyclePalette: () => void;
   onSelectPalette?: (id: RetroPaletteId) => void;
+  onSetTemporaryPalette?: (palette: RetroPalette | null) => void;
+  onWinTrialExpired?: () => void;
   getPaletteId?: () => RetroPaletteId;
   onToggleScanlines: () => void;
   getPaletteName: () => string;
@@ -72,6 +74,7 @@ import {
   renderDesktop,
   renderArcadeBrowser,
   renderSetup,
+  renderWallpapers,
   renderThemes,
   renderPro,
 } from './render/renderCoreApps';
@@ -94,6 +97,22 @@ import {
   renderStats,
   renderTerm,
 } from './render/renderMediaToolApps';
+import {
+  renderFormatApp,
+  renderWinActivationScreen,
+  renderWinPostFormatBoot,
+  renderWinPostFormatTaskbar,
+  renderWinPostFormatTopBar,
+} from './render/renderFormatApp';
+import {
+  FormatSimState,
+  PostFormatWinStyle,
+  clearPostFormatWinTheme,
+  createInitialFormatState,
+  dismissPostFormatWinActivation,
+  openFormatSimulator,
+  syncPostFormatWinTimer,
+} from './engine/formatSimEngine';
 import { pushTermLinesImpl, execTermCmdImpl } from './engine/retroOsShell';
 import {
   triggerLivePersonaSmsImpl,
@@ -135,6 +154,10 @@ import {
   LIVE_AI_SMS_STORAGE_KEY,
   LIVE_SMS_HISTORY_STORAGE_KEY,
   CONTACTS_STORAGE_KEY,
+  WALLPAPER_STORAGE_KEY,
+  WALLPAPER_DIM_STORAGE_KEY,
+  WALLPAPER_DIM_OPACITIES,
+  hexWithAlpha,
   DEFAULT_CONTACTS_BY_LANG,
   RetroContact,
   DYNAMIC_MOODS,
@@ -347,8 +370,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
     'TYPE "help" OR [KBD]',
   ];
 
-  // Setup state
+  // Setup, Wallpaper & Format Simulation state
   /** @internal */ setupIdx = 0;
+  /** @internal */ wallpaperId = 'none';
+  /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS
+  /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark
+  /** @internal */ wallpaperCleanPreview = false;
+  /** @internal */ formatSim: FormatSimState = createInitialFormatState();
+  /** @internal */ postFormatWinStyle: PostFormatWinStyle | null = null;
+  /** @internal */ postFormatWinTimer = 0;
+  /** @internal */ postFormatWinExpiresAtMs: number | null = null;
+  /** @internal */ postFormatWinPendingBoot = false;
+  /** @internal */ postFormatWinActivationScreen = false;
+  /** @internal */ postFormatWinActivationShownAtMs = 0;
+  /** @internal */ postFormatTechSmsTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // In-LCD Themes Browser state
   /** @internal */ themeIdx = 0;
@@ -553,6 +588,65 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(WALLPAPER_STORAGE_KEY)
+      .then((savedId) => {
+        if (savedId && (savedId === 'none' || REAL_POSTCARDS.some((p) => p.id === savedId))) {
+          this.wallpaperId = savedId;
+          const foundIdx = REAL_POSTCARDS.findIndex((p) => p.id === savedId);
+          this.wallpaperIdx = foundIdx >= 0 ? foundIdx + 1 : 0;
+        }
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(WALLPAPER_DIM_STORAGE_KEY)
+      .then((rawDim) => {
+        const d = rawDim ? parseInt(rawDim, 10) : NaN;
+        if (!isNaN(d) && d >= 0 && d < WALLPAPER_DIM_OPACITIES.length) {
+          this.wallpaperDimIdx = d;
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ getActiveWallpaper(): { id: string; title: string; image: any } | null {
+    if (!this.wallpaperId || this.wallpaperId === 'none') return null;
+    return REAL_POSTCARDS.find((p) => p.id === this.wallpaperId) || null;
+  }
+
+  /** @internal */ getWallpaperDimOpacity(): number {
+    return WALLPAPER_DIM_OPACITIES[this.wallpaperDimIdx] ?? 0.44;
+  }
+
+  /** @internal */ setWallpaperById(nextId: string) {
+    const valid = nextId === 'none' || REAL_POSTCARDS.some((p) => p.id === nextId);
+    this.wallpaperId = valid ? nextId : 'none';
+    const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
+    this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    AsyncStorage.setItem(WALLPAPER_STORAGE_KEY, this.wallpaperId).catch(() => {});
+  }
+
+  /** @internal */ cycleWallpaper(delta: number) {
+    const total = REAL_POSTCARDS.length + 1; // 0 = none, 1..20 = scenes
+    const curIdx =
+      this.wallpaperId === 'none'
+        ? 0
+        : Math.max(0, REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId) + 1);
+    const nextIdx = (curIdx + delta + total) % total;
+    const nextId = nextIdx === 0 ? 'none' : REAL_POSTCARDS[nextIdx - 1].id;
+    this.setWallpaperById(nextId);
+  }
+
+  /** @internal */ cycleWallpaperDim(delta = 1) {
+    const total = WALLPAPER_DIM_OPACITIES.length;
+    this.wallpaperDimIdx = (this.wallpaperDimIdx + delta + total) % total;
+    AsyncStorage.setItem(WALLPAPER_DIM_STORAGE_KEY, String(this.wallpaperDimIdx)).catch(() => {});
+  }
+
+  /** @internal */ openWallpaperGallery() {
+    const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
+    this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    this.wallpaperCleanPreview = false;
+    this.app = 'wallpapers';
+    this.cb.onRequestKeyboard?.(false);
   }
 
   /** @internal */ saveCustomContacts() {
@@ -601,10 +695,29 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.simState.lastActiveAtMs = Date.now();
   }
 
-  /** Records major console events (High Score, Pro unlock) so personas can shift mood & react */
-  public recordMajorSimEvent(type: 'HIGH_SCORE' | 'PRO_UNLOCKED' | 'LATE_NIGHT', detail: string) {
+  /** Records major console events (High Score, Pro unlock, Format Sim) so personas can shift mood & react */
+  public recordMajorSimEvent(
+    type: 'HIGH_SCORE' | 'PRO_UNLOCKED' | 'LATE_NIGHT' | 'FORMAT_COMPLETE',
+    detail: string
+  ) {
     this.simState.lastOsEvent = { type, detail, atMs: Date.now() };
     saveAutonomousSimState(this.simState);
+  }
+
+  public openFormatSim(presetIdx = 0, skipToConfirm = false) {
+    openFormatSimulator(this, presetIdx, skipToConfirm);
+  }
+
+  public clearPostFormatWinTheme() {
+    clearPostFormatWinTheme(this);
+  }
+
+  public syncWinTrialTimer(nowMs = Date.now(), isAppActive = true): boolean {
+    return syncPostFormatWinTimer(this, nowMs, isAppActive);
+  }
+
+  public dismissWinActivation(bypassGuard = false, nowMs = Date.now()): boolean {
+    return dismissPostFormatWinActivation(this, nowMs, bypassGuard);
   }
 
   /** Persists timestamp & schedules local Android/iOS simulated SMS notifications when backgrounded */
@@ -624,9 +737,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   /** Reconciles delivered OS tray notifications (or runs fallback catch-up) when returning */
   public onAppForegrounded() {
+    const nowMs = Date.now();
     const prevMs = this.simState.lastActiveAtMs;
-    this.simState.lastActiveAtMs = Date.now();
+    this.simState.lastActiveAtMs = nowMs;
     saveAutonomousSimState(this.simState);
+    this.syncWinTrialTimer(nowMs, true);
     this.syncScheduledNotifications(prevMs).catch(() => {});
   }
 
@@ -791,6 +906,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public reset() {
+    if (this.postFormatWinActivationScreen) {
+      this.dismissWinActivation(true);
+      return;
+    }
     this.app = 'boot';
     this.bootTimer = 0;
     this.deskIdx = 0;
@@ -827,6 +946,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   public getCurrentTitle(): string {
+    if (this.postFormatWinActivationScreen) return 'WINDOWS ACTIVATION';
     if (this.keyLocked) return tOs('titleKeyguard', this.lang);
     if (this.app === 'boot') return tOs('titleBoot', this.lang);
     if (this.app === 'desktop') return tOs('titleDesktop', this.lang);
@@ -837,6 +957,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'synth') return tOs('titleSynth', this.lang);
     if (this.app === 'sms') return tOs('titleSms', this.lang);
     if (this.app === 'wap') return tOs('titleWap', this.lang);
+    if (this.app === 'wallpapers') return tOs('titleWallpapers', this.lang);
+    if (this.app === 'format') return tOs('titleFormat', this.lang);
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -1034,7 +1156,14 @@ export class RetroDeckOS implements ArcadeGameInstance {
     const fg = this.torchInvert ? palette.screenBg : palette.pixelOn;
     const bg = this.torchInvert ? palette.pixelOn : palette.screenBg;
 
+    if (this.postFormatWinActivationScreen) {
+      return renderWinActivationScreen(this);
+    }
+
     if (this.app === 'boot') {
+      if (this.postFormatWinStyle) {
+        return renderWinPostFormatBoot(this);
+      }
       const pct = Math.min(100, Math.floor((this.bootTimer / 3.2) * 100));
       return (
         <View style={[styles.container, { backgroundColor: bg, justifyContent: 'center', alignItems: 'center' }]}>
@@ -1054,16 +1183,37 @@ export class RetroDeckOS implements ArcadeGameInstance {
       );
     }
 
-    // Nokia 3310 Keyguard & Floating Pixel Digital Clock Screensaver
+    // Nokia 3310 Keyguard & Floating Pixel Digital Clock Screensaver (with optional Pixel Wallpaper!)
     if (this.keyLocked) {
       const d = new Date();
       const hh = String(d.getHours()).padStart(2, '0');
       const mm = String(d.getMinutes()).padStart(2, '0');
       const ss = String(d.getSeconds()).padStart(2, '0');
       const driftY = Math.round(Math.sin(this.uptime * 1.1) * 14);
+      const lockWall = this.getActiveWallpaper();
 
       return (
         <View style={[styles.container, { backgroundColor: bg }]}>
+          {lockWall && (
+            <>
+              <Image
+                source={lockWall.image}
+                style={{ position: 'absolute', top: 20, left: 0, right: 0, bottom: 18, width: undefined, height: undefined }}
+                resizeMode="cover"
+              />
+              <View
+                style={{
+                  position: 'absolute',
+                  top: 20,
+                  left: 0,
+                  right: 0,
+                  bottom: 18,
+                  backgroundColor: bg,
+                  opacity: Math.max(0.32, this.getWallpaperDimOpacity()),
+                }}
+              />
+            </>
+          )}
           <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
             {renderStatusLeft(this, bg)}
             <Text style={[styles.osBarTxt, { color: bg }]}>[KEYGUARD]</Text>
@@ -1077,6 +1227,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   styles.swBox,
                   {
                     borderColor: fg,
+                    backgroundColor: lockWall ? hexWithAlpha(bg, 0.82) : 'transparent',
                     paddingHorizontal: 18,
                     paddingVertical: 8,
                     flexDirection: 'row',
@@ -1099,7 +1250,17 @@ export class RetroDeckOS implements ArcadeGameInstance {
                 </View>
               </View>
             ) : (
-              <View style={[styles.swBox, { borderColor: fg, paddingHorizontal: 22, paddingVertical: 10 }]}>
+              <View
+                style={[
+                  styles.swBox,
+                  {
+                    borderColor: fg,
+                    backgroundColor: lockWall ? hexWithAlpha(bg, 0.82) : 'transparent',
+                    paddingHorizontal: 22,
+                    paddingVertical: 10,
+                  },
+                ]}
+              >
                 <Text style={[styles.swLbl, { color: fg }]}>
                   {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
                 </Text>
@@ -1152,18 +1313,27 @@ export class RetroDeckOS implements ArcadeGameInstance {
       );
     }
 
+    const isPureWallPreview =
+      this.app === 'wallpapers' && this.wallpaperCleanPreview;
+
     return (
       <View style={[styles.container, { backgroundColor: bg }]}>
-        {/* OS Top Status Bar */}
-        <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
-          {this.app === 'desktop' ? (
-            renderStatusLeft(this, bg)
+        {/* OS Top Status Bar (hidden during pure buttonless wallpaper preview) */}
+        {!isPureWallPreview && (
+          this.postFormatWinStyle ? (
+            renderWinPostFormatTopBar(this)
           ) : (
-            <Text style={[styles.osBarTxt, { color: bg }]}>{`< ${this.app.toUpperCase()}`}</Text>
-          )}
-          <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
-          {renderStatusRight(this, bg)}
-        </View>
+            <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
+              {this.app === 'desktop' ? (
+                renderStatusLeft(this, bg)
+              ) : (
+                <Text style={[styles.osBarTxt, { color: bg }]}>{`< ${this.app.toUpperCase()}`}</Text>
+              )}
+              <Text style={[styles.osBarTxt, { color: bg }]}>{this.formatClock()}</Text>
+              {renderStatusRight(this, bg)}
+            </View>
+          )
+        )}
 
         {/* Body */}
         <View style={styles.osBody}>
@@ -1185,6 +1355,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'stats' && renderStats(this, fg, bg)}
           {this.app === 'term' && renderTerm(this, fg, bg)}
           {this.app === 'setup' && renderSetup(this, fg, bg)}
+          {this.app === 'wallpapers' && renderWallpapers(this, fg, bg)}
+          {this.app === 'format' && renderFormatApp(this, fg, bg)}
           {this.app === 'themes' && renderThemes(this, fg, bg)}
           {this.app === 'pro' && renderPro(this, fg, bg)}
 
@@ -1228,28 +1400,38 @@ export class RetroDeckOS implements ArcadeGameInstance {
           )}
         </View>
 
-        {/* OS Footer Taskbar */}
-        <View style={[styles.osFooter, { borderTopColor: fg }]}>
-          <Text style={[styles.footerTxt, { color: fg }]} numberOfLines={1}>
-            {this.app === 'desktop'
-              ? tOs('footerDesktop', this.lang)
-              : this.app === 'radio'
-              ? tOs('footerRadio', this.lang)
-              : this.app === 'ai'
-              ? tOs('footerAi', this.lang)
-              : this.app === 'sms'
-              ? tOs('footerSms', this.lang)
-              : this.app === 'weather'
-              ? tOs('footerWeather', this.lang)
-              : this.app === 'notes'
-              ? tOs('footerNotes', this.lang)
-              : this.app === 'paint'
-              ? tOs('footerPaint', this.lang)
-              : this.app === 'contacts'
-              ? tOs('footerContacts', this.lang)
-              : tOs('footerDefault', this.lang)}
-          </Text>
-        </View>
+        {/* OS Footer Taskbar (hidden during pure buttonless wallpaper preview) */}
+        {!isPureWallPreview && (
+          this.postFormatWinStyle ? (
+            renderWinPostFormatTaskbar(this)
+          ) : (
+            <View style={[styles.osFooter, { borderTopColor: fg }]}>
+              <Text style={[styles.footerTxt, { color: fg }]} numberOfLines={1}>
+                {this.app === 'desktop'
+                  ? tOs('footerDesktop', this.lang)
+                  : this.app === 'radio'
+                  ? tOs('footerRadio', this.lang)
+                  : this.app === 'ai'
+                  ? tOs('footerAi', this.lang)
+                  : this.app === 'sms'
+                  ? tOs('footerSms', this.lang)
+                  : this.app === 'weather'
+                  ? tOs('footerWeather', this.lang)
+                  : this.app === 'notes'
+                  ? tOs('footerNotes', this.lang)
+                  : this.app === 'paint'
+                  ? tOs('footerPaint', this.lang)
+                  : this.app === 'contacts'
+                  ? tOs('footerContacts', this.lang)
+                  : this.app === 'wallpapers'
+                  ? tOs('footerWallpapers', this.lang)
+                  : this.app === 'format'
+                  ? tOs('footerFormat', this.lang)
+                  : tOs('footerDefault', this.lang)}
+              </Text>
+            </View>
+          )
+        )}
       </View>
     );
   }

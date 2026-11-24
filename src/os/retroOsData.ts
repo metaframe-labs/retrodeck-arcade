@@ -10,6 +10,24 @@ export const SMS_LIST_STORAGE_KEY = '@retrodeck8_sms_list_v1';
 export const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
 export const LIVE_SMS_HISTORY_STORAGE_KEY = '@retrodeck8_live_sms_history_v1';
 export const CONTACTS_STORAGE_KEY = '@retrodeck8_contacts_v1';
+export const WALLPAPER_STORAGE_KEY = '@retrodeck8_wallpaper_v1';
+export const WALLPAPER_DIM_STORAGE_KEY = '@retrodeck8_wallpaper_dim_v1';
+
+export const WALLPAPER_DIM_OPACITIES = [0.18, 0.36, 0.56] as const;
+
+export function hexWithAlpha(hexColor: string, alpha: number): string {
+  const clean = hexColor.trim().replace('#', '');
+  const a = Math.max(0, Math.min(1, alpha));
+  if (clean.length === 6) {
+    const r = parseInt(clean.slice(0, 2), 16);
+    const g = parseInt(clean.slice(2, 4), 16);
+    const b = parseInt(clean.slice(4, 6), 16);
+    if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
+  }
+  return hexColor;
+}
 
 export const DYNAMIC_MOODS_BY_LANG: Record<RetroLang, string[]> = {
   en: [
@@ -72,6 +90,8 @@ export type OsAppId =
   | 'stats'
   | 'term'
   | 'setup'
+  | 'wallpapers'
+  | 'format'
   | 'themes'
   | 'pro';
 
@@ -163,6 +183,8 @@ export const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'term', label: 'SHELL', icon: 'terminal' },
   { id: 'stats', label: 'STATS', icon: 'bar-chart' },
   { id: 'setup', label: 'SETUP', icon: 'settings' },
+  { id: 'wallpapers', label: 'WALLS', icon: 'image' },
+  { id: 'format', label: 'FORMAT', icon: 'disc' },
 ];
 
 export const WEATHER_CITIES = [
@@ -1488,6 +1510,13 @@ export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'mountains', title: 'ALPINE PEAKS', image: require('../../assets/postcards/mountains.jpg') },
   { id: 'space', title: 'DEEP SPACE', image: require('../../assets/postcards/space.jpg') },
   { id: 'campfire', title: 'NIGHT CAMP', image: require('../../assets/postcards/campfire.jpg') },
+  { id: 'london', title: 'LONDON RAIN', image: require('../../assets/postcards/london.jpg') },
+  { id: 'santorini', title: 'AEGEAN SUNSET', image: require('../../assets/postcards/santorini.jpg') },
+  { id: 'cybercity', title: 'CYBER ARCADE', image: require('../../assets/postcards/cybercity.jpg') },
+  { id: 'bliss_meadow', title: 'GREEN MEADOW', image: require('../../assets/postcards/bliss_meadow.jpg') },
+  { id: 'lofi_room', title: 'COZY LO-FI ROOM', image: require('../../assets/postcards/lofi_room.jpg') },
+  { id: 'synth_highway', title: 'OUTRUN SUNSET', image: require('../../assets/postcards/synth_highway.jpg') },
+  { id: 'underwater', title: 'CORAL REEF', image: require('../../assets/postcards/underwater.jpg') },
 ];
 
 export const POSTCARD_STAMPS: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
@@ -1886,6 +1915,8 @@ export const TERM_PRESETS = [
   'ai hello 3310',
   'pro',
   'resetpro',
+  'wallpaper tokyo',
+  'format c:',
   'clear',
   'reboot',
 ];

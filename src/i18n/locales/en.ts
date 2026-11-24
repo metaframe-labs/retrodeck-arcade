@@ -21,6 +21,8 @@ export const enLocale = {
     term: 'SHELL',
     stats: 'STATS',
     setup: 'SETUP',
+    wallpapers: 'WALLS',
+    format: 'FORMAT',
   },
   os: {
     // Boot & Titles
@@ -34,18 +36,22 @@ export const enLocale = {
     titleSynth: 'RD COMPOSER',
     titleSms: 'RD SMS [SIM]',
     titleWap: 'RETRO WAP 1.1',
+    titleWallpapers: 'PIXEL WALLPAPERS',
+    titleFormat: 'FORMAT SIM [C:]',
 
     // Setup
     setupTitle: 'SYSTEM SETUP',
     setupProActive: '★ RETRODECK PRO: ACTIVE',
     setupProUpgrade: '★ UPGRADE: RETRODECK PRO',
     setupPalette: 'PALETTE',
+    setupWallpaper: 'WALLPAPER',
     setupScanlines: 'CRT SCANLINES',
     setupClockFace: 'CLOCK FACE',
     setupLiveSms: 'AUTONOMOUS SIM-SMS',
     setupLanguage: 'LANGUAGE: ENGLISH (EN)',
     setupVault: 'OPEN FULL CARTRIDGE VAULT',
     setupReboot: 'REBOOT RETRODECK OS',
+    setupFormatSim: 'FORMAT SYSTEM C: [SIM]',
     on: 'ON',
     off: 'OFF',
     analog: 'ANALOG',
@@ -82,6 +88,8 @@ export const enLocale = {
     footerNotes: '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP',
     footerPaint: '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT',
     footerContacts: '[A] CALL   [▶] SMS   [◀]x2 DEL   [KBD] +NEW   [B] EXIT',
+    footerWallpapers: '[◀/▶] 20 SCENES   [▲/▼] TINT   [A] SET/FULL   [B] EXIT',
+    footerFormat: '[▲/▼] MODE   [◀/▶] D: SAVE   [A] NEXT/SMACK   [B] BACK',
     footerDefault: '[A] ACTION   [B] DESKTOP',
 
     // AI Chat
@@ -158,7 +166,7 @@ export const enLocale = {
 
     // Phone & Profiles
     phoneDialTitle: 'RETRODECK DIALER',
-    phoneDialPrompt: 'DIAL NUMBER OR *#0000# / *#06#',
+    phoneDialPrompt: 'DIAL NUMBER OR *#0000# / *#7370#',
     phoneDialHint: '[OK]: CALL   [DEL]: ERASE   [BACK]: DESKTOP',
     phoneIncoming: '((( INCOMING CALL )))',
     phoneConnected: 'CONNECTED',
@@ -282,6 +290,8 @@ export const enLocale = {
     hintStats: 'Viewing Arcade High Scores & Rank • [B]: Desktop',
     hintTerm: '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit',
     hintSetup: '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop',
+    hintWallpapers: '[◀]/[▶]: Browse 20 Pixel Scenes • [▲]/[▼]: Contrast Dim • [A]: Apply • [B]: Back',
+    hintFormat: '[▲]/[▼]: Mode • [◀]/[▶]: Backup D: • [A]: Start / Smack Case • [B]: Back',
     hintThemes: '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back',
     hintPro: '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back',
     hintDefault: 'D-PAD: Navigate • [A]: Select • [B]: Back',

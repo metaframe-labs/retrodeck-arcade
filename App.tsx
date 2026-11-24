@@ -28,6 +28,7 @@ import {
   FREE_PALETTE_ORDER,
   PALETTE_ORDER,
   RETRO_PALETTES,
+  RetroPalette,
   RetroPaletteId,
   getAccentInk,
   isPaletteProLocked,
@@ -79,6 +80,9 @@ function RetroDeckConsole() {
 
   const [stats, setStats] = useState<ArcadeStats>(() => gameRef.current.getStats());
   const [paletteId, setPaletteId] = useState<RetroPaletteId>('gameboy');
+  const [tempPaletteOverride, setTempPaletteOverride] = useState<RetroPalette | null>(null);
+  const tempPaletteRef = useRef<RetroPalette | null>(null);
+  tempPaletteRef.current = tempPaletteOverride;
   const [scanlines, setScanlines] = useState(false);
   const [isPro, setIsPro] = useState(() => revenueCatService.getStatus().isPro);
   const isProRef = useRef(isPro);
@@ -93,6 +97,7 @@ function RetroDeckConsole() {
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const modalOpenRef = useRef(false);
   modalOpenRef.current = bayVisible || devCartVisible || themeModalVisible;
+  const appActiveRef = useRef(AppState.currentState === 'active');
   const [highScores, setHighScores] = useState<Record<string, number>>({});
   const [gameOverMenuSelection, setGameOverMenuSelection] = useState<number>(0);
   const gameOverMenuSelectionRef = useRef<number>(0);
@@ -116,7 +121,7 @@ function RetroDeckConsole() {
   scanlinesRef.current = scanlines;
   highScoresRef.current = highScores;
 
-  const palette = RETRO_PALETTES[paletteId];
+  const palette = tempPaletteOverride || RETRO_PALETTES[paletteId];
 
   useEffect(() => {
     osRef.current.lang = lang;
@@ -176,12 +181,15 @@ function RetroDeckConsole() {
     });
 
     let inBackground = AppState.currentState !== 'active';
+    appActiveRef.current = !inBackground;
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if ((nextState === 'background' || nextState === 'inactive') && !inBackground) {
         inBackground = true;
+        appActiveRef.current = false;
         osRef.current.onAppBackgrounded?.();
       } else if (nextState === 'active' && inBackground) {
         inBackground = false;
+        appActiveRef.current = true;
         osRef.current.onAppForegrounded?.();
       }
     });
@@ -250,6 +258,11 @@ function RetroDeckConsole() {
 
       if (delta > MAX_ACCUM) delta = MAX_ACCUM;
       accumulator += delta;
+
+      // Keep post-format 45s Windows trial wall-clock timer synced even inside Arcade games & modals!
+      if (!osMode || modalOpenRef.current || isPaused) {
+        osRef.current.syncWinTrialTimer(Date.now(), appActiveRef.current);
+      }
 
       if (modalOpenRef.current) {
         accumulator = 0;
@@ -443,12 +456,16 @@ function RetroDeckConsole() {
       handleSoundEvent('die');
       return;
     }
+    setTempPaletteOverride(null);
+    osRef.current.clearPostFormatWinTheme?.();
     setPaletteId(next);
     AsyncStorage.setItem(PALETTE_STORAGE_KEY, next).catch(() => {});
     handleSoundEvent('score');
   }, [handleSoundEvent]);
 
   const handleCyclePalette = useCallback(() => {
+    setTempPaletteOverride(null);
+    osRef.current.clearPostFormatWinTheme?.();
     setPaletteId((prev) => {
       const pool = isProRef.current ? PALETTE_ORDER : FREE_PALETTE_ORDER;
       const idx = pool.indexOf(prev);
@@ -474,9 +491,18 @@ function RetroDeckConsole() {
       onOpenCartVault: () => setBayVisible(true),
       onCyclePalette: () => handleCyclePalette(),
       onSelectPalette: (id) => handleSelectPalette(id),
+      onSetTemporaryPalette: (temp) => setTempPaletteOverride(temp),
+      onWinTrialExpired: () => {
+        setBayVisible(false);
+        setDevCartVisible(false);
+        setThemeModalVisible(false);
+        setIsPaused(true);
+        setOsMode(true);
+        setDeckMode('pad');
+      },
       getPaletteId: () => paletteIdRef.current,
       onToggleScanlines: () => handleToggleScanlines(),
-      getPaletteName: () => RETRO_PALETTES[paletteIdRef.current].name,
+      getPaletteName: () => tempPaletteRef.current?.name || RETRO_PALETTES[paletteIdRef.current].name,
       getScanlines: () => scanlinesRef.current,
       onRequestKeyboard: (open) => {
         inputRef.current = {
@@ -545,6 +571,10 @@ function RetroDeckConsole() {
   }, []);
 
   const handleSelectPress = useCallback(() => {
+    if (osRef.current.postFormatWinActivationScreen) {
+      osRef.current.dismissWinActivation();
+      return;
+    }
     if (osMode) {
       setDeckMode((m) => (m === 'pad' ? 'num' : m === 'num' ? 'kbd' : 'pad'));
       handleSoundEvent('hit');
@@ -555,6 +585,10 @@ function RetroDeckConsole() {
   }, [osMode, handleSoundEvent]);
 
   const handleStartPress = useCallback(() => {
+    if (osRef.current.postFormatWinActivationScreen) {
+      osRef.current.dismissWinActivation();
+      return;
+    }
     if (osMode) {
       handleButtonChange('a', true);
       setTimeout(() => handleButtonChange('a', false), 65);
@@ -590,6 +624,10 @@ function RetroDeckConsole() {
   }, [osMode, handleButtonChange, handleSoundEvent]);
 
   const handleHomePress = useCallback(() => {
+    if (osRef.current.postFormatWinActivationScreen) {
+      osRef.current.dismissWinActivation();
+      return;
+    }
     if (osMode) {
       setOsMode(false);
       setIsPaused(false);

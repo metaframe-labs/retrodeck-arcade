@@ -3,7 +3,8 @@ import { isCartridgeProLocked } from '../../arcade/cartridges';
 import { RetroAudioEngine } from '../../audio/RetroAudioEngine';
 import { somaRadioService } from '../../services/somaRadioService';
 import { callBYOKAIChat, getProviderMeta, getProviderModel } from '../../services/byokAiService';
-import { ALL_PIC_ART_KEYS, LIVE_SMS_PERSONAS, NOKIA_SONGS, wrapTextLines } from '../retroOsData';
+import { ALL_PIC_ART_KEYS, LIVE_SMS_PERSONAS, NOKIA_SONGS, REAL_POSTCARDS, wrapTextLines } from '../retroOsData';
+import { activatePostFormatWinTheme, openFormatSimulator } from './formatSimEngine';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function pushTermLinesImpl(os: RetroDeckOS, lines: string[], showLogo = false) {
@@ -65,7 +66,7 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
       'CMDS: ls, cd, pwd, cat, clear, top,',
       'neofetch, uname, free, date, whoami,',
       'open <game>, randgame, play <song>,',
-      'stop, ai <msg>, lang, theme, reboot',
+      'stop, ai <msg>, format, theme, reboot',
     ]);
     return 'score';
   }
@@ -283,6 +284,34 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
     return 'powerup';
   }
 
+  if (bin === 'wallpaper' || bin === 'wall' || bin === 'wp') {
+    const q = arg.trim().toLowerCase();
+    if (!q) {
+      os.openWallpaperGallery();
+      os.pushTermLines(['OPENING 20-SCENE PIXEL WALLPAPER GALLERY...']);
+      return 'score';
+    }
+    if (q === 'off' || q === 'none' || q === 'clear') {
+      os.setWallpaperById('none');
+      os.pushTermLines(['WALLPAPER CLEARED (SOLID LCD).']);
+      return 'hit';
+    }
+    const num = parseInt(q, 10);
+    const match =
+      !isNaN(num) && num >= 1 && num <= REAL_POSTCARDS.length
+        ? REAL_POSTCARDS[num - 1]
+        : REAL_POSTCARDS.find(
+            (p) => p.id.toLowerCase().includes(q) || p.title.toLowerCase().includes(q)
+          );
+    if (match) {
+      os.setWallpaperById(match.id);
+      os.pushTermLines([`WALLPAPER SET: ${match.title} (${REAL_POSTCARDS.length} SCENES)`]);
+      return 'powerup';
+    }
+    os.pushTermLines(['usage: wallpaper <1..20 | tokyo | cyber | off>']);
+    return 'die';
+  }
+
   if (bin === 'pro' || bin === 'buy') {
     os.app = 'pro';
     os.proIdx = 0;
@@ -328,6 +357,32 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
     os.app = 'desktop';
     os.cb.onRequestKeyboard?.(false);
     return 'hit';
+  }
+
+  if (
+    bin === 'format' ||
+    bin === 'fdisk' ||
+    bin === 'mkfs' ||
+    (bin === 'rm' && arg.toLowerCase().includes('-rf')) ||
+    (bin === 'sudo' && arg.toLowerCase().includes('rm'))
+  ) {
+    const q = arg.toLowerCase();
+    const presetIdx =
+      q.includes('7370') || q.includes('3310') || q.includes('dos')
+        ? 2
+        : q.includes('xp')
+        ? 1
+        : 0;
+    os.pushTermLines(['MOUNTING FORMAT UTILITY [SIMULATION]...']);
+    openFormatSimulator(os, presetIdx, false);
+    return 'explode';
+  }
+
+  if (bin === 'win98' || bin === 'winxp') {
+    const style = bin === 'winxp' ? 'winxp' : 'win98';
+    activatePostFormatWinTheme(os, style, 45);
+    os.pushTermLines([`ACTIVATED ${style.toUpperCase()} THEME (45s TRIAL)!`]);
+    return 'powerup';
   }
 
   if (bin === 'reboot') {
