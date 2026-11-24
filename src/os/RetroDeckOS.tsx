@@ -2590,31 +2590,31 @@ export class RetroDeckOS implements ArcadeGameInstance {
       if (dir === 'up') this.setupIdx = (this.setupIdx + totalSetupItems - 1) % totalSetupItems;
       if (dir === 'down') this.setupIdx = (this.setupIdx + 1) % totalSetupItems;
       if (dir === 'left' || dir === 'right') {
-        if (this.setupIdx === 0) {
+        if (this.setupIdx === 1) {
           this.cb.onCyclePalette();
           return 'score';
         }
-        if (this.setupIdx === 1) {
+        if (this.setupIdx === 2) {
           this.cb.onToggleScanlines();
           return 'score';
         }
-        if (this.setupIdx === 2) {
+        if (this.setupIdx === 3) {
           this.toggleClockFace();
           return 'score';
         }
       }
       if (dir) return 'hit';
       if (pressA) {
-        if (this.setupIdx === 0) this.cb.onCyclePalette();
-        else if (this.setupIdx === 1) this.cb.onToggleScanlines();
-        else if (this.setupIdx === 2) this.toggleClockFace();
-        else if (this.setupIdx === 3) this.cb.onOpenCartVault();
-        else if (this.setupIdx === 4) {
+        if (this.setupIdx === 0) {
           this.app = 'pro';
           this.proIdx = 0;
           this.proStatusMsg = '';
           return 'powerup';
         }
+        else if (this.setupIdx === 1) this.cb.onCyclePalette();
+        else if (this.setupIdx === 2) this.cb.onToggleScanlines();
+        else if (this.setupIdx === 3) this.toggleClockFace();
+        else if (this.setupIdx === 4) this.cb.onOpenCartVault();
         else if (this.setupIdx === 5) {
           this.app = 'boot';
           this.bootTimer = 0;
@@ -4668,11 +4668,11 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private renderSetup(fg: string, bg: string) {
     const isPro = this.cb.getIsPro?.() ?? false;
     const items = [
+      isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE: RETRODECK PRO',
       `PALETTE: ${this.cb.getPaletteName()}`,
       `CRT SCANLINES: ${this.cb.getScanlines() ? 'ON' : 'OFF'}`,
       `CLOCK FACE: ${this.clockFace.toUpperCase()}`,
       'OPEN FULL CARTRIDGE VAULT',
-      isPro ? '★ RETRODECK PRO: ACTIVE' : '★ UPGRADE: RETRODECK PRO',
       'REBOOT RETRODECK OS',
     ];
 
@@ -4697,7 +4697,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {visibleItems.map((label, i) => {
             const actualIdx = startIdx + i;
             const sel = actualIdx === this.setupIdx;
-            const isProRow = actualIdx === 4;
+            const isProRow = actualIdx === 0;
             return (
               <View
                 key={label}
