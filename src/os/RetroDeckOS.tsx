@@ -381,7 +381,33 @@ export type PicArtKey =
   | 'MUSIC'
   | 'CAKE'
   | 'SNAKE'
-  | 'VIP_CROWN';
+  | 'VIP_CROWN'
+  | 'ROCKET'
+  | 'TROPHY'
+  | 'GHOST'
+  | 'GAMEPAD'
+  | 'SUNSET';
+
+const ALL_PIC_ART_KEYS: PicArtKey[] = [
+  'COFFEE',
+  'SMILE',
+  'COOL',
+  'WINK',
+  'HEART',
+  'SAD',
+  'CAT',
+  'ALIEN',
+  'SKULL',
+  'MUSIC',
+  'CAKE',
+  'SNAKE',
+  'VIP_CROWN',
+  'ROCKET',
+  'TROPHY',
+  'GHOST',
+  'GAMEPAD',
+  'SUNSET',
+];
 
 const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
   COFFEE: buildPixelSpans(
@@ -599,6 +625,91 @@ const PIC_BANNERS: Record<PicArtKey, PixelSpan[]> = {
       '................#...................',
       '................###########@........',
       '....................................',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  ROCKET: buildPixelSpans(
+    [
+      '....#............##............#....',
+      '................####................',
+      '...............######...............',
+      '..#...........##.##.##...........#..',
+      '..............########..............',
+      '.............##########.............',
+      '............###.####.###............',
+      '...........##...####...##...........',
+      '...............##..##...............',
+      '......#.......#..##..#.......#......',
+    ],
+    2,
+    72,
+    20
+  ),
+  TROPHY: buildPixelSpans(
+    [
+      '..........################..........',
+      '........##.##############.##........',
+      '.......#..################..#.......',
+      '.......#..################..#.......',
+      '........##..############..##........',
+      '............############............',
+      '..............########..............',
+      '...............######...............',
+      '............############............',
+      '..........################..........',
+    ],
+    2,
+    72,
+    20
+  ),
+  GHOST: buildPixelSpans(
+    [
+      '.............##########.............',
+      '...........##############...........',
+      '..........################..........',
+      '.........###..###..###..###.........',
+      '.........###.#.##..##.#.###.........',
+      '.........##################.........',
+      '.........##################.........',
+      '.........##################.........',
+      '.........###..###..###..###.........',
+      '.........#......#..#......#.........',
+    ],
+    2,
+    72,
+    20
+  ),
+  GAMEPAD: buildPixelSpans(
+    [
+      '....................................',
+      '......########################......',
+      '.....##########################.....',
+      '....#####..##############..#####....',
+      '....###......##########..#..####....',
+      '....#####..##############..#####....',
+      '.....#######...####...#########.....',
+      '......######..........########......',
+      '.......####............######.......',
+      '....................................',
+    ],
+    2,
+    72,
+    20
+  ),
+  SUNSET: buildPixelSpans(
+    [
+      '...............######...............',
+      '...........##############...........',
+      '.........##################.........',
+      '........####################........',
+      '....############################....',
+      '....................................',
+      '..###########..######..###########..',
+      '......####################..........',
+      '..........############..............',
       '....................................',
     ],
     2,
@@ -1241,6 +1352,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   private smsSendingAi = false;
   private smsDeleteConfirm = false;
   private smsMode: 'inbox' | 'compose' = 'inbox';
+  private smsStudioTab: 'art' | 'stamps' = 'art';
+  private smsArtIdx = 0;
   private smsStampIdx = 0;
   private smsDraftText = '';
 
@@ -2554,18 +2667,30 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     if (this.app === 'sms') {
       if (this.smsMode === 'compose') {
-        const totalStamps = POSTCARD_STAMPS.length;
-        if (dir === 'left') {
-          this.smsStampIdx = (this.smsStampIdx + totalStamps - 1) % totalStamps;
-          return 'hit';
-        }
-        if (dir === 'right') {
-          this.smsStampIdx = (this.smsStampIdx + 1) % totalStamps;
-          return 'hit';
-        }
         if (dir === 'down') {
-          this.smsStampIdx = (this.smsStampIdx + 10) % totalStamps;
-          return 'hit';
+          this.smsStudioTab = this.smsStudioTab === 'art' ? 'stamps' : 'art';
+          return 'score';
+        }
+        if (this.smsStudioTab === 'art') {
+          const totalArts = ALL_PIC_ART_KEYS.length;
+          if (dir === 'left') {
+            this.smsArtIdx = (this.smsArtIdx + totalArts - 1) % totalArts;
+            return 'hit';
+          }
+          if (dir === 'right') {
+            this.smsArtIdx = (this.smsArtIdx + 1) % totalArts;
+            return 'hit';
+          }
+        } else {
+          const totalStamps = POSTCARD_STAMPS.length;
+          if (dir === 'left') {
+            this.smsStampIdx = (this.smsStampIdx + totalStamps - 1) % totalStamps;
+            return 'hit';
+          }
+          if (dir === 'right') {
+            this.smsStampIdx = (this.smsStampIdx + 1) % totalStamps;
+            return 'hit';
+          }
         }
         if (dir === 'up') {
           this.cb.onRequestKeyboard?.(true);
@@ -2577,15 +2702,25 @@ export class RetroDeckOS implements ArcadeGameInstance {
             this.cb.onRequestKeyboard?.(true);
             return 'score';
           }
-          const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
-          this.smsList.unshift({
-            sender: 'MY-POSTCARD',
-            title: stamp.label,
-            text,
-            artKey: 'SMILE',
-            stampIcon: stamp.icon,
-            stampLabel: stamp.label,
-          });
+          if (this.smsStudioTab === 'art') {
+            const artKey = ALL_PIC_ART_KEYS[this.smsArtIdx] || 'SMILE';
+            this.smsList.unshift({
+              sender: 'MY-POSTCARD',
+              title: artKey.replace('_', ' '),
+              text,
+              artKey,
+            });
+          } else {
+            const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
+            this.smsList.unshift({
+              sender: 'MY-POSTCARD',
+              title: stamp.label,
+              text,
+              artKey: 'SMILE',
+              stampIcon: stamp.icon,
+              stampLabel: stamp.label,
+            });
+          }
           if (this.smsList.length > 20) this.smsList.pop();
           this.smsIdx = 0;
           this.smsDraftText = '';
@@ -4991,61 +5126,98 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   private renderSms(fg: string, bg: string) {
     if (this.smsMode === 'compose') {
+      const isArtTab = this.smsStudioTab === 'art';
+      const artKey = ALL_PIC_ART_KEYS[this.smsArtIdx] || 'COFFEE';
+      const artSpans = PIC_BANNERS[artKey] || PIC_BANNERS.COFFEE;
       const stamp = POSTCARD_STAMPS[this.smsStampIdx] || POSTCARD_STAMPS[0];
-      const total = POSTCARD_STAMPS.length;
+      const totalStamps = POSTCARD_STAMPS.length;
       const stripOffsets = [-3, -2, -1, 0, 1, 2, 3];
 
       return (
         <View style={styles.listWrap}>
           <View style={styles.compHeader}>
             <Text style={[styles.compTitle, { color: fg }]} numberOfLines={1}>
-              POSTCARD STUDIO
+              {isArtTab ? 'POSTCARD P1/2: BIG ART' : 'POSTCARD P2/2: STAMPS'}
             </Text>
             <Text style={[styles.compBpm, { color: fg }]}>
-              {this.smsStampIdx + 1}/{total} [{stamp.label}]
+              {isArtTab
+                ? `${this.smsArtIdx + 1}/${ALL_PIC_ART_KEYS.length} [${artKey.replace('_', ' ')}]`
+                : `${this.smsStampIdx + 1}/${totalStamps} [${stamp.label}]`}
             </Text>
           </View>
 
-          {/* 7-icon horizontal stamp strip from 130+ stamps */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderWidth: 1,
-              borderColor: fg,
-              paddingVertical: 4,
-              paddingHorizontal: 4,
-              marginBottom: 4,
-            }}
-          >
-            {stripOffsets.map((off) => {
-              const idx = (this.smsStampIdx + off + total) % total;
-              const item = POSTCARD_STAMPS[idx];
-              const isCenter = off === 0;
-              return (
-                <View
-                  key={`${off}-${item.icon}`}
-                  style={{
-                    width: isCenter ? 28 : 20,
-                    height: isCenter ? 26 : 20,
-                    backgroundColor: isCenter ? fg : 'transparent',
-                    borderWidth: isCenter ? 1.5 : 0,
-                    borderColor: fg,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: isCenter ? 1 : 0.65,
-                  }}
-                >
-                  <Ionicons
-                    name={item.icon}
-                    size={isCenter ? 18 : 13}
-                    color={isCenter ? bg : fg}
+          {isArtTab ? (
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: fg,
+                paddingVertical: 4,
+                paddingHorizontal: 8,
+                marginBottom: 4,
+              }}
+            >
+              <Text style={[styles.compBpm, { color: fg }]}>◀</Text>
+              <View style={[styles.picBannerBox, { borderColor: fg }]}>
+                {artSpans.map((s) => (
+                  <View
+                    key={s.key}
+                    style={{
+                      position: 'absolute',
+                      left: s.x,
+                      top: s.y,
+                      width: s.w,
+                      height: s.h,
+                      backgroundColor: fg,
+                    }}
                   />
-                </View>
-              );
-            })}
-          </View>
+                ))}
+              </View>
+              <Text style={[styles.compBpm, { color: fg }]}>▶</Text>
+            </View>
+          ) : (
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderWidth: 1,
+                borderColor: fg,
+                paddingVertical: 4,
+                paddingHorizontal: 4,
+                marginBottom: 4,
+              }}
+            >
+              {stripOffsets.map((off) => {
+                const idx = (this.smsStampIdx + off + totalStamps) % totalStamps;
+                const item = POSTCARD_STAMPS[idx];
+                const isCenter = off === 0;
+                return (
+                  <View
+                    key={`${off}-${item.icon}`}
+                    style={{
+                      width: isCenter ? 28 : 20,
+                      height: isCenter ? 26 : 20,
+                      backgroundColor: isCenter ? fg : 'transparent',
+                      borderWidth: isCenter ? 1.5 : 0,
+                      borderColor: fg,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: isCenter ? 1 : 0.65,
+                    }}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={isCenter ? 18 : 13}
+                      color={isCenter ? bg : fg}
+                    />
+                  </View>
+                );
+              })}
+            </View>
+          )}
 
           {/* Message Preview Box */}
           <View
@@ -5066,7 +5238,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
           </View>
 
           <Text style={[styles.miniHint, { color: fg, textAlign: 'center', marginTop: 3 }]} numberOfLines={1}>
-            [◀/▶] STAMP • [▼] +10 • [▲] TEXT • [A] SAVE
+            [◀/▶] PICK • [▼] {isArtTab ? 'PAGE 2/2' : 'PAGE 1/2'} • [▲] MSG • [A] SAVE
           </Text>
         </View>
       );
