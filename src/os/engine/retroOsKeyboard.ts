@@ -258,6 +258,7 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
     return;
   }
   if (os.app === 'sms') {
+    os.markUserInteraction();
     os.cb.onRequestKeyboard?.(false);
     if (os.smsReplyTargetIdx !== null) {
       const target = os.smsList[os.smsReplyTargetIdx];
@@ -268,12 +269,7 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
         os.smsBanner = tOs('smsSentTo', { sender: target.sender }, os.lang);
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
-        os.triggerLivePersonaSms(target.personaId, replyText, undefined, target.text).then((ok) => {
-          if (!ok) {
-            os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
-            os.smsBannerTimer = 3.0;
-          }
-        });
+        os.triggerLivePersonaSms(target.personaId, replyText, undefined, target.text);
       }
       return;
     }
@@ -281,6 +277,7 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
     return;
   }
   if (os.app === 'contacts') {
+    os.markUserInteraction();
     os.cb.onRequestKeyboard?.(false);
     if (os.smsContactTarget) {
       const target = os.smsContactTarget;
@@ -292,19 +289,9 @@ export function submitKeyboardImpl(os: RetroDeckOS) {
         os.smsBannerTimer = 3.0;
         os.cb.onPlaySound?.('score');
         if (target.personaId) {
-          os.triggerLivePersonaSms(target.personaId, msgText, undefined, undefined).then((ok) => {
-            if (!ok) {
-              os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
-              os.smsBannerTimer = 3.0;
-            }
-          });
+          os.triggerLivePersonaSms(target.personaId, msgText, undefined, undefined);
         } else {
-          os.triggerLivePersonaSms(`custom_${target.id}`, msgText, target, undefined).then((ok) => {
-            if (!ok) {
-              os.smsBanner = 'NO AI REPLY (CHECK BYOK KEY)';
-              os.smsBannerTimer = 3.0;
-            }
-          });
+          os.triggerLivePersonaSms(`custom_${target.id}`, msgText, target, undefined);
         }
       }
       return;

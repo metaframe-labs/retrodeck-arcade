@@ -13,6 +13,8 @@ import {
   ALL_PIC_ART_KEYS,
   DYNAMIC_MOODS_BY_LANG,
   LIVE_SMS_PERSONAS_BY_LANG,
+  LivePersonaRandomEvent,
+  LiveSmsPersona,
   NOKIA_SMS_TONES,
   OsAppId,
   PicArtKey,
@@ -24,6 +26,16 @@ import {
   stripMarkdownForLcd,
 } from '../retroOsData';
 import { pickLang, tOs } from '../../i18n/retroI18n';
+import {
+  describeSimMoodForPrompt,
+  evaluateMoodAfterUserReply,
+  formatSimMoodBadge,
+  getOrCreatePersonaState,
+  saveAutonomousSimState,
+  selectAutonomousSimTurn,
+  SimContextTrigger,
+  SimMood,
+} from './autonomousSmsSim';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 function normalizeWords(text: string): Set<string> {
@@ -72,38 +84,71 @@ export async function triggerLivePersonaSmsImpl(
   const meta = getProviderMeta(os.byokConfig.activeProvider);
   const hasKey =
     !meta.requiresKey || Boolean(os.byokConfig.keys[os.byokConfig.activeProvider]?.trim());
-  if (!hasKey) return false;
 
   const lang = os.lang;
   const personas = LIVE_SMS_PERSONAS_BY_LANG[lang] || LIVE_SMS_PERSONAS_BY_LANG.en;
-  const moods = DYNAMIC_MOODS_BY_LANG[lang] || DYNAMIC_MOODS_BY_LANG.en;
   const twists = UNEXPECTED_TWISTS_BY_LANG[lang] || UNEXPECTED_TWISTS_BY_LANG.en;
-
-  // Avoid picking the same random persona twice in a row
   const lastLivePersonaId = os.smsList.find((m) => m.isLivePersona)?.personaId;
-  const pool =
-    !forcedPersonaId && personas.length > 1 && lastLivePersonaId
-      ? personas.filter((p) => p.id !== lastLivePersonaId)
-      : personas;
 
-  const persona = customContact
-    ? {
-        id: forcedPersonaId || `custom_${customContact.id}`,
-        sender: customContact.name,
-        tag: customContact.tag || 'SMS',
-        instruction: pickLang(
-          lang,
-          `You are "${customContact.name}" (phone ${customContact.number}), saved in the user's RetroDeck contacts. Reply naturally and warmly as this real contact in English.`,
-          `Sen kullanicinin telefon rehberinde kayitli "${customContact.name}" (${customContact.number}) isimli kisisin. Bu kisiye yakisan dogal ve samimi bir Turkce SMS cevabi yaz.`
-        ),
-        fallback: pickLang(
-          lang,
-          `hey just got your text! talk soon - ${customContact.name}`,
-          `selam mesajini simdi gordum, musait olunca donerim!`
-        ),
-      }
-    : (forcedPersonaId ? personas.find((p) => p.id === forcedPersonaId) : null) ||
-      pool[Math.floor(Math.random() * pool.length)];
+  let persona: LiveSmsPersona;
+  let trigger: SimContextTrigger = userReply ? 'USER_REPLY_REACTION' : 'SPONTANEOUS_EVENT';
+  let activeMood: SimMood = 'CHEERFUL';
+  let moodBadge = formatSimMoodBadge('CHEERFUL', lang);
+  let pickedEvent: LivePersonaRandomEvent | null = null;
+  let contextDirective = '';
+  let offlineFallback = '';
+
+  if (customContact) {
+    persona = {
+      id: forcedPersonaId || `custom_${customContact.id}`,
+      sender: customContact.name,
+      tag: customContact.tag || 'SMS',
+      instruction: pickLang(
+        lang,
+        `You are "${customContact.name}" (phone ${customContact.number}), saved in the user's virtual RetroDeck contacts. Reply naturally and warmly as this simulated contact in English.`,
+        `Sen kullanicinin sanal RetroDeck rehberinde kayitli "${customContact.name}" (${customContact.number}) isimli kisisin. Bu kisiye yakisan dogal ve samimi bir Turkce SMS cevabi yaz.`
+      ),
+      fallback: pickLang(
+        lang,
+        `hey just got your text! talk soon - ${customContact.name}`,
+        `selam mesajini simdi gordum, musait olunca donerim!`
+      ),
+    };
+    const pState = getOrCreatePersonaState(os.simState, persona.id);
+    if (userReply) {
+      pState.mood = evaluateMoodAfterUserReply(persona.id, pState.mood, userReply);
+    }
+    activeMood = pState.mood;
+    moodBadge = formatSimMoodBadge(activeMood, lang);
+    offlineFallback = persona.fallback;
+  } else if (userReply) {
+    const found =
+      (forcedPersonaId
+        ? personas.find((p) => p.id === forcedPersonaId) ||
+          personas.find((p) => p.sender.toLowerCase().includes(forcedPersonaId.toLowerCase()))
+        : null) || personas[0];
+    persona = found;
+    const pState = getOrCreatePersonaState(os.simState, persona.id);
+    pState.mood = evaluateMoodAfterUserReply(persona.id, pState.mood, userReply);
+    activeMood = pState.mood;
+    moodBadge = formatSimMoodBadge(activeMood, lang);
+    offlineFallback = persona.fallback;
+  } else {
+    const turn = selectAutonomousSimTurn(
+      os.simState,
+      lang,
+      lastLivePersonaId,
+      forcedPersonaId,
+      new Date().getHours()
+    );
+    persona = turn.persona;
+    trigger = turn.trigger;
+    activeMood = turn.mood;
+    moodBadge = turn.moodBadge;
+    pickedEvent = turn.pickedEvent;
+    contextDirective = turn.contextDirective;
+    offlineFallback = turn.offlineFallback;
+  }
 
   os.liveSmsFetching = true;
   try {
@@ -132,8 +177,15 @@ export async function triggerLivePersonaSmsImpl(
       )
     ).slice(-6);
 
-    const mood = moods[Math.floor(Math.random() * moods.length)];
-    const isUnexpected = !userReply && Math.random() < 0.35;
+    const moodDescription = pickedEvent
+      ? `${describeSimMoodForPrompt(activeMood, lang)} — ${pickedEvent.mood}`
+      : describeSimMoodForPrompt(activeMood, lang);
+
+    const isUnexpected =
+      !userReply &&
+      !pickedEvent &&
+      trigger === 'SPONTANEOUS_EVENT' &&
+      Math.random() < 0.25;
     const twist = isUnexpected
       ? pickLang(
           lang,
@@ -141,34 +193,40 @@ export async function triggerLivePersonaSmsImpl(
           `\nEKSTRA DURUM: ${twists[Math.floor(Math.random() * twists.length)]}`
         )
       : '';
+    const contextBlock = contextDirective ? `\n${contextDirective}` : '';
+    const replyAgencyBlock =
+      userReply && persona.replyInstruction ? `\n${persona.replyInstruction}` : '';
 
     const forbiddenBlock =
       previousBotTexts.length > 0
         ? pickLang(
             lang,
-            `\n\nYOUR PREVIOUS SENT MESSAGES (STRICTLY DO NOT REPEAT OR PARAPHRASE THESE — CONTINUE THE STORY OR MOVE TO A NEW SITUATION):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`,
-            `\n\nDAHA ONCE ATTIGIN MESAJLAR (BUNLARI ASLA TEKRARLAMA VE AYNI SEYI BASKA KELIMELERLE YAZMA — HIKAYEYI DEVAM ETTIR VEYA YENI KONU AC):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`
+            `\n\nYOUR PREVIOUS SENT MESSAGES (STRICTLY DO NOT REPEAT OR PARAPHRASE THESE — ADVANCE THE CONTEXT OR PIVOT):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`,
+            `\n\nDAHA ONCE ATTIGIN MESAJLAR (BUNLARI ASLA TEKRARLAMA VE AYNI SEYI BASKA KELIMELERLE YAZMA — OLAYI ILERLET VEYA YENI KONU AC):\n${previousBotTexts.map((t, i) => `${i + 1}. "${t}"`).join('\n')}`
           )
         : '';
 
+    const minChars = userReply ? 3 : 12;
     const systemPrompt = pickLang(
       lang,
-      `${persona.instruction}\n` +
-        `CURRENT MOOD / VIBE: ${mood}.${twist}\n` +
+      `[RETRODECK AUTONOMOUS SMS SIMULATION — IN-GAME VIRTUAL CHARACTER]\n` +
+        `${persona.instruction}${contextBlock}${replyAgencyBlock}\n` +
+        `MOOD ENGINE STATE: ${moodDescription}.${twist}\n` +
         `CURRENT TIME: ${os.formatClock()}.${forbiddenBlock}\n` +
         `STRICT RULES:\n` +
-        `1) Write ONE realistic SMS strictly in English (25 to 125 chars).\n` +
-        `2) Progress from what you previously texted — acknowledge earlier context naturally OR bring up a totally fresh moment/event.\n` +
+        `1) Write ONE realistic SMS strictly in English (${minChars} to 125 chars — ultra-short deadpan lines like "And?" or "Cousin, bowling. Now." are great when in character!).\n` +
+        `2) Stay 100% in character as a real person with your own life, mood (${activeMood}), and agenda—never sound like a polite chatbot.\n` +
         `3) NEVER repeat openings, jokes, numbers, or phrasing from your previous messages.\n` +
-        `4) Plain text only: NO emojis, NO quotes around output, NEVER mention AI.`,
-      `${persona.instruction}\n` +
-        `SU ANKI RUH HALIN / KISILIGIN: ${mood}.${twist}\n` +
+        `4) Plain text only: NO emojis, NO quotes around output, NEVER mention AI or simulation.`,
+      `[RETRODECK OTONOM SMS SIMULASYONU — OYUN ICI SANAL KARAKTER]\n` +
+        `${persona.instruction}${contextBlock}${replyAgencyBlock}\n` +
+        `RUH HALI MOTORU: ${moodDescription}.${twist}\n` +
         `SAAT: ${os.formatClock()}.${forbiddenBlock}\n` +
         `KESIN KURALLAR:\n` +
-        `1) En az 25, en fazla 125 karakterlik tek bir gercekci Turkce SMS yaz.\n` +
-        `2) Onceki mesajlarina bagli kalarak olayi devam ettir YA DA tamamen farkli, yeni bir gelisme yaz.\n` +
+        `1) En az ${minChars}, en fazla 125 karakterlik tek bir gercekci Turkce SMS yaz ("Ee yani?" veya "Kuzen, bowling. Simdi." gibi kisa, vurucu cevaplar karaktere uyuyorsa harikadir!).\n` +
+        `2) Kendi hayati, ${formatSimMoodBadge(activeMood, lang)} ruh hali ve inadi olan gercek bir insan gibi yaz; asla kibar bir asistan gibi uysal konusma.\n` +
         `3) Onceki attigin mesajlarla ayni girisi, espriyi veya cumle yapisini ASLA tekrarlama.\n` +
-        `4) Sadece duz metin: emoji yok, tirnak yok, yapay zeka oldugunu asla belli etme.`
+        `4) Sadece duz metin: emoji yok, tirnak yok, yapay zeka veya simulasyon oldugunu metin icinde soyleme.`
     );
 
     const buildUserTurn = (extraGuard = ''): BYOKChatMessage[] => {
@@ -176,28 +234,22 @@ export async function triggerLivePersonaSmsImpl(
         .slice(-10)
         .map((h) => `${h.role === 'assistant' ? persona.sender : 'USER'}: "${h.content}"`)
         .join('\n');
-      const logSection = threadLog
-        ? `[RECENT SMS THREAD]\n${threadLog}\n\n`
-        : '';
+      const logSection = threadLog ? `[RECENT SMS THREAD]\n${threadLog}\n\n` : '';
 
       const promptText = userReply
         ? pickLang(
             lang,
             `${logSection}TASK: The user just replied to ${replyingToText ? `your message "${replyingToText}"` : 'you'} with: "${userReply}".\n` +
-              `Write your direct NEXT SMS response reacting specifically to "${userReply}". Never repeat or copy your earlier SMS above.${extraGuard}`,
+              `Your mood shifted to ${activeMood}. Write your direct NEXT SMS response reacting to "${userReply}"${persona.replyInstruction ? ' while sticking to your own agenda/stubbornness' : ''}. Never repeat earlier lines.${extraGuard}`,
             `${logSection}GOREV: Kullanici az once ${replyingToText ? `"${replyingToText}" mesajina` : 'sana'} su cevabi yazdi: "${userReply}".\n` +
-              `Kullanicinin yazdigi "${userReply}" cevabina dogrudan karsilik veren YENI bir SMS yaz. Yukaridaki eski mesajini asla tekrar etme.${extraGuard}`
+              `Ruh halin su an ${formatSimMoodBadge(activeMood, lang)}. Kullanicinin "${userReply}" cevabina ${persona.replyInstruction ? 'kendi gundeminden odun vermeden ' : ''}dogrudan karsilik veren YENI bir SMS yaz. Eski mesajini tekrar etme.${extraGuard}`
           )
-        : history.length > 0
-        ? pickLang(
-            lang,
-            `${logSection}TASK: Based on your previous messages above, write the NEXT follow-up or a fresh topic SMS right now (completely different from previous lines).${extraGuard}`,
-            `${logSection}GOREV: Yukarida daha once attigin mesajlara gore simdi SIRADAKI devam mesajini ya da tamamen yeni bir konuyu yaz (eski mesajlari tekrarlama).${extraGuard}`
-          )
+        : contextDirective
+        ? `${logSection}TASK: ${contextDirective} Write the SMS right now with 100% fresh wording.${extraGuard}`
         : pickLang(
             lang,
-            `TASK: Send a spontaneous, natural first SMS message right now.${extraGuard}`,
-            `GOREV: Bana simdi dogal, samimi ilk SMS mesajini gonder.${extraGuard}`
+            `${logSection}TASK: Send a spontaneous, natural SMS message right now.${extraGuard}`,
+            `${logSection}GOREV: Simdi dogal, samimi bir SMS mesaji gonder.${extraGuard}`
           );
 
       return [{ role: 'user', content: promptText }];
@@ -206,7 +258,10 @@ export async function triggerLivePersonaSmsImpl(
     const parseReply = (raw: string) =>
       stripMarkdownForLcd(raw)
         .replace(/^["']|["']$/g, '')
-        .replace(/^(?:USER|ME|ASSISTANT|BOT):\s*/i, '')
+        .replace(
+          /^(?:USER|ME|ASSISTANT|BOT|JAKE(?:\s*\(BRO\))?|MERT(?:\s*\(KANKA\))?|MOM|ANNEM|MR\.\s*CARTER|SELIM\s*BEY):\s*/i,
+          ''
+        )
         .replace(/\n+/g, ' ')
         .trim()
         .slice(0, 130);
@@ -215,50 +270,74 @@ export async function triggerLivePersonaSmsImpl(
       ...previousBotTexts,
       ...os.smsList.slice(0, 6).map((m) => m.text),
     ];
+    const minValidLen = userReply ? 3 : 8;
+    let cleaned = '';
 
-    let cleaned = parseReply(
-      await callBYOKAIChat(buildUserTurn(), os.byokConfig, systemPrompt, {
-        temperature: 0.9,
-        maxTokens: 140,
-      })
-    );
+    // Call BYOK LLM when key is configured; otherwise run Offline Autonomous Simulation Pool seamlessly
+    if (hasKey) {
+      try {
+        cleaned = parseReply(
+          await callBYOKAIChat(buildUserTurn(), os.byokConfig, systemPrompt, {
+            temperature: 0.92,
+            maxTokens: 140,
+          })
+        );
 
-    // Retry once if empty or too similar to previously sent SMS
-    if (!cleaned || cleaned.length < 8 || isSmsTooSimilar(cleaned, recentGlobalTexts)) {
-      const retryGuard = pickLang(
-        lang,
-        ' IMPORTANT: Your previous draft was TOO SIMILAR to what you already sent! Acknowledge the conversation naturally with 100% NEW words and details.',
-        ' ONEMLI: Onceki taslagin az onceki mesajla AYNI cikti! Tamamen YENI kelimeler ve farkli bir cumleyle cevap ver.'
-      );
-      const retried = parseReply(
-        await callBYOKAIChat(buildUserTurn(retryGuard), os.byokConfig, systemPrompt, {
-          temperature: 1.05,
-          maxTokens: 140,
-        })
-      );
-      if (retried && retried.length >= 8 && !isSmsTooSimilar(retried, previousBotTexts)) {
-        cleaned = retried;
-      } else if (retried && retried.length >= 8 && isSmsTooSimilar(cleaned, previousBotTexts)) {
-        cleaned = retried;
+        if (!cleaned || cleaned.length < minValidLen || isSmsTooSimilar(cleaned, recentGlobalTexts)) {
+          const retryGuard = pickLang(
+            lang,
+            ' IMPORTANT: Your previous draft was TOO SIMILAR to what you already sent! Write with 100% NEW words and details.',
+            ' ONEMLI: Onceki taslagin az onceki mesajla AYNI cikti! Tamamen YENI kelimeler ve farkli bir cumleyle yaz.'
+          );
+          const retried = parseReply(
+            await callBYOKAIChat(buildUserTurn(retryGuard), os.byokConfig, systemPrompt, {
+              temperature: 1.05,
+              maxTokens: 140,
+            })
+          );
+          if (retried && retried.length >= minValidLen && !isSmsTooSimilar(retried, previousBotTexts)) {
+            cleaned = retried;
+          } else if (
+            retried &&
+            retried.length >= minValidLen &&
+            isSmsTooSimilar(cleaned, previousBotTexts)
+          ) {
+            cleaned = retried;
+          }
+        }
+      } catch {
+        cleaned = '';
       }
     }
 
-    if (!cleaned || cleaned.length < 8 || isSmsTooSimilar(cleaned, previousBotTexts)) {
+    if (!cleaned || cleaned.length < minValidLen || isSmsTooSimilar(cleaned, previousBotTexts)) {
       if (userReply) {
-        const snippet = userReply.slice(0, 32);
-        cleaned = pickLang(
-          lang,
-          `Got your text ("${snippet}")! Catching up on that now, talk in a bit.`,
-          `Tamamdir mesajini aldim ("${snippet}"), ona gore hallediyorum!`
+        const customReplyFb = persona.replyFallbacks?.find(
+          (fb) => !isSmsTooSimilar(fb, previousBotTexts)
         );
+        const snippet = userReply.slice(0, 32);
+        cleaned =
+          customReplyFb ||
+          pickLang(
+            lang,
+            `Got your text ("${snippet}")! Catching up on that now, talk in a bit.`,
+            `Tamamdir mesajini aldim ("${snippet}"), ona gore hallediyorum!`
+          );
       } else {
-        cleaned = !isSmsTooSimilar(persona.fallback, previousBotTexts)
-          ? persona.fallback
-          : pickLang(
-              lang,
-              `Quick update from ${persona.sender} at ${os.formatClock()} - still around?`,
-              `${persona.sender} saat ${os.formatClock()} itibariyla tekrar yaziyor, musait misin?`
-            );
+        const candidates = [
+          offlineFallback,
+          ...(persona.unansweredFollowups || []),
+          ...(persona.eventPool?.map((ev) => ev.fallback) || []),
+          persona.fallback,
+        ].filter(Boolean);
+        const uniqueFallback = candidates.find((c) => !isSmsTooSimilar(c, previousBotTexts));
+        cleaned =
+          uniqueFallback ||
+          pickLang(
+            lang,
+            `[${os.formatClock()}] ${persona.sender}: hey u around? ping me back when u see this`,
+            `[${os.formatClock()}] ${persona.sender}: musait misin? gorunce bana don`
+          );
       }
     }
 
@@ -271,19 +350,38 @@ export async function triggerLivePersonaSmsImpl(
     os.personaHistories[persona.id] = nextHistory.slice(-12);
     os.savePersonaHistories();
 
+    // Update Autonomous Context & Mood Engine state
+    const pState = getOrCreatePersonaState(os.simState, persona.id);
+    const isSocialContact = ['kanka', 'anne', 'patron', 'flort'].includes(persona.id);
+    if (userReply) {
+      pState.awaitingReply = false;
+      pState.unansweredCount = 0;
+    } else if (trigger === 'UNANSWERED_NUDGE') {
+      pState.unansweredCount += 1;
+      pState.awaitingReply = isSocialContact && pState.unansweredCount < 2;
+    } else {
+      pState.unansweredCount = 0;
+      pState.awaitingReply = isSocialContact;
+    }
+    pState.lastMessageText = cleaned;
+    pState.lastSentAtMs = Date.now();
+    os.simState.lastActiveAtMs = Date.now();
+    saveAutonomousSimState(os.simState);
+
     os.smsList.unshift({
       sender: persona.sender,
-      title: persona.tag,
+      title: `SIM•${persona.tag}`,
       text: cleaned,
       artKey: 'SMILE',
       isLivePersona: true,
+      isSimulated: true,
       personaId: persona.id,
       timestamp: os.formatClock(),
-      mood: isUnexpected ? pickLang(lang, 'SURPRISE', 'SURPRIZ') : mood.split(' ')[0],
+      mood: isUnexpected ? pickLang(lang, 'SURPRISE', 'SURPRIZ') : moodBadge,
     });
     if (os.smsList.length > 25) os.smsList.pop();
     os.smsIdx = 0;
-    os.smsBanner = `✉ ${tOs('smsNewBanner', lang)}: ${persona.sender}`;
+    os.smsBanner = `✉ [SIM] ${tOs('smsNewBanner', lang)}: ${persona.sender}`;
     os.smsBannerTimer = 4.5;
     if (os.app !== 'sms' || os.keyLocked) os.unreadSmsCount += 1;
     os.saveSmsList();
@@ -430,7 +528,7 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
       somaRadioService.stop();
       actionLogs.push('AUDIO STOPPED');
     } else if (cmd === 'LIVE_SMS') {
-      os.triggerLivePersonaSms();
+      os.triggerLivePersonaSms(arg || undefined);
       actionLogs.push('INCOMING SMS TRIGGERED');
     } else if (cmd === 'LOCK') {
       actionLogs.push('LOCKING KEYGUARD...');

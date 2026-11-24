@@ -585,30 +585,33 @@ export function renderSms(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         </View>
       ) : msg.isLivePersona ? (
-        /* Authentic Plain-Text Real SMS Bubble with Timestamp & Mood */
+        /* Autonomous Simulated SMS Bubble with Timestamp, Mood & Clear Simulation Badge */
         <View
           style={[
             styles.compStaff,
             {
               borderColor: fg,
               alignItems: 'flex-start',
-              justifyContent: 'center',
+              justifyContent: 'space-between',
               paddingHorizontal: 10,
-              paddingVertical: 8,
-              gap: 6,
+              paddingVertical: 6,
+              gap: 4,
             },
           ]}
         >
           <View style={{ width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.75 }]} numberOfLines={1}>
+            <Text style={[styles.compTitle, { color: fg, fontSize: 9, opacity: 0.8 }]} numberOfLines={1}>
               {tOs('from', os.lang)}: {msg.sender}
             </Text>
-            <Text style={[styles.listMeta, { color: fg, fontSize: 8, opacity: 0.75 }]}>
+            <Text style={[styles.listMeta, { color: fg, fontSize: 8, opacity: 0.8 }]}>
               {msg.mood ? `${msg.mood} • ` : ''}{msg.timestamp || os.formatClock()}
             </Text>
           </View>
-          <Text style={[styles.smsBodyTxt, { color: fg, textAlign: 'left', fontSize: 10.5, lineHeight: 14 }]} numberOfLines={5}>
+          <Text style={[styles.smsBodyTxt, { color: fg, textAlign: 'left', fontSize: 10.5, lineHeight: 13.5, flex: 1 }]} numberOfLines={4}>
             {msg.text}
+          </Text>
+          <Text style={[styles.miniHint, { color: fg, fontSize: 7.5, opacity: 0.68, width: '100%', textAlign: 'right', marginTop: 0 }]} numberOfLines={1}>
+            {tOs('smsSimDisclaimer', os.lang)}
           </Text>
         </View>
       ) : (

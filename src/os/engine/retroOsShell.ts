@@ -312,12 +312,9 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
   }
 
   if (bin === 'livesms') {
-    os.pushTermLines(['FETCHING LIVE AI SMS...']);
-    os.triggerLivePersonaSms().then((ok) => {
-      if (!ok) {
-        os.pushTermLines(['ADD BYOK API KEY IN CHAT FIRST!']);
-      }
-    });
+    os.markUserInteraction();
+    os.pushTermLines([arg ? `SIMULATING SMS (${arg.toUpperCase()})...` : 'SIMULATING AUTONOMOUS SMS...']);
+    os.triggerLivePersonaSms(arg || undefined);
     return 'score';
   }
 

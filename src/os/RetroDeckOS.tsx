@@ -104,6 +104,17 @@ import {
   fetchWeatherImpl,
 } from './engine/retroOsAiAndNet';
 import {
+  AutonomousSimState,
+  getOrCreatePersonaState,
+  loadAutonomousSimState,
+  rollAutonomousSmsIntervalSec,
+  saveAutonomousSimState,
+} from './engine/autonomousSmsSim';
+import {
+  ScheduledSimSmsItem,
+  simNotificationService,
+} from '../services/simNotificationService';
+import {
   getControlsHintImpl,
   getKeyboardBindingImpl,
   setKeyboardTextImpl,
@@ -222,6 +233,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   /** @internal */ triggerPurchaseSuccessSms(planName: string) {
+    this.recordMajorSimEvent('PRO_UNLOCKED', `RETRODECK PRO (${planName.toUpperCase()})`);
     this.smsList.unshift({
       sender: 'RETRODECK-VIP',
       title: 'PRO ACTIVATED!',
@@ -378,9 +390,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ contactDraft = '';
   /** @internal */ contactDeleteConfirm = false;
   /** @internal */ liveAiSmsEnabled = true;
-  /** @internal */ liveSmsTimer = 80;
+  /** @internal */ hasUserInteracted = false;
+  /** @internal */ liveSmsTimer = rollAutonomousSmsIntervalSec();
   /** @internal */ liveSmsFetching = false;
   /** @internal */ personaHistories: Record<string, { role: 'user' | 'assistant'; content: string }[]> = {};
+  /** @internal */ recentPersonaEvents: Record<string, string[]> = {};
+  /** @internal */ simState: AutonomousSimState = {
+    personas: {},
+    lastActiveAtMs: Date.now(),
+  };
 
   /** @internal */ profRow = 0;
   /** @internal */ profileIdx = 0;
@@ -503,6 +521,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    simNotificationService.init().catch(() => {});
+    loadAutonomousSimState().then((savedSim) => {
+      if (savedSim) {
+        const prevActive = savedSim.lastActiveAtMs;
+        this.simState = savedSim;
+        setTimeout(() => {
+          this.syncScheduledNotifications(prevActive).catch(() => {});
+        }, 1800);
+      } else {
+        simNotificationService.cancelPendingAsync().catch(() => {});
+      }
+    });
     i18nService.hydrate().then((val) => {
       this.lang = val;
       if (this.chatHistory.length === 0 && this.chatLines.length <= 3) {
@@ -550,7 +580,151 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   /** @internal */ toggleLiveAiSms() {
     this.liveAiSmsEnabled = !this.liveAiSmsEnabled;
+    if (this.liveAiSmsEnabled) {
+      this.liveSmsTimer = rollAutonomousSmsIntervalSec();
+      simNotificationService.ensurePermissionsOnInteraction().catch(() => {});
+    } else {
+      simNotificationService.cancelPendingAsync().catch(() => {});
+    }
     AsyncStorage.setItem(LIVE_AI_SMS_STORAGE_KEY, this.liveAiSmsEnabled ? '1' : '0').catch(() => {});
+  }
+
+  /** Starts the 30-90s autonomous SMS clock only AFTER the user's first interaction */
+  public markUserInteraction() {
+    if (!this.hasUserInteracted) {
+      this.hasUserInteracted = true;
+      this.liveSmsTimer = rollAutonomousSmsIntervalSec();
+      if (this.liveAiSmsEnabled) {
+        simNotificationService.ensurePermissionsOnInteraction().catch(() => {});
+      }
+    }
+    this.simState.lastActiveAtMs = Date.now();
+  }
+
+  /** Records major console events (High Score, Pro unlock) so personas can shift mood & react */
+  public recordMajorSimEvent(type: 'HIGH_SCORE' | 'PRO_UNLOCKED' | 'LATE_NIGHT', detail: string) {
+    this.simState.lastOsEvent = { type, detail, atMs: Date.now() };
+    saveAutonomousSimState(this.simState);
+  }
+
+  /** Persists timestamp & schedules local Android/iOS simulated SMS notifications when backgrounded */
+  public onAppBackgrounded() {
+    this.simState.lastActiveAtMs = Date.now();
+    saveAutonomousSimState(this.simState);
+    simNotificationService
+      .scheduleBackgroundSimBatch({
+        enabled: this.liveAiSmsEnabled,
+        simState: this.simState,
+        lang: this.lang,
+        personaHistories: this.personaHistories,
+        recentInboxTexts: this.smsList.slice(0, 8).map((m) => m.text),
+      })
+      .catch(() => {});
+  }
+
+  /** Reconciles delivered OS tray notifications (or runs fallback catch-up) when returning */
+  public onAppForegrounded() {
+    const prevMs = this.simState.lastActiveAtMs;
+    this.simState.lastActiveAtMs = Date.now();
+    saveAutonomousSimState(this.simState);
+    this.syncScheduledNotifications(prevMs).catch(() => {});
+  }
+
+  /** Opens Nokia 3310 SMS inbox directly on the exact simulated message tapped in the OS tray */
+  public async openFromSimNotificationTap(tappedQueueId?: string) {
+    await this.syncScheduledNotifications(this.simState.lastActiveAtMs, tappedQueueId);
+    this.hasUserInteracted = true;
+    this.keyLocked = false;
+    this.unlockStage = false;
+    this.idleTimer = 0;
+    this.app = 'sms';
+    this.smsMode = 'inbox';
+    this.smsIdx = 0;
+    this.unreadSmsCount = 0;
+    this.cb.onPlaySound?.('powerup');
+  }
+
+  /** @internal */ commitDeliveredSimItems(items: ScheduledSimSmsItem[]) {
+    if (items.length === 0) return;
+    for (const item of items) {
+      const dt = new Date(item.deliverAtMs);
+      const hh = String(dt.getHours()).padStart(2, '0');
+      const mm = String(dt.getMinutes()).padStart(2, '0');
+
+      const prevHist = this.personaHistories[item.personaId] || [];
+      this.personaHistories[item.personaId] = [
+        ...prevHist,
+        { role: 'assistant' as const, content: item.text },
+      ].slice(-12);
+
+      const pState = getOrCreatePersonaState(this.simState, item.personaId);
+      const isSocial = ['kanka', 'anne', 'patron', 'flort'].includes(item.personaId);
+      pState.mood = item.mood;
+      if (item.trigger === 'UNANSWERED_NUDGE') {
+        pState.unansweredCount += 1;
+        pState.awaitingReply = isSocial && pState.unansweredCount < 2;
+      } else {
+        pState.unansweredCount = 0;
+        pState.awaitingReply = isSocial;
+      }
+      pState.lastMessageText = item.text;
+      pState.lastSentAtMs = item.deliverAtMs;
+
+      this.smsList.unshift({
+        sender: item.sender,
+        title: `SIM•${item.tag}`,
+        text: item.text,
+        artKey: 'SMILE',
+        isLivePersona: true,
+        isSimulated: true,
+        personaId: item.personaId,
+        timestamp: `${hh}:${mm}`,
+        mood: item.moodBadge,
+      });
+      if (this.smsList.length > 25) this.smsList.pop();
+      if (this.app !== 'sms' || this.keyLocked) {
+        this.unreadSmsCount += 1;
+      }
+    }
+
+    const latest = items[items.length - 1];
+    this.smsIdx = 0;
+    this.smsBanner = `✉ [SIM] ${tOs('smsNewBanner', this.lang)}: ${latest.sender}`;
+    this.smsBannerTimer = 4.5;
+    this.liveSmsTimer = rollAutonomousSmsIntervalSec();
+    this.simState.lastActiveAtMs = Date.now();
+    this.savePersonaHistories();
+    this.saveSmsList();
+    saveAutonomousSimState(this.simState);
+    this.playActiveSmsTone();
+  }
+
+  /** @internal */ async syncScheduledNotifications(prevActiveMs: number, tappedQueueId?: string) {
+    const { delivered, hadScheduledQueue } =
+      await simNotificationService.reconcileDeliveredQueueAsync(tappedQueueId);
+    if (delivered.length > 0) {
+      this.hasUserInteracted = true;
+      this.commitDeliveredSimItems(delivered);
+      return;
+    }
+    if (!hadScheduledQueue) {
+      this.handleBackgroundCatchUp(prevActiveMs);
+    }
+  }
+
+  /** @internal */ handleBackgroundCatchUp(prevActiveMs: number) {
+    if (!this.liveAiSmsEnabled || !prevActiveMs) return;
+    const elapsedSec = (Date.now() - prevActiveMs) / 1000;
+    if (elapsedSec < 60) return;
+    this.hasUserInteracted = true;
+    const catchUpCount = elapsedSec >= 240 ? 2 : 1;
+    this.triggerLivePersonaSms();
+    if (catchUpCount > 1) {
+      setTimeout(() => {
+        if (this.liveAiSmsEnabled) this.triggerLivePersonaSms();
+      }, 3200);
+    }
+    this.liveSmsTimer = rollAutonomousSmsIntervalSec();
   }
 
   /** @internal */ async triggerLivePersonaSms(

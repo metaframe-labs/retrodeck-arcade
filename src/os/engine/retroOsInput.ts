@@ -23,6 +23,7 @@ import {
   WEATHER_CITIES,
 } from '../retroOsData';
 import { tOs } from '../../i18n/retroI18n';
+import { rollAutonomousSmsIntervalSec } from './autonomousSmsSim';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | null {
@@ -447,11 +448,11 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     os.smsBannerTimer -= dt;
   }
 
-  // Background Live AI Persona & Ad SMS scheduler (only fires if BYOK key is configured)
-  if (os.liveAiSmsEnabled && os.app !== 'boot' && !os.liveSmsFetching) {
+  // Autonomous SMS Simulation scheduler: starts AFTER first user interaction, random 30–90s interval
+  if (os.liveAiSmsEnabled && os.hasUserInteracted && os.app !== 'boot' && !os.liveSmsFetching) {
     os.liveSmsTimer -= dt;
     if (os.liveSmsTimer <= 0) {
-      os.liveSmsTimer = 135 + Math.random() * 145; // Next SMS in ~2.2 - 4.6 mins
+      os.liveSmsTimer = rollAutonomousSmsIntervalSec();
       os.triggerLivePersonaSms();
     }
   }
@@ -502,9 +503,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     return null;
   }
 
-  // Auto Screensaver / Keyguard after 28s idle on desktop
+  // Auto Screensaver / Keyguard after 28s idle on desktop + arm Autonomous SMS on first input
   if (anyInput) {
     os.idleTimer = 0;
+    os.markUserInteraction();
   } else if (os.app === 'desktop') {
     os.idleTimer += dt;
     if (os.idleTimer >= 28) {

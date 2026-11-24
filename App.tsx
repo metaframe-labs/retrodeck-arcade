@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, Modal, NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,6 +36,7 @@ import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
 import { HighScoreService } from './src/arcade/HighScoreService';
 import { RetroDeckOS } from './src/os/RetroDeckOS';
 import { revenueCatService, SubscriptionStatus } from './src/services/revenueCatService';
+import { simNotificationService } from './src/services/simNotificationService';
 import { useTranslation } from './src/i18n/retroI18n';
 
 const OS_GAMEPAD_LABELS = {
@@ -165,15 +166,40 @@ function RetroDeckConsole() {
       console.log('HIGH_SCORES_UPDATED:', JSON.stringify(scores));
       setHighScores(scores);
       const hs = scores[activeCart.id] || 0;
+      if (hs > 0) {
+        osRef.current.recordMajorSimEvent?.('HIGH_SCORE', `${activeCart.title}: ${hs} PTS`);
+      }
       if (hs > 0 && gameRef.current.setHighScore) {
         gameRef.current.setHighScore(hs);
         setStats(gameRef.current.getStats());
       }
     });
 
+    let inBackground = AppState.currentState !== 'active';
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if ((nextState === 'background' || nextState === 'inactive') && !inBackground) {
+        inBackground = true;
+        osRef.current.onAppBackgrounded?.();
+      } else if (nextState === 'active' && inBackground) {
+        inBackground = false;
+        osRef.current.onAppForegrounded?.();
+      }
+    });
+
+    const unsubscribeNotifTap = simNotificationService.subscribeToNotificationTaps((queueId) => {
+      setBayVisible(false);
+      setDevCartVisible(false);
+      setThemeModalVisible(false);
+      setIsPaused(false);
+      setOsMode(true);
+      osRef.current.openFromSimNotificationTap?.(queueId);
+    });
+
     return () => {
       unsubscribeRC();
       unsubscribeHS();
+      appStateSub.remove();
+      unsubscribeNotifTap();
     };
   }, [activeCart.id]);
 
