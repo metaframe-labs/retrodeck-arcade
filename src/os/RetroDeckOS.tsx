@@ -909,6 +909,20 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // In-LCD Arcade Browser
   private gameIdx = 0;
 
+  private triggerPurchaseFailedSms(reason: string) {
+    this.smsList.unshift({
+      sender: 'BANK-RD8',
+      title: 'PAYMENT FAILED',
+      text: `DEAR USER, YOUR PURCHASE OF RETRODECK PRO COULD NOT BE COMPLETED (${reason.toUpperCase()}). PLEASE CHECK YOUR CARD & RETRY!`,
+      artKey: 'SAD',
+    });
+    if (this.smsList.length > 10) this.smsList.pop();
+    this.smsIdx = 0;
+    this.smsBanner = '✉ NEW SMS: PURCHASE FAILED!';
+    this.smsBannerTimer = 4.0;
+    RetroAudioEngine.playNokiaSmsTone();
+  }
+
   // AI & BYOK state
   private byokConfig: BYOKConfig = { ...DEFAULT_BYOK_CONFIG };
   private aiTab: 'chat' | 'byok' = 'chat';
@@ -2677,12 +2691,15 @@ export class RetroDeckOS implements ArcadeGameInstance {
               this.proStatusMsg = 'WELCOME TO PRO!';
             } else if (res.userCancelled) {
               this.proStatusMsg = 'TRANSACTION CANCELLED.';
+              this.triggerPurchaseFailedSms('USER CANCELLED');
             } else {
               this.proStatusMsg = 'TRANSACTION FAILED.';
+              this.triggerPurchaseFailedSms('CARD DECLINED');
             }
           }).catch((err) => {
             this.proBusy = false;
             this.proStatusMsg = 'PURCHASE ERROR.';
+            this.triggerPurchaseFailedSms(err?.message || 'STORE ERROR');
           });
           return 'powerup';
         }
@@ -3016,6 +3033,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
         this.pushTermLines(['PRO STATUS REVOKED (DEBUG OK).']);
       });
       this.pushTermLines(['REVOKING PRO STATUS...']);
+      return 'die';
+    }
+
+    if (bin === 'failsms' || bin === 'testfailsms') {
+      this.triggerPurchaseFailedSms('TEST ERROR: INSUFFICIENT FUNDS');
+      this.pushTermLines(['SENT TEST FAILED PURCHASE SMS TO 3310!']);
       return 'die';
     }
 
