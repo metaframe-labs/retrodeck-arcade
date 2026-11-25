@@ -31,6 +31,7 @@ import {
   RetroPalette,
   RetroPaletteId,
   getAccentInk,
+  isLightBackground,
   isPaletteProLocked,
 } from './src/theme/palettes';
 import { RetroAudioEngine } from './src/audio/RetroAudioEngine';
@@ -640,6 +641,12 @@ function RetroDeckConsole() {
     }
   }, [osMode, handleSoundEvent]);
 
+  const isLightChassis = isLightBackground(palette.chassisBg);
+  const isLightDeck = isLightBackground(palette.deckBg);
+  const chassisTextColor = isLightChassis ? '#0F172A' : '#F8FAFC';
+  const chassisMutedColor = isLightChassis ? '#475569' : '#64748B';
+  const toolTextColor = isLightChassis ? '#1E293B' : '#CBD5E1';
+
   return (
     <View
       style={[
@@ -651,7 +658,7 @@ function RetroDeckConsole() {
         },
       ]}
     >
-      <StatusBar style="light" />
+      <StatusBar style={isLightChassis ? "dark" : "light"} />
       <View style={styles.mainContainer}>
         {/* Top Hardware Console Header */}
         <View style={styles.topBar}>
@@ -659,7 +666,7 @@ function RetroDeckConsole() {
             <Text style={[styles.brandTag, { color: palette.bezelAccent }]}>
               METAFRAME // {palette.name}
             </Text>
-            <Text style={styles.brandTitle}>RETRODECK OS</Text>
+            <Text style={[styles.brandTitle, { color: chassisTextColor }]}>RETRODECK OS</Text>
           </View>
 
           <View style={styles.topActions}>
@@ -749,7 +756,7 @@ function RetroDeckConsole() {
 
         {/* Controls Hint Strip */}
         <View style={styles.hintBar}>
-          <Text style={styles.hintText} numberOfLines={1}>
+          <Text style={[styles.hintText, { color: chassisMutedColor }]} numberOfLines={1}>
             {osMode ? osRef.current.getControlsHint() : activeCart.controlsHint}
           </Text>
         </View>
@@ -770,9 +777,9 @@ function RetroDeckConsole() {
             <Ionicons
               name="desktop-outline"
               size={14}
-              color={osMode ? palette.bezelAccent : '#CBD5E1'}
+              color={osMode ? palette.bezelAccent : toolTextColor}
             />
-            <Text style={[styles.toolText, osMode && { color: palette.bezelAccent }]}>
+            <Text style={[styles.toolText, { color: osMode ? palette.bezelAccent : toolTextColor }]}>
               {tUi('osBtn')}
             </Text>
           </Pressable>
@@ -804,9 +811,9 @@ function RetroDeckConsole() {
                     : 'game-controller-outline'
                 }
                 size={14}
-                color={deckMode !== 'pad' ? palette.bezelAccent : '#CBD5E1'}
+                color={deckMode !== 'pad' ? palette.bezelAccent : toolTextColor}
               />
-              <Text style={[styles.toolText, deckMode !== 'pad' && { color: palette.bezelAccent }]}>
+              <Text style={[styles.toolText, { color: deckMode !== 'pad' ? palette.bezelAccent : toolTextColor }]}>
                 {deckMode === 'pad' ? 'NUM' : deckMode === 'num' ? tUi('numKbd') : tUi('kbdPad')}
               </Text>
             </Pressable>
@@ -825,9 +832,9 @@ function RetroDeckConsole() {
               <Ionicons
                 name={isPaused ? 'play' : 'pause'}
                 size={14}
-                color={isPaused ? '#FF9F0A' : '#CBD5E1'}
+                color={isPaused ? '#FF9F0A' : toolTextColor}
               />
-              <Text style={[styles.toolText, isPaused && { color: '#FF9F0A' }]}>
+              <Text style={[styles.toolText, { color: isPaused ? '#FF9F0A' : toolTextColor }]}>
                 {isPaused ? tUi('resume') : tUi('pause')}
               </Text>
             </Pressable>
@@ -843,8 +850,8 @@ function RetroDeckConsole() {
               },
             ]}
           >
-            <Ionicons name="refresh" size={14} color="#CBD5E1" />
-            <Text style={styles.toolText}>{osMode ? tUi('reboot') : tUi('reset')}</Text>
+            <Ionicons name="refresh" size={14} color={toolTextColor} />
+            <Text style={[styles.toolText, { color: toolTextColor }]}>{osMode ? tUi('reboot') : tUi('reset')}</Text>
           </Pressable>
 
           <Pressable
@@ -861,9 +868,9 @@ function RetroDeckConsole() {
             <Ionicons
               name="tv-outline"
               size={14}
-              color={scanlines ? palette.bezelAccent : '#CBD5E1'}
+              color={scanlines ? palette.bezelAccent : toolTextColor}
             />
-            <Text style={[styles.toolText, scanlines && { color: palette.bezelAccent }]}>
+            <Text style={[styles.toolText, { color: scanlines ? palette.bezelAccent : toolTextColor }]}>
               {tUi('crt')}
             </Text>
           </Pressable>
@@ -917,7 +924,7 @@ function RetroDeckConsole() {
                   { backgroundColor: palette.ledColor || palette.bezelAccent },
                 ]}
               />
-              <Text style={[styles.chassisBadgeText, { color: `${palette.bezelAccent}CC` }]}>
+              <Text style={[styles.chassisBadgeText, { color: isLightDeck ? '#334155' : `${palette.bezelAccent}CC` }]}>
                 {deckMode === 'kbd'
                   ? tUi('deckKbd')
                   : deckMode === 'num'

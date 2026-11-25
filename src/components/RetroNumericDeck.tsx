@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from '../i18n/retroI18n';
+import { isLightBackground } from '../theme/palettes';
 
 interface RetroNumericDeckProps {
   accentColor: string;
@@ -53,6 +54,12 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   onKeySound,
 }) => {
   const { tUi } = useTranslation();
+  const isLightBtn = isLightBackground(buttonBg);
+  const defIconColor = isLightBtn ? '#1E293B' : '#E2E8F0';
+  const defDigitColor = isLightBtn ? '#0F172A' : '#F8FAFC';
+  const defSubColor = isLightBtn ? '#64748B' : '#94A3B8';
+  const defTxtColor = isLightBtn ? '#334155' : '#CBD5E1';
+
   const tapHaptic = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -111,7 +118,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
                   },
                 ]}
               >
-                <Text style={styles.navTxt}>{label}</Text>
+                <Text style={[styles.navTxt, { color: defIconColor }]}>{label}</Text>
               </Pressable>
             );
           })}
@@ -132,8 +139,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
                   },
                 ]}
               >
-                <Text style={styles.digitTxt}>{k.digit}</Text>
-                <Text style={styles.subTxt}>{k.sub}</Text>
+                <Text style={[styles.digitTxt, { color: defDigitColor }]}>{k.digit}</Text>
+                <Text style={[styles.subTxt, { color: defSubColor }]}>{k.sub}</Text>
               </Pressable>
             ))}
           </View>
@@ -150,8 +157,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             pressed && { borderColor: accentColor },
           ]}
         >
-          <Ionicons name="backspace-outline" size={15} color="#E2E8F0" />
-          <Text style={styles.sideTxt}>{tUi('numDel')}</Text>
+          <Ionicons name="backspace-outline" size={15} color={defIconColor} />
+          <Text style={[styles.sideTxt, { color: defTxtColor }]}>{tUi('numDel')}</Text>
         </Pressable>
 
         <Pressable
@@ -162,8 +169,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             pressed && { borderColor: accentColor },
           ]}
         >
-          <Ionicons name="return-down-back-outline" size={15} color="#E2E8F0" />
-          <Text style={styles.sideTxt}>{tUi('numBack')}</Text>
+          <Ionicons name="return-down-back-outline" size={15} color={defIconColor} />
+          <Text style={[styles.sideTxt, { color: defTxtColor }]}>{tUi('numBack')}</Text>
         </Pressable>
 
         <Pressable

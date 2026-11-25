@@ -3,6 +3,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from '../i18n/retroI18n';
+import { isLightBackground } from '../theme/palettes';
 
 export type ArcadeButton = 'up' | 'down' | 'left' | 'right' | 'a' | 'b';
 
@@ -125,6 +126,11 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
       }
     };
   }, []);
+
+  const isLightBtn = isLightBackground(buttonBg);
+  const defIconColor = isLightBtn ? '#334155' : '#94A3B8';
+  const defTextColor = isLightBtn ? '#1E293B' : '#CBD5E1';
+  const defSubColor = isLightBtn ? '#64748B' : '#94A3B8';
 
   const triggerHaptic = () => {
     if (Platform.OS !== 'web') {
@@ -268,6 +274,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
         <Text
           style={[
             styles.dpadArrow,
+            { color: isLightBtn ? '#1E293B' : '#E2E8F0' },
             info.sub ? styles.dpadArrowCompact : null,
             pressed[dir] && { color: accentColor },
           ]}
@@ -276,7 +283,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
         </Text>
         {info.sub ? (
           <Text
-            style={[styles.dpadSub, pressed[dir] && { color: accentColor }]}
+            style={[styles.dpadSub, { color: defSubColor }, pressed[dir] && { color: accentColor }]}
             numberOfLines={1}
             adjustsFontSizeToFit
           >
@@ -350,20 +357,20 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             isMuted && { borderColor: accentColor, backgroundColor: `${accentColor}26` },
           ]}
         >
-          <Text style={[styles.shoulderTag, isMuted && { color: accentColor }]}>L</Text>
+          <Text style={[styles.shoulderTag, { color: defSubColor }, isMuted && { color: accentColor }]}>L</Text>
           <Ionicons
             name={isMuted ? 'volume-mute' : 'volume-high-outline'}
             size={12}
-            color={isMuted ? accentColor : '#94A3B8'}
+            color={isMuted ? accentColor : defIconColor}
           />
-          <Text style={[styles.shoulderTxt, isMuted && { color: accentColor }]}>
+          <Text style={[styles.shoulderTxt, { color: defTextColor }, isMuted && { color: accentColor }]}>
             {isMuted ? tUi('btnMuted') : tUi('btnSfx')}
           </Text>
         </Pressable>
 
         <View style={styles.deckModelStamp}>
           <View style={[styles.modelDash, { backgroundColor: buttonBorder }]} />
-          <Text style={styles.modelTxt}>RD-CON</Text>
+          <Text style={[styles.modelTxt, { color: defSubColor }]}>RD-CON</Text>
           <View style={[styles.modelDash, { backgroundColor: buttonBorder }]} />
         </View>
 
@@ -380,12 +387,12 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
           <Ionicons
             name="flash"
             size={11}
-            color={turboActive ? accentColor : '#94A3B8'}
+            color={turboActive ? accentColor : defIconColor}
           />
-          <Text style={[styles.shoulderTxt, turboActive && { color: accentColor }]}>
+          <Text style={[styles.shoulderTxt, { color: defTextColor }, turboActive && { color: accentColor }]}>
             {tUi('btnTurbo')}
           </Text>
-          <Text style={[styles.shoulderTag, turboActive && { color: accentColor }]}>R</Text>
+          <Text style={[styles.shoulderTag, { color: defSubColor }, turboActive && { color: accentColor }]}>R</Text>
         </Pressable>
       </View>
 
@@ -440,7 +447,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
               <Text
                 style={[
                   styles.actionLetter,
-                  { color: '#CBD5E1' },
+                  { color: defTextColor },
                   pressed.b && { color: accentColor },
                 ]}
               >
@@ -450,7 +457,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
                 <Text
                   style={[
                     styles.actionSub,
-                    { color: '#94A3B8' },
+                    { color: defSubColor },
                     pressed.b && { color: accentColor },
                   ]}
                   numberOfLines={1}
@@ -515,11 +522,12 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             <Ionicons
               name={btn.icon}
               size={12}
-              color={btn.active || btn.key === 'ok' ? accentColor : '#94A3B8'}
+              color={btn.active || btn.key === 'ok' ? accentColor : defIconColor}
             />
             <Text
               style={[
                 styles.sysPillTxt,
+                { color: defTextColor },
                 (btn.active || btn.key === 'ok') && { color: accentColor },
               ]}
             >

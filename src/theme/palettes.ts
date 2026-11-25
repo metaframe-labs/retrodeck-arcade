@@ -2420,3 +2420,15 @@ export function getAccentInk(hexColor: string): string {
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
   return luminance > 0.56 ? '#05080D' : '#F8FAFC';
 }
+
+/** Determines if a surface/chassis background is light (requiring dark labels and borders) */
+export function isLightBackground(hexColor?: string): boolean {
+  if (!hexColor) return false;
+  const clean = hexColor.trim().replace('#', '');
+  if (clean.length !== 6) return false;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 140;
+}
