@@ -40,7 +40,7 @@ Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular sig
 | **`MUSIC`** | Nokia Composer | Real-time square-wave piezo buzzer synthesizer supporting Nokia Composer notation (`8e2 8d2 4f#1...`), **16 built-in ringtones**, scrollable **`♫ TUNES`** list, **`★ RING`** assignment, and **3 persistent custom tune slots (`MY TUNE 1–3`)** with keyboard rename (`[◀]`) & clear (`[▶]x2`). |
 | **`PHONE`** | Dialer & Codes | Live DTMF tones, large-digit dialer (`NUM`) / 4×4 matrix (`PAD`), **Contacts caller-ID matching**, continuous looping incoming ring (`RING`), and Nokia service codes (`*#0000#`, `*#06#`, `*#92702689#` 5-page `*#WAR0ANTY#`, `*#7780#`, `*#7370#`). |
 | **`CONTACTS`** | Phonebook | Synced SIM/AI phonebook with all 9 Live SMS personas + custom saved contacts (`@retrodeck8_contacts_v1`). Browse (`▲/▼`), 1-tap **Call** (`[A]`), direct **SMS / AI Reply** (`[▶]`), add new contact (`[KBD]` or `+ ADD`), and delete custom entries (`[◀]x2` / `DEL`). |
-| **`SMS`** | Live AI SMS & Postcard Studio | **1) Live AI Persona & Promo SMS (`EN/TR`):** Background & on-demand scheduler with 9 distinct personas/ads, timestamps, dynamic moods, 35% unexpected twists, per-persona 12-turn memory, Gemini/Claude role normalization, and anti-repeat similarity protection + `[A]` direct reply.<br>**2) 2-Page Postcard Studio (`[▲]`):** Compose with **13 bespoke 16-bit pixel-art postcard scenes** (`assets/postcards/*.jpg`) and **130+ vector `Ionicons` stamps**, plus Morse `"S-M-S"` & custom SMS alert tones. |
+| **`SMS`** | Live AI SMS & Postcard Studio | **1) Live AI Persona & Promo SMS (`EN/TR`):** Background & on-demand scheduler with 9 distinct personas/ads, timestamps, dynamic moods, 35% unexpected twists, per-persona 12-turn memory, Gemini/Claude role normalization, and anti-repeat similarity protection + `[A]` direct reply.<br>**2) 2-Page Postcard Studio (`[▲]`):** Compose with **50 bespoke 16-bit pixel-art postcard scenes** (`assets/postcards/*.jpg`) and **130+ vector `Ionicons` stamps**, plus Morse `"S-M-S"` & custom SMS alert tones. |
 | **`PROFILE`** | Audio & Keyguard | Switch profiles (`GENERAL`, `SILENT`, `MEETING`, `OUTDOOR`), volume (`0–100%`), **16 Ringtones**, **5 SMS Tones**, **6 Key Sound Styles**, operator names, LCD Torch invert, and Keyguard lock (`[A]` then `[▲]` to unlock). |
 | **`CALC`** | Calculator | Precision arithmetic (`+`, `-`, `×`, `÷`, `.`, `DEL`, `C`, `=`) with full D-pad & `NUM` keypad support. |
 | **`CLOCK`** | Timepiece | 3-tab watch (`1.CLOCK`, `2.STOPWATCH`, `3.TIMER`) with rotating circular **Analog Clock** or **Digital** face, lap stopwatch, and countdown ringtone alarm. |
@@ -82,7 +82,7 @@ Switch between three hardware decks in `App.tsx`:
 
 ```text
 ├── App.tsx                         # Main console shell, 60 FPS loop & 3-mode deck host
-├── assets/postcards/               # 13 pixel-art postcard illustrations
+├── assets/postcards/               # 50 pixel-art postcard illustrations
 └── src/
     ├── arcade/                     # 100 games, CHIP-8/custom compiler & ArcadeScreen
     ├── audio/RetroAudioEngine.ts   # Procedural 8-bit 22,050 Hz PCM WAV synthesizer
