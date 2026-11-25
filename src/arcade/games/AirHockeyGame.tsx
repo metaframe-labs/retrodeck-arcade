@@ -97,15 +97,66 @@ export class AirHockeyGame implements ArcadeGameInstance {
     this.py = Math.max(MALLET_R + 6, Math.min(ARENA_H - MALLET_R - 6, this.py + this.pvy * pSpd * dt));
 
     // CPU Mallet AI (right half)
-    const cSpd = Math.min(200, 110 + this.level * 18);
-    const targetX = this.puckX > ARENA_W / 2 ? Math.min(ARENA_W - 24, Math.max(ARENA_W / 2 + 16, this.puckX - 4)) : ARENA_W - 42;
-    const targetY = this.puckX > ARENA_W / 2 ? this.puckY : ARENA_H / 2;
+    const cSpd = Math.min(240, 130 + this.level * 20);
+    let targetX = ARENA_W - 42;
+    let targetY = ARENA_H / 2;
+
+    const puckInCpuHalf = this.puckX > ARENA_W / 2;
+    const puckSpeed = Math.hypot(this.puckVx, this.puckVy);
+    const isPuckInCorner =
+      this.puckX > ARENA_W - 45 && (this.puckY < 45 || this.puckY > ARENA_H - 45);
+
+    if (puckInCpuHalf) {
+      if (isPuckInCorner && puckSpeed < 70) {
+        // Corner Unstuck Strategy: Approach puck from outside-in to sweep it towards center/player
+        const cornerTop = this.puckY < ARENA_H / 2;
+        targetX = Math.min(ARENA_W - MALLET_R - 8, this.puckX + 16);
+        targetY = cornerTop ? Math.max(MALLET_R + 8, this.puckY - 14) : Math.min(ARENA_H - MALLET_R - 8, this.puckY + 14);
+      } else {
+        // Normal aggressive attack: get behind puck to shoot toward player goal
+        targetX = Math.min(ARENA_W - MALLET_R - 6, Math.max(ARENA_W / 2 + MALLET_R + 4, this.puckX + 18));
+        targetY = this.puckY;
+      }
+    } else {
+      // Defensive stance when puck is on player's side
+      targetX = ARENA_W - 38;
+      targetY = Math.max(GOAL_TOP, Math.min(GOAL_BOT, this.puckY));
+    }
+
     const cdx = targetX - this.cx;
     const cdy = targetY - this.cy;
     const cDist = Math.hypot(cdx, cdy);
-    if (cDist > 3) {
-      this.cx += (cdx / cDist) * cSpd * dt;
-      this.cy += (cdy / cDist) * cSpd * dt;
+    let cpuVx = 0;
+    let cpuVy = 0;
+    if (cDist > 2) {
+      cpuVx = (cdx / cDist);
+      cpuVy = (cdy / cDist);
+      this.cx += cpuVx * cSpd * dt;
+      this.cy += cpuVy * cSpd * dt;
+    }
+    // Confine CPU mallet to right half & within rink borders
+    this.cx = Math.max(ARENA_W / 2 + MALLET_R + 2, Math.min(ARENA_W - MALLET_R - 6, this.cx));
+    this.cy = Math.max(MALLET_R + 6, Math.min(ARENA_H - MALLET_R - 6, this.cy));
+
+    // Anti-Corner Deadlock: If puck is motionless in any corner for >1.2s, nudge it towards field center
+    if (puckSpeed < 15) {
+      if (this.puckX > ARENA_W - 35 && this.puckY < 35) {
+        this.puckVx = -90;
+        this.puckVy = 90;
+        sound = 'hit';
+      } else if (this.puckX > ARENA_W - 35 && this.puckY > ARENA_H - 35) {
+        this.puckVx = -90;
+        this.puckVy = -90;
+        sound = 'hit';
+      } else if (this.puckX < 35 && this.puckY < 35) {
+        this.puckVx = 90;
+        this.puckVy = 90;
+        sound = 'hit';
+      } else if (this.puckX < 35 && this.puckY > ARENA_H - 35) {
+        this.puckVx = 90;
+        this.puckVy = -90;
+        sound = 'hit';
+      }
     }
 
     // Puck physics & light friction
@@ -125,8 +176,9 @@ export class AirHockeyGame implements ArcadeGameInstance {
       sound = 'hit';
     }
 
+    // Goals (puck must fully cross the goal line: puckX <= 0 or puckX >= ARENA_W)
     const inGoalY = this.puckY >= GOAL_TOP && this.puckY <= GOAL_BOT;
-    if (this.puckX - PUCK_R <= 6) {
+    if (this.puckX <= -PUCK_R / 2) {
       if (inGoalY) {
         this.cGoals++;
         if (this.cGoals >= 5) {
@@ -136,12 +188,16 @@ export class AirHockeyGame implements ArcadeGameInstance {
         }
         this.resetFaceoff(1);
         sound = 'die';
-      } else {
+      }
+    } else if (this.puckX - PUCK_R <= 6) {
+      if (!inGoalY) {
         this.puckX = 6 + PUCK_R;
         this.puckVx = Math.abs(this.puckVx);
         sound = 'hit';
       }
-    } else if (this.puckX + PUCK_R >= ARENA_W - 6) {
+    }
+
+    if (this.puckX >= ARENA_W + PUCK_R / 2) {
       if (inGoalY) {
         this.pGoals++;
         this.score += 200;
@@ -158,27 +214,76 @@ export class AirHockeyGame implements ArcadeGameInstance {
           this.resetFaceoff(-1);
           sound = 'score';
         }
-      } else {
+      }
+    } else if (this.puckX + PUCK_R >= ARENA_W - 6) {
+      if (!inGoalY) {
         this.puckX = ARENA_W - 6 - PUCK_R;
         this.puckVx = -Math.abs(this.puckVx);
         sound = 'hit';
       }
     }
 
-    // Mallet collisions
+    // Real Air Hockey Corner Chamfers (Triangle wedges in 4 corners so 90 deg corners do NOT exist physically)
+    const C_OFFSET = 26; // Corner bevel size
+    // Top-Left bevel: (x + y <= 6 + 6 + C_OFFSET)
+    if ((this.puckX - 6) + (this.puckY - 6) < C_OFFSET) {
+      const normalDist = ((this.puckX - 6) + (this.puckY - 6)) / Math.SQRT2;
+      const targetDist = C_OFFSET / Math.SQRT2;
+      const push = targetDist - normalDist + 2;
+      this.puckX += push / Math.SQRT2;
+      this.puckY += push / Math.SQRT2;
+      const spd = Math.max(160, Math.hypot(this.puckVx, this.puckVy));
+      this.puckVx = Math.abs(spd * 0.707);
+      this.puckVy = Math.abs(spd * 0.707);
+      sound = 'hit';
+    }
+    // Bottom-Left bevel: (x + (ARENA_H - 6 - y) <= C_OFFSET)
+    if ((this.puckX - 6) + (ARENA_H - 6 - this.puckY) < C_OFFSET) {
+      this.puckX = 6 + C_OFFSET * 0.75;
+      this.puckY = ARENA_H - 6 - C_OFFSET * 0.75;
+      const spd = Math.max(160, Math.hypot(this.puckVx, this.puckVy));
+      this.puckVx = Math.abs(spd * 0.707);
+      this.puckVy = -Math.abs(spd * 0.707);
+      sound = 'hit';
+    }
+    // Top-Right bevel: ((ARENA_W - 6 - x) + (y - 6) <= C_OFFSET)
+    if ((ARENA_W - 6 - this.puckX) + (this.puckY - 6) < C_OFFSET) {
+      this.puckX = ARENA_W - 6 - C_OFFSET * 0.75;
+      this.puckY = 6 + C_OFFSET * 0.75;
+      const spd = Math.max(160, Math.hypot(this.puckVx, this.puckVy));
+      this.puckVx = -Math.abs(spd * 0.707);
+      this.puckVy = Math.abs(spd * 0.707);
+      sound = 'hit';
+    }
+    // Bottom-Right bevel: ((ARENA_W - 6 - x) + (ARENA_H - 6 - y) <= C_OFFSET)
+    if ((ARENA_W - 6 - this.puckX) + (ARENA_H - 6 - this.puckY) < C_OFFSET) {
+      this.puckX = ARENA_W - 6 - C_OFFSET * 0.75;
+      this.puckY = ARENA_H - 6 - C_OFFSET * 0.75;
+      const spd = Math.max(160, Math.hypot(this.puckVx, this.puckVy));
+      this.puckVx = -Math.abs(spd * 0.707);
+      this.puckVy = -Math.abs(spd * 0.707);
+      sound = 'hit';
+    }
+
+    // Mallet collisions (Puck is pushed AND position is immediately moved out of mallet)
     const collideMallet = (mx: number, my: number, boostX: number, boostY: number) => {
-      const dx = this.puckX - mx;
-      const dy = this.puckY - my;
-      const d = Math.hypot(dx, dy);
+      let dx = this.puckX - mx;
+      let dy = this.puckY - my;
+      let d = Math.hypot(dx, dy);
       const minD = MALLET_R + PUCK_R;
-      if (d > 0 && d < minD) {
+      if (d < minD) {
+        if (d < 1) {
+          dx = mx < ARENA_W / 2 ? 1 : -1;
+          dy = my < ARENA_H / 2 ? 1 : -1;
+          d = 1.414;
+        }
         const nx = dx / d;
         const ny = dy / d;
-        this.puckX = mx + nx * (minD + 1);
-        this.puckY = my + ny * (minD + 1);
-        const speed = Math.min(340, Math.max(195, Math.hypot(this.puckVx, this.puckVy) * 1.08));
-        this.puckVx = nx * speed + boostX * 55;
-        this.puckVy = ny * speed + boostY * 55;
+        this.puckX = mx + nx * (minD + 3);
+        this.puckY = my + ny * (minD + 3);
+        const speed = Math.min(360, Math.max(220, Math.hypot(this.puckVx, this.puckVy) * 1.15));
+        this.puckVx = nx * speed + boostX * 70;
+        this.puckVy = ny * speed + boostY * 70;
         sound = 'hit';
       }
     };

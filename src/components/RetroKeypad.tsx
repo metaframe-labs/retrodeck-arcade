@@ -191,16 +191,67 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
   const leftInfo = parseDpadLabel('◀', labels?.leftLabel, labels?.left);
   const rightInfo = parseDpadLabel('▶', labels?.rightLabel, labels?.right);
 
+  const activeDpadState = useRef<{ up: boolean; down: boolean; left: boolean; right: boolean }>({
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+  });
+
+  const handleDpadTouch = (e: any) => {
+    const { locationX, locationY } = e.nativeEvent;
+    // Dpad box is 154x154. Center is at (77, 77)
+    const dx = locationX - 77;
+    const dy = locationY - 77;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist < 12) {
+      // Center deadzone
+      setDpadDirections(false, false, false, false);
+      return;
+    }
+
+    // 8-Way directional sector evaluation with 45 degree spreads
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI); // -180 to 180
+    // Up: [-157.5, -22.5]
+    const up = angle > -157.5 && angle < -22.5;
+    // Down: [22.5, 157.5]
+    const down = angle > 22.5 && angle < 157.5;
+    // Right: [-67.5, 67.5]
+    const right = angle > -67.5 && angle < 67.5;
+    // Left: [<-112.5 or >112.5]
+    const left = angle < -112.5 || angle > 112.5;
+
+    setDpadDirections(up, down, left, right);
+  };
+
+  const setDpadDirections = (up: boolean, down: boolean, left: boolean, right: boolean) => {
+    const cur = activeDpadState.current;
+    if (cur.up !== up || cur.down !== down || cur.left !== left || cur.right !== right) {
+      if ((up && !cur.up) || (down && !cur.down) || (left && !cur.left) || (right && !cur.right)) {
+        triggerHaptic();
+      }
+      if (cur.up !== up) onButtonChange('up', up);
+      if (cur.down !== down) onButtonChange('down', down);
+      if (cur.left !== left) onButtonChange('left', left);
+      if (cur.right !== right) onButtonChange('right', right);
+
+      activeDpadState.current = { up, down, left, right };
+      setPressed((prev) => ({ ...prev, up, down, left, right }));
+    }
+  };
+
+  const handleDpadRelease = () => {
+    setDpadDirections(false, false, false, false);
+  };
+
   const renderDpadButton = (
     dir: 'up' | 'down' | 'left' | 'right',
     info: { arrow: string; sub: string }
   ) => {
     const isHorizontal = dir === 'left' || dir === 'right';
     return (
-      <Pressable
-        hitSlop={BUTTON_HIT_SLOP}
-        onPressIn={() => handlePressIn(dir)}
-        onPressOut={() => handlePressOut(dir)}
+      <View
         style={[
           styles.dpadBtn,
           isHorizontal ? styles.dpadBtnH : styles.dpadBtnV,
@@ -232,7 +283,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             {info.sub}
           </Text>
         ) : null}
-      </Pressable>
+      </View>
     );
   };
 
@@ -340,12 +391,20 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
 
       {/* Main Thumb Cluster: Wide Cross D-Pad + Circular A/B */}
       <View style={styles.gamepadRow}>
-        <View style={styles.dpadBox}>
-          <View style={styles.dpadTopRow}>
+        <View
+          style={styles.dpadBox}
+          onStartShouldSetResponder={() => true}
+          onMoveShouldSetResponder={() => true}
+          onResponderGrant={handleDpadTouch}
+          onResponderMove={handleDpadTouch}
+          onResponderRelease={handleDpadRelease}
+          onResponderTerminate={handleDpadRelease}
+        >
+          <View style={styles.dpadTopRow} pointerEvents="none">
             {renderDpadButton('up', upInfo)}
           </View>
 
-          <View style={styles.dpadMidRow}>
+          <View style={styles.dpadMidRow} pointerEvents="none">
             {renderDpadButton('left', leftInfo)}
             <View style={[styles.dpadCenter, { backgroundColor: centerBg, borderColor: buttonBorder }]}>
               <View style={[styles.dpadPivot, { borderColor: buttonBorder }]} />
@@ -353,7 +412,7 @@ export const RetroKeypad: React.FC<RetroKeypadProps> = ({
             {renderDpadButton('right', rightInfo)}
           </View>
 
-          <View style={styles.dpadTopRow}>
+          <View style={styles.dpadTopRow} pointerEvents="none">
             {renderDpadButton('down', downInfo)}
           </View>
         </View>
@@ -546,6 +605,8 @@ const styles = StyleSheet.create({
   dpadBox: {
     alignItems: 'center',
     justifyContent: 'center',
+    width: 154,
+    height: 154,
   },
   dpadTopRow: {
     alignItems: 'center',

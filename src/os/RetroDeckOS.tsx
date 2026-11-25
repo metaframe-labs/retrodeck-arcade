@@ -1352,7 +1352,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
       <View style={[styles.container, { backgroundColor: bg }]}>
         {/* OS Top Status Bar (hidden during pure buttonless wallpaper preview) */}
         {!isPureWallPreview && (
-          this.postFormatWinStyle ? (
+          (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
             renderWinPostFormatTopBar(this)
           ) : (
             <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
@@ -1434,7 +1434,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
         {/* OS Footer Taskbar (hidden during pure buttonless wallpaper preview) */}
         {!isPureWallPreview && (
-          this.postFormatWinStyle ? (
+          (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
             renderWinPostFormatTaskbar(this)
           ) : (
             <View style={[styles.osFooter, { borderTopColor: fg }]}>

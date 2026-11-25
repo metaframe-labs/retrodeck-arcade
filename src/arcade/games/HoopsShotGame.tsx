@@ -231,17 +231,67 @@ export class HoopsShotGame implements ArcadeGameInstance {
         <View
           style={{
             position: 'absolute',
-            left: this.ballX - 8,
-            top: this.ballY - 8,
-            width: 16,
-            height: 16,
-            borderRadius: 8,
+            left: this.ballX - 9,
+            top: this.ballY - 9,
+            width: 18,
+            height: 18,
+            borderRadius: 9,
             backgroundColor: pixelColor,
+            borderWidth: 1,
+            borderColor: pixelColor,
+            overflow: 'hidden',
             justifyContent: 'center',
             alignItems: 'center',
           }}
         >
-          <View style={{ width: 12, height: 1.5, backgroundColor: bg }} />
+          {/* Horizontal Seam */}
+          <View
+            style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              height: 1.5,
+              backgroundColor: bg,
+            }}
+          />
+          {/* Vertical Seam */}
+          <View
+            style={{
+              position: 'absolute',
+              top: 0,
+              bottom: 0,
+              width: 1.5,
+              backgroundColor: bg,
+            }}
+          />
+          {/* Left Curved Rib Seam */}
+          <View
+            style={{
+              position: 'absolute',
+              left: -4,
+              top: 1,
+              bottom: 1,
+              width: 13,
+              borderRadius: 6.5,
+              borderWidth: 1.2,
+              borderColor: bg,
+              backgroundColor: 'transparent',
+            }}
+          />
+          {/* Right Curved Rib Seam */}
+          <View
+            style={{
+              position: 'absolute',
+              right: -4,
+              top: 1,
+              bottom: 1,
+              width: 13,
+              borderRadius: 6.5,
+              borderWidth: 1.2,
+              borderColor: bg,
+              backgroundColor: 'transparent',
+            }}
+          />
         </View>
 
         {/* Banner */}

@@ -751,7 +751,7 @@ export async function fetchWapPageImpl(os: RetroDeckOS, rawUrl: string) {
         '[HIDDEN TIPS]',
         '• TAP WALLS SCREEN -> PURE FULLSCREEN',
         '• SETUP -> MENU STYLE CHANGES ALL APPS',
-        '• SMS [▲] -> 31-SCENE POSTCARD STUDIO',
+        '• SMS [▲] -> 50-SCENE POSTCARD STUDIO',
       ],
       [
         '=== RETRODECK GIZLI KODLAR ===',
@@ -769,7 +769,7 @@ export async function fetchWapPageImpl(os: RetroDeckOS, rawUrl: string) {
         '[PUF NOKTALARI]',
         '• DUVAR EKRANINA DOKUN -> TAM EKRAN',
         '• AYAR -> MENU STILI TUM MENUYU DEGISTIRIR',
-        '• SMS [▲] -> 31 SAHNELI KARTPOSTAL',
+        '• SMS [▲] -> 50 SAHNELI KARTPOSTAL',
       ]
     );
     os.cb.onPlaySound?.('powerup');

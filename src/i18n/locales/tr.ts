@@ -52,6 +52,7 @@ export const trLocale: LocaleBundle = {
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'LISTE',
     menuStyleCards: 'BUYUK KART',
+    menuStyleWindows: 'WINDOWS MASAUSTU',
     setupScanlines: 'CRT TARAMA',
     setupClockFace: 'SAAT TIPI',
     setupLiveSms: 'OTONOM SIM-SMS',

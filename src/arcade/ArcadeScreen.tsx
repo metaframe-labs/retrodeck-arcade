@@ -318,17 +318,22 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
           <View
             style={[
               styles.overlay,
-              palette.isLightLcd && {
-                backgroundColor: `${palette.screenBg}F0`,
+              {
+                backgroundColor: palette.isLightLcd
+                  ? `${palette.screenBg}EE`
+                  : `${palette.screenBg}E0`,
               },
             ]}
           >
             <View
               style={[
                 styles.nokiaGameOverFrame,
-                palette.isLightLcd && {
+                {
                   borderColor: palette.pixelOn,
                   backgroundColor: palette.screenBg,
+                  shadowColor: palette.pixelOn,
+                  shadowOpacity: palette.isLightLcd ? 0.08 : 0.4,
+                  shadowRadius: 10,
                 },
               ]}
             >
@@ -336,11 +341,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 style={[
                   styles.overlayTitle,
                   {
-                    color: palette.isLightLcd
-                      ? palette.pixelOn
-                      : stats.message.includes('OVER')
-                      ? '#FF0055'
-                      : '#FFD700',
+                    color: palette.pixelOn,
                   },
                 ]}
               >
@@ -350,7 +351,9 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 <Text
                   style={[
                     styles.overlaySub,
-                    palette.isLightLcd && { color: palette.pixelOn },
+                    {
+                      color: palette.textMuted || palette.pixelOn,
+                    },
                   ]}
                 >
                   {stats.subMessage}
@@ -359,16 +362,16 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
               <View
                 style={[
                   styles.gameOverScorePill,
-                  palette.isLightLcd && {
-                    backgroundColor: `${palette.pixelOn}18`,
-                    borderColor: palette.pixelOn,
+                  {
+                    backgroundColor: `${palette.pixelOn}14`,
+                    borderColor: `${palette.pixelOn}55`,
                   },
                 ]}
               >
                 <Text
                   style={[
                     styles.overlayFinalScoreLabel,
-                    palette.isLightLcd && { color: palette.textMuted },
+                    { color: palette.textMuted || palette.pixelOn },
                   ]}
                 >
                   {tUi('finalScore')}
@@ -387,7 +390,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                   <Text
                     style={[
                       styles.overlayHighScoreLabel,
-                      palette.isLightLcd && { color: palette.pixelOn },
+                      { color: palette.pixelOn },
                     ]}
                   >
                     ★ {tUi('bestScore', { score: stats.highScore.toString().padStart(6, '0') })} ★
@@ -409,7 +412,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                           }
                         : {
                             backgroundColor: 'transparent',
-                            borderColor: `${palette.pixelOn}55`,
+                            borderColor: `${palette.pixelOn}66`,
                           },
                     ]}
                   >
@@ -441,7 +444,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                           }
                         : {
                             backgroundColor: 'transparent',
-                            borderColor: `${palette.pixelOn}55`,
+                            borderColor: `${palette.pixelOn}66`,
                           },
                     ]}
                   >

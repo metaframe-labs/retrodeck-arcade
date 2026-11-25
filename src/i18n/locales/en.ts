@@ -50,6 +50,7 @@ export const enLocale = {
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'RETRO LIST',
     menuStyleCards: 'BIG CARDS',
+    menuStyleWindows: 'WINDOWS DESKTOP',
     setupScanlines: 'CRT SCANLINES',
     setupClockFace: 'CLOCK FACE',
     setupLiveSms: 'AUTONOMOUS SIM-SMS',

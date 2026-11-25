@@ -240,15 +240,15 @@ export class PenaltyKickGame implements ArcadeGameInstance {
           </View>
         )}
 
-        {/* Soccer Ball */}
+        {/* Soccer Ball (Iconic Retro Telstar / Cross & Dots Pattern) */}
         <View
           style={{
             position: 'absolute',
-            left: this.ballX - 9,
-            top: this.ballY - 9,
-            width: 18,
-            height: 18,
-            borderRadius: 9,
+            left: this.ballX - 10,
+            top: this.ballY - 10,
+            width: 20,
+            height: 20,
+            borderRadius: 10,
             borderWidth: 2,
             borderColor: pixelColor,
             backgroundColor: bg,
@@ -257,7 +257,25 @@ export class PenaltyKickGame implements ArcadeGameInstance {
             transform: [{ scale: this.ballScale }],
           }}
         >
-          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: pixelColor }} />
+          {/* Center pentagon patch */}
+          <View
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: 2,
+              backgroundColor: pixelColor,
+            }}
+          />
+          {/* Seam spoke lines radiating outward to edges */}
+          <View style={{ position: 'absolute', top: 1, width: 2, height: 4, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', bottom: 1, width: 2, height: 4, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', left: 1, height: 2, width: 4, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', right: 1, height: 2, width: 4, backgroundColor: pixelColor }} />
+          {/* 4 outer triangular edge patches */}
+          <View style={{ position: 'absolute', top: 3, left: 3, width: 3, height: 3, borderRadius: 1, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', top: 3, right: 3, width: 3, height: 3, borderRadius: 1, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', bottom: 3, left: 3, width: 3, height: 3, borderRadius: 1, backgroundColor: pixelColor }} />
+          <View style={{ position: 'absolute', bottom: 3, right: 3, width: 3, height: 3, borderRadius: 1, backgroundColor: pixelColor }} />
         </View>
 
         {/* Result Banner */}

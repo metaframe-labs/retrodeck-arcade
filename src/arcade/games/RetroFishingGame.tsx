@@ -231,14 +231,40 @@ export class RetroFishingGame implements ArcadeGameInstance {
           <View
             style={{
               position: 'absolute',
-              left: this.boatX - 8,
+              left: this.boatX - 10,
               top: this.hookY,
-              width: 16,
-              height: 10,
-              borderRadius: 4,
-              backgroundColor: pixelColor,
+              width: 20,
+              height: 12,
+              justifyContent: 'center',
+              alignItems: 'center',
+              transform: [{ rotate: '90deg' }],
             }}
-          />
+          >
+            {/* Body */}
+            <View
+              style={{
+                width: 14,
+                height: 8,
+                backgroundColor: pixelColor,
+                borderRadius: 4,
+              }}
+            />
+            {/* Tail */}
+            <View
+              style={{
+                position: 'absolute',
+                left: 0,
+                width: 0,
+                height: 0,
+                borderTopWidth: 4,
+                borderBottomWidth: 4,
+                borderLeftWidth: 5,
+                borderTopColor: 'transparent',
+                borderBottomColor: 'transparent',
+                borderLeftColor: pixelColor,
+              }}
+            />
+          </View>
         )}
 
         {/* Swimming Fish & Chests */}
@@ -258,31 +284,90 @@ export class RetroFishingGame implements ArcadeGameInstance {
                   backgroundColor: bg,
                   justifyContent: 'center',
                   alignItems: 'center',
+                  borderRadius: 2,
                 }}
               >
-                <Text style={{ fontSize: 8, fontWeight: '900', color: pixelColor }}>$</Text>
+                <View style={{ position: 'absolute', top: 2, left: 2, right: 2, height: 2, backgroundColor: pixelColor }} />
+                <Text style={{ fontSize: 7, fontWeight: '900', color: pixelColor }}>$</Text>
               </View>
             );
           }
-          const w = f.size === 'big' ? 22 : 14;
-          const h = f.size === 'big' ? 11 : 7;
+
+          const isFacingRight = f.vx > 0;
+          const isBig = f.size === 'big';
+          const bodyW = isBig ? 18 : 12;
+          const bodyH = isBig ? 10 : 6;
+          const tailW = isBig ? 6 : 4;
+          const tailH = isBig ? 10 : 6;
+          const eyeSize = isBig ? 2.5 : 1.8;
+          const finW = isBig ? 4 : 3;
+          const finH = isBig ? 3 : 2;
+
           return (
             <View
               key={f.id}
               style={{
                 position: 'absolute',
-                left: f.x - w / 2,
-                top: f.y - h / 2,
-                width: w,
-                height: h,
-                borderRadius: h / 2,
-                backgroundColor: pixelColor,
-                justifyContent: 'center',
-                alignItems: f.vx > 0 ? 'flex-end' : 'flex-start',
-                paddingHorizontal: 3,
+                left: f.x - (bodyW + tailW) / 2,
+                top: f.y - bodyH / 2,
+                width: bodyW + tailW,
+                height: Math.max(bodyH, tailH),
+                flexDirection: isFacingRight ? 'row' : 'row-reverse',
+                alignItems: 'center',
               }}
             >
-              <View style={{ width: 2.5, height: 2.5, borderRadius: 1.5, backgroundColor: bg }} />
+              {/* Fish Tail (Fin) */}
+              <View
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderTopWidth: tailH / 2,
+                  borderBottomWidth: tailH / 2,
+                  borderRightWidth: isFacingRight ? 0 : tailW,
+                  borderLeftWidth: isFacingRight ? tailW : 0,
+                  borderTopColor: 'transparent',
+                  borderBottomColor: 'transparent',
+                  borderRightColor: isFacingRight ? 'transparent' : pixelColor,
+                  borderLeftColor: isFacingRight ? pixelColor : 'transparent',
+                }}
+              />
+
+              {/* Fish Oval Body */}
+              <View
+                style={{
+                  width: bodyW,
+                  height: bodyH,
+                  backgroundColor: pixelColor,
+                  borderRadius: bodyH / 2,
+                  justifyContent: 'center',
+                  alignItems: isFacingRight ? 'flex-end' : 'flex-start',
+                  paddingHorizontal: 2,
+                }}
+              >
+                {/* Dorsal Fin / Detail */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: -finH + 1,
+                    alignSelf: 'center',
+                    width: finW,
+                    height: finH,
+                    backgroundColor: pixelColor,
+                    borderTopLeftRadius: 2,
+                    borderTopRightRadius: 2,
+                  }}
+                />
+
+                {/* Eye */}
+                <View
+                  style={{
+                    width: eyeSize,
+                    height: eyeSize,
+                    borderRadius: eyeSize / 2,
+                    backgroundColor: bg,
+                  }}
+                />
+              </View>
             </View>
           );
         })}

@@ -802,16 +802,124 @@ export function renderWinPostFormatBoot(os: RetroDeckOS): React.ReactNode {
   );
 }
 
-/** Post-format Windows 98 / XP Top Window Titlebar ([_][□][X]) */
+/** Post-format Windows 98 / XP / 8 / 10 / 11 Top Window Titlebar ([_][□][X]) */
 export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
-  const isXp = os.postFormatWinStyle === 'winxp';
+  const pal = os.cb.getPaletteId?.() ?? '';
+  const isXp = os.postFormatWinStyle === 'winxp' || (!os.postFormatWinStyle && pal === 'windows_xp');
+  const isWin8 = !os.postFormatWinStyle && pal === 'windows_8';
+  const isWin10 = !os.postFormatWinStyle && pal === 'windows_10';
+  const isWin11 = !os.postFormatWinStyle && pal === 'windows_11';
+  const isFormatSim = Boolean(os.postFormatWinStyle);
   const secsLeft = Math.max(1, Math.ceil(os.postFormatWinTimer));
+  const defaultTitle = isXp
+    ? '⊞ My RetroDeck XP'
+    : isWin8
+    ? '⊞ Windows 8'
+    : isWin10
+    ? '⊞ Windows 10'
+    : isWin11
+    ? '⊞ Windows 11'
+    : '▣ My RetroDeck (C:)';
   const winTitle =
     os.app === 'desktop'
-      ? isXp
-        ? '⊞ My RetroDeck XP'
-        : '▣ My RetroDeck (C:)'
+      ? defaultTitle
       : `▣ ${os.app.toUpperCase()}.EXE`;
+
+  if (isWin11) {
+    return (
+      <View
+        style={{
+          height: 20,
+          backgroundColor: '#202020',
+          borderBottomWidth: 1,
+          borderBottomColor: '#2B2B2B',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 6,
+        }}
+      >
+        <Text
+          style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '700', color: '#E4E4E7' }}
+          numberOfLines={1}
+        >
+          {winTitle}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
+          {isFormatSim && (
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '900', color: '#60A5FA' }}>
+              [{secsLeft}s]
+            </Text>
+          )}
+          {['_', '□', '✕'].map((sym) => (
+            <View
+              key={sym}
+              style={{
+                width: 14,
+                height: 12,
+                borderRadius: 2,
+                backgroundColor: sym === '✕' ? '#E81123' : '#2D2D2D',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 6.5, fontWeight: '700', color: '#FFFFFF' }}>
+                {sym}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
+
+  if (isWin8 || isWin10) {
+    const barBg = isWin8 ? '#0078D7' : '#1F1F1F';
+    return (
+      <View
+        style={{
+          height: 20,
+          backgroundColor: barBg,
+          borderBottomWidth: 1,
+          borderBottomColor: isWin8 ? '#005A9E' : '#2D2D2D',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 6,
+        }}
+      >
+        <Text
+          style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '700', color: '#FFFFFF' }}
+          numberOfLines={1}
+        >
+          {winTitle}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
+          {isFormatSim && (
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#93C5FD' }}>
+              [{secsLeft}s]
+            </Text>
+          )}
+          {['_', '□', '✕'].map((sym) => (
+            <View
+              key={sym}
+              style={{
+                width: 13,
+                height: 13,
+                backgroundColor: sym === '✕' ? '#E81123' : 'rgba(255,255,255,0.15)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '900', color: '#FFFFFF' }}>
+                {sym}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
 
   if (isXp) {
     return (
@@ -835,9 +943,15 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
         >
           {winTitle}
         </Text>
-        <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#BFDBFE' }}>
-          [XP•{secsLeft}s]
-        </Text>
+        {isFormatSim ? (
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#BFDBFE' }}>
+            [XP•{secsLeft}s]
+          </Text>
+        ) : (
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '900', color: '#BFDBFE' }}>
+            Windows XP
+          </Text>
+        )}
         <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
           {['_', '□'].map((sym) => (
             <View
@@ -879,7 +993,7 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
     );
   }
 
-  // Windows 98 Classic Navy Titlebar with 3D gray [_][□][X] buttons
+  // Windows 98 / 95 Classic Navy Titlebar with 3D gray [_][□][X] buttons
   return (
     <View
       style={{
@@ -899,9 +1013,15 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
       >
         {winTitle}
       </Text>
-      <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#7DD3FC' }}>
-        [W98•{secsLeft}s]
-      </Text>
+      {isFormatSim ? (
+        <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#7DD3FC' }}>
+          [W98•{secsLeft}s]
+        </Text>
+      ) : (
+        <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '900', color: '#93C5FD' }}>
+          Windows 95/98
+        </Text>
+      )}
       <View style={{ flexDirection: 'row', gap: 2, alignItems: 'center' }}>
         {['_', '□', 'X'].map((sym) => (
           <View
@@ -932,14 +1052,153 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
   );
 }
 
-/** Post-format Windows 98 / XP Taskbar with [Start / Başlat] Button & System Tray */
+/** Post-format Windows 98 / XP / 8 / 10 / 11 Taskbar with [Start / Başlat] Button & System Tray */
 export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
-  const isXp = os.postFormatWinStyle === 'winxp';
+  const pal = os.cb.getPaletteId?.() ?? '';
+  const isXp = os.postFormatWinStyle === 'winxp' || (!os.postFormatWinStyle && pal === 'windows_xp');
+  const isWin8 = !os.postFormatWinStyle && pal === 'windows_8';
+  const isWin10 = !os.postFormatWinStyle && pal === 'windows_10';
+  const isWin11 = !os.postFormatWinStyle && pal === 'windows_11';
   const startLabel = pickLang(os.lang, 'Start', 'Baslat');
   const activeTab =
     os.app === 'desktop'
       ? pickLang(os.lang, 'Desktop', 'Masaustu')
       : os.app.toUpperCase();
+
+  // Windows 11 Modern Taskbar with Centered Start & App Pill, Sleek System Tray
+  if (isWin11) {
+    return (
+      <View
+        style={{
+          height: 22,
+          backgroundColor: '#1C1C1C',
+          borderTopWidth: 1,
+          borderTopColor: '#2B2B2B',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 6,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {/* Win 11 4-square logo icon */}
+          <View
+            style={{
+              paddingHorizontal: 6,
+              paddingVertical: 2,
+              borderRadius: 3,
+              backgroundColor: '#0067C0',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+              ⊞
+            </Text>
+          </View>
+
+          {/* Active Tab */}
+          <View
+            style={{
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 3,
+              backgroundColor: '#2D2D2D',
+              borderBottomWidth: 1.5,
+              borderBottomColor: '#60A5FA',
+            }}
+          >
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}>
+              {activeTab}
+            </Text>
+          </View>
+        </View>
+
+        {/* Windows 11 Tray */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {os.unreadSmsCount > 0 && (
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#FDE047' }}>
+              ✉{os.unreadSmsCount}
+            </Text>
+          )}
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#A1A1AA' }}>
+            {os.formatClock()}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Windows 8 / 10 Modern Metro Flat Dark Taskbar
+  if (isWin8 || isWin10) {
+    return (
+      <View
+        style={{
+          height: 20,
+          backgroundColor: '#101010',
+          borderTopWidth: 1,
+          borderTopColor: '#2A2A2A',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 2,
+        }}
+      >
+        <View
+          style={{
+            height: '100%',
+            backgroundColor: isWin8 ? '#0078D7' : 'transparent',
+            paddingHorizontal: 8,
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF' }}>
+            ⊞
+          </Text>
+        </View>
+
+        <View
+          style={{
+            flex: 1,
+            marginHorizontal: 4,
+            height: 16,
+            backgroundColor: '#262626',
+            borderBottomWidth: 2,
+            borderBottomColor: '#0078D7',
+            paddingHorizontal: 6,
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}
+            numberOfLines={1}
+          >
+            ▣ {activeTab}
+          </Text>
+        </View>
+
+        <View
+          style={{
+            paddingHorizontal: 6,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 3,
+          }}
+        >
+          {os.unreadSmsCount > 0 && (
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
+              ✉{os.unreadSmsCount}
+            </Text>
+          )}
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#D4D4D8' }}>
+            {os.formatClock()}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   if (isXp) {
     return (

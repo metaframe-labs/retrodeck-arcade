@@ -263,13 +263,52 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   };
 
-  if (winStyle) {
-    const isXp = winStyle === 'winxp';
-    const selHighlight = isXp ? '#2B65CE' : '#000080';
+  const isWinDesktop = Boolean(winStyle) || os.menuStyle === 'windows';
+  const activeWall = os.getActiveWallpaper();
+
+  const renderWallBackdrop = () =>
+    activeWall ? (
+      <>
+        <Image
+          source={activeWall.image}
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            width: undefined,
+            height: undefined,
+          }}
+          resizeMode="cover"
+        />
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            left: -8,
+            right: -8,
+            top: -6,
+            bottom: -6,
+            backgroundColor: bg,
+            opacity: os.getWallpaperDimOpacity(),
+          }}
+        />
+      </>
+    ) : null;
+
+  if (isWinDesktop) {
+    const isXp = winStyle === 'winxp' || (!winStyle && os.cb.getPaletteId?.() === 'windows_xp');
+    const isWin8 = !winStyle && os.cb.getPaletteId?.() === 'windows_8';
+    const isWin11 = !winStyle && os.cb.getPaletteId?.() === 'windows_11';
+    const selHighlight = isXp ? '#2B65CE' : isWin8 ? '#2D89EF' : isWin11 ? '#0067C0' : '#000080';
     return (
       <View style={[styles.deskGrid, { position: 'relative' }]}>
-        {/* Windows XP Bliss Rolling Green Meadow Backdrop */}
-        {isXp && (
+        {/* Render wallpaper backdrop if active */}
+        {renderWallBackdrop()}
+
+        {/* Windows XP Bliss Rolling Green Meadow Backdrop (when XP and no custom wallpaper) */}
+        {isXp && !activeWall && (
           <View
             pointerEvents="none"
             style={{
@@ -315,6 +354,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
               }
               const sel = idx === os.deskIdx;
+              const textColor = sel ? '#FFFFFF' : (activeWall ? '#FFFFFF' : fg);
               return (
                 <View
                   key={item.id}
@@ -322,11 +362,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     flex: 1,
                     justifyContent: 'center',
                     alignItems: 'center',
-                    borderRadius: 2,
+                    borderRadius: isWin11 ? 4 : isWin8 ? 0 : 2,
                     borderWidth: sel ? 1 : 0,
-                    borderStyle: sel && !isXp ? 'dotted' : 'solid',
+                    borderStyle: sel && !isXp && !isWin8 && !isWin11 ? 'dotted' : 'solid',
                     borderColor: sel ? '#FFFFFF' : 'transparent',
-                    backgroundColor: sel ? `${selHighlight}CC` : 'transparent',
+                    backgroundColor: sel ? `${selHighlight}DD` : 'transparent',
                     paddingVertical: 2,
                   }}
                 >
@@ -334,7 +374,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     <Ionicons
                       name={item.icon}
                       size={18}
-                      color={sel ? '#FEF08A' : '#FFFFFF'}
+                      color={sel ? '#FEF08A' : textColor}
                     />
                     {/* Classic tiny Windows desktop shortcut arrow badge */}
                     <View
@@ -347,6 +387,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         backgroundColor: '#FFFFFF',
                         alignItems: 'center',
                         justifyContent: 'center',
+                        borderRadius: isWin11 ? 1 : 0,
                       }}
                     >
                       <Text style={{ fontSize: 5, fontWeight: '900', color: '#000000', lineHeight: 6 }}>
@@ -358,7 +399,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     style={[
                       styles.deskLbl,
                       {
-                        color: '#FFFFFF',
+                        color: textColor,
                         backgroundColor: sel ? selHighlight : 'transparent',
                         paddingHorizontal: 2,
                         marginTop: 2,
@@ -379,39 +420,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
       </View>
     );
   }
-
-  const activeWall = os.getActiveWallpaper();
-
-  const renderWallBackdrop = () =>
-    activeWall ? (
-      <>
-        <Image
-          source={activeWall.image}
-          style={{
-            position: 'absolute',
-            left: -8,
-            right: -8,
-            top: -6,
-            bottom: -6,
-            width: undefined,
-            height: undefined,
-          }}
-          resizeMode="cover"
-        />
-        <View
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            left: -8,
-            right: -8,
-            top: -6,
-            bottom: -6,
-            backgroundColor: bg,
-            opacity: os.getWallpaperDimOpacity(),
-          }}
-        />
-      </>
-    ) : null;
 
   // STYLE 2: Classic Nokia 3310 Single-Item Carousel Menu
   if (os.menuStyle === 'nokia') {
@@ -1039,6 +1047,7 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     nokia: tOs('menuStyleNokia', L),
     list: tOs('menuStyleList', L),
     cards: tOs('menuStyleCards', L),
+    windows: tOs('menuStyleWindows', L),
   };
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
