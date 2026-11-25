@@ -1066,69 +1066,106 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
       ? pickLang(os.lang, 'Desktop', 'Masaustu')
       : os.app.toUpperCase();
 
-  // Windows 11 Modern Taskbar with Centered Start & App Pill, Sleek System Tray
+  // Windows 11: Frosted Mica Taskbar with Centered Group (Centered Win11 4-Square Logo + Search + Centered Task Tabs)
   if (isWin11) {
     return (
       <View
         style={{
           height: 22,
-          backgroundColor: '#1C1C1C',
+          backgroundColor: '#F3F4F6',
           borderTopWidth: 1,
-          borderTopColor: '#2B2B2B',
+          borderTopColor: '#E5E7EB',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          paddingHorizontal: 6,
+          paddingHorizontal: 8,
+          shadowColor: '#000000',
+          shadowOffset: { width: 0, height: -1 },
+          shadowOpacity: 0.06,
+          elevation: 2,
         }}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-          {/* Win 11 4-square logo icon */}
+        {/* Left: Weather Widget Glance (Iconic Windows 11 Left Glance) */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, opacity: 0.85 }}>
+          <Ionicons name="partly-sunny" size={10} color="#0284C7" />
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#334155' }}>
+            21°C
+          </Text>
+        </View>
+
+        {/* Center Cluster: Authentic Win11 Centered Start Logo & Active App Icon */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {/* Windows 11 Official 4 Blue Squares Logo */}
           <View
             style={{
-              paddingHorizontal: 7,
-              paddingVertical: 2.5,
-              borderRadius: 3,
-              backgroundColor: '#0067C0',
+              width: 14,
+              height: 14,
               flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 1.5,
               alignItems: 'center',
-              gap: 2,
+              justifyContent: 'center',
+              padding: 1.5,
+              borderRadius: 3,
+              backgroundColor: 'rgba(0, 103, 192, 0.12)',
             }}
           >
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF' }}>
-              ⊞
+            <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
+            <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
+            <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
+            <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
+          </View>
+
+          {/* Windows 11 Search Pill */}
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 3,
+              backgroundColor: '#FFFFFF',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: '#E2E8F0',
+              paddingHorizontal: 5,
+              paddingVertical: 1,
+            }}
+          >
+            <Ionicons name="search" size={7} color="#64748B" />
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 6.5, color: '#64748B', fontWeight: '600' }}>
+              Search
             </Text>
           </View>
 
-          {/* Active Tab */}
+          {/* Active Running App Pill with Blue Underline */}
           <View
             style={{
-              paddingHorizontal: 8,
-              paddingVertical: 2.5,
+              paddingHorizontal: 6,
+              paddingVertical: 1.5,
               borderRadius: 3,
-              backgroundColor: '#2D2D2D',
+              backgroundColor: 'rgba(0, 103, 192, 0.08)',
               borderBottomWidth: 2,
-              borderBottomColor: '#60A5FA',
+              borderBottomColor: '#0067C0',
             }}
           >
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}>
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '800', color: '#0F172A' }}>
               {activeTab}
             </Text>
           </View>
         </View>
 
-        {/* Windows 11 Tray with WiFi, Sound & Clock */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 }}>
-          <Ionicons name="wifi" size={9} color="#A1A1AA" />
-          <Ionicons name="volume-medium" size={9} color="#A1A1AA" />
+        {/* Right: Windows 11 System Tray (WiFi, Volume, Battery, Clock) */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <Ionicons name="wifi" size={8.5} color="#475569" />
+          <Ionicons name="volume-medium" size={8.5} color="#475569" />
           {os.unreadSmsCount > 0 && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-              <Ionicons name="mail" size={8} color="#FDE047" />
-              <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#FDE047' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+              <Ionicons name="mail" size={7.5} color="#0067C0" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '800', color: '#0067C0' }}>
                 {os.unreadSmsCount}
               </Text>
             </View>
           )}
-          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#E4E4E7' }}>
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#1E293B' }}>
             {os.formatClock()}
           </Text>
         </View>
@@ -1136,55 +1173,73 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
     );
   }
 
-  // Windows 8 / 10 Modern Metro Flat Dark Taskbar
-  if (isWin8 || isWin10) {
+  // Windows 10: Iconic Dark Taskbar with Skewed Window Logo, Cortana & Taskview
+  if (isWin10) {
     return (
       <View
         style={{
           height: 20,
           backgroundColor: '#101010',
           borderTopWidth: 1,
-          borderTopColor: '#2A2A2A',
+          borderTopColor: '#262626',
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingHorizontal: 2,
         }}
       >
-        <View
-          style={{
-            height: '100%',
-            backgroundColor: isWin8 ? '#0078D7' : 'transparent',
-            paddingHorizontal: 8,
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF' }}>
-            ⊞
-          </Text>
-        </View>
-
-        <View
-          style={{
-            flex: 1,
-            marginHorizontal: 4,
-            height: 16,
-            backgroundColor: '#262626',
-            borderBottomWidth: 2,
-            borderBottomColor: '#0078D7',
-            paddingHorizontal: 6,
-            justifyContent: 'center',
-          }}
-        >
-          <Text
-            style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}
-            numberOfLines={1}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {/* Windows 10 Perspective 4-Pane Flag Start Button */}
+          <View
+            style={{
+              height: 20,
+              paddingHorizontal: 8,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            }}
           >
-            ▣ {activeTab}
-          </Text>
+            <View
+              style={{
+                width: 11,
+                height: 10,
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 1,
+                transform: [{ skewY: '-12deg' }],
+              }}
+            >
+              <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
+            </View>
+          </View>
+
+          {/* Cortana Circle Icon */}
+          <View style={{ width: 9, height: 9, borderRadius: 4.5, borderWidth: 1.2, borderColor: '#FFFFFF', opacity: 0.7 }} />
+
+          {/* Active Window Tab with Classic Win10 Bottom Accent Line */}
+          <View
+            style={{
+              height: 17,
+              backgroundColor: '#262626',
+              borderBottomWidth: 2,
+              borderBottomColor: '#0078D7',
+              paddingHorizontal: 6,
+              justifyContent: 'center',
+            }}
+          >
+            <Text
+              style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}
+              numberOfLines={1}
+            >
+              ▣ {activeTab}
+            </Text>
+          </View>
         </View>
 
+        {/* Windows 10 Tray */}
         <View
           style={{
             paddingHorizontal: 6,
@@ -1197,6 +1252,94 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
               <Ionicons name="mail" size={8} color="#FEF08A" />
               <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
+                {os.unreadSmsCount}
+              </Text>
+            </View>
+          )}
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#D4D4D8' }}>
+            {os.formatClock()}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Windows 8: Metro Charms Start Tile
+  if (isWin8) {
+    return (
+      <View
+        style={{
+          height: 20,
+          backgroundColor: '#0F0F0F',
+          borderTopWidth: 1,
+          borderTopColor: '#282828',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingHorizontal: 2,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {/* Windows 8 Metro Solid Cyan Start Tile */}
+          <View
+            style={{
+              height: 20,
+              backgroundColor: '#0078D7',
+              paddingHorizontal: 9,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 10,
+                height: 10,
+                flexDirection: 'row',
+                flexWrap: 'wrap',
+                gap: 1,
+                transform: [{ skewY: '-14deg' }],
+              }}
+            >
+              <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
+              <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
+              <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
+              <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
+            </View>
+          </View>
+
+          {/* Active Window */}
+          <View
+            style={{
+              height: 16,
+              backgroundColor: '#1E1E1E',
+              borderBottomWidth: 2,
+              borderBottomColor: '#0078D7',
+              paddingHorizontal: 6,
+              justifyContent: 'center',
+            }}
+          >
+            <Text
+              style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#FFFFFF' }}
+              numberOfLines={1}
+            >
+              ▣ {activeTab}
+            </Text>
+          </View>
+        </View>
+
+        {/* Windows 8 Tray */}
+        <View
+          style={{
+            paddingHorizontal: 6,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          {os.unreadSmsCount > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Ionicons name="mail" size={8} color="#00E5FF" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#00E5FF' }}>
                 {os.unreadSmsCount}
               </Text>
             </View>
