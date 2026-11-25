@@ -3385,7 +3385,11 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                           numberOfLines={1}
                         >
                           {activeItem ? '★ ' : ''}
-                          {card ? card.title : 'OFF'}
+                          {isCustomEntry && os.wallpaperCustomUri
+                            ? pickLang(L, 'MY PHOTO', 'RESMIM')
+                            : card
+                            ? card.title
+                            : 'OFF'}
                         </Text>
                       </View>
                     )}
@@ -3518,6 +3522,42 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                 {isApplied ? tOs('active', L) : pickLang(L, '[A] SET', '[A] SEC')}
               </Text>
             </View>
+            {isCustomIdx && os.wallpaperCustomUri && (
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation?.();
+                  if (!os.wallpaperCustomDeleteConfirm) {
+                    os.wallpaperCustomDeleteConfirm = true;
+                    os.smsBanner = pickLang(L, '[?] TAP/PRESS [A] TO CONFIRM DELETE', '[?] ONAYLAMAK ICIN SIL/A BAS');
+                    os.smsBannerTimer = 2.5;
+                    os.cb.onPlaySound?.('hit');
+                  } else {
+                    os.removeCustomWallpaper();
+                  }
+                }}
+                style={{
+                  backgroundColor: os.wallpaperCustomDeleteConfirm ? fg : bg,
+                  borderWidth: 1,
+                  borderColor: bg,
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  marginLeft: 3,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 7.5,
+                    fontWeight: '900',
+                    color: os.wallpaperCustomDeleteConfirm ? bg : fg,
+                  }}
+                >
+                  {os.wallpaperCustomDeleteConfirm
+                    ? pickLang(L, 'SURE?', 'SIL?')
+                    : pickLang(L, 'DEL', 'SIL')}
+                </Text>
+              </Pressable>
+            )}
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
@@ -3646,6 +3686,8 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
             >
               {isCustomIdx && !os.wallpaperCustomUri
                 ? pickLang(L, '[A] PICK/CROP', '[A] RESIM SEC')
+                : isCustomIdx && os.wallpaperCustomDeleteConfirm
+                ? pickLang(L, '[A] CONFIRM DELETE', '[A] SILMEYI ONAYLA')
                 : isApplied && previewCard
                 ? pickLang(L, '[A]/TAP FULLSCREEN', '[A]/DOKUN TAM EKRAN')
                 : pickLang(L, '[A] APPLY', '[A] UYGULA')}

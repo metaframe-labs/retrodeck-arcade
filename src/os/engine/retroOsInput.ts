@@ -153,19 +153,38 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
   // Wallpaper Gallery numeric keypad support (4/6/*/# scene, 2/8 contrast dim, 0 clean preview, OK apply)
   if (os.app === 'wallpapers') {
     const total = REAL_POSTCARDS.length + 2; // 0 = none, 1..20 = scenes, 21 = custom photo
+    if (key === 'DEL' || key === 'CLR') {
+      const isCustom = os.wallpaperIdx === REAL_POSTCARDS.length + 1;
+      if (isCustom && os.wallpaperCustomUri) {
+        if (!os.wallpaperCustomDeleteConfirm) {
+          os.wallpaperCustomDeleteConfirm = true;
+          os.smsBanner = os.lang === 'tr' ? '[?] SILMEK ICIN TEKRAR BAS' : '[?] PRESS DEL AGAIN TO REMOVE';
+          os.smsBannerTimer = 2.5;
+          os.cb.onPlaySound?.('hit');
+        } else {
+          os.removeCustomWallpaper();
+        }
+        return;
+      }
+    }
     if (key === '4' || key === '*') {
+      os.wallpaperCustomDeleteConfirm = false;
       os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
       os.cb.onPlaySound?.('hit');
     } else if (key === '6' || key === '#') {
+      os.wallpaperCustomDeleteConfirm = false;
       os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
       os.cb.onPlaySound?.('hit');
     } else if (key === '2') {
+      os.wallpaperCustomDeleteConfirm = false;
       os.cycleWallpaperDim(-1);
       os.cb.onPlaySound?.('hit');
     } else if (key === '8') {
+      os.wallpaperCustomDeleteConfirm = false;
       os.cycleWallpaperDim(1);
       os.cb.onPlaySound?.('hit');
     } else if (key === '0') {
+      os.wallpaperCustomDeleteConfirm = false;
       if (os.wallpaperViewMode === 'preview') {
         os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
       } else {
@@ -173,6 +192,7 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
       }
       os.cb.onPlaySound?.('hit');
     } else if (key === 'OK') {
+      os.wallpaperCustomDeleteConfirm = false;
       const isCustom = os.wallpaperIdx === REAL_POSTCARDS.length + 1;
       if (isCustom) {
         if (!os.wallpaperCustomUri) {
@@ -669,6 +689,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   if (os.app !== 'desktop' && os.app !== 'format' && pressB) {
     if (os.app === 'setup' && (os.setupSubPage === 'menu_style' || os.setupSubPage === 'startup_sound')) {
       os.setupSubPage = 'main';
+      return 'hit';
+    }
+    if (os.app === 'wallpapers' && os.wallpaperCustomDeleteConfirm) {
+      os.wallpaperCustomDeleteConfirm = false;
       return 'hit';
     }
     if (os.app === 'wallpapers' && os.wallpaperCleanPreview) {
@@ -1771,14 +1795,17 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (os.wallpaperViewMode === 'grid3x2' || os.wallpaperViewMode === 'grid4x3') {
       const cols = os.wallpaperViewMode === 'grid3x2' ? 3 : 4;
       if (dir === 'left') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
         return 'hit';
       }
       if (dir === 'right') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
         return 'hit';
       }
       if (dir === 'up') {
+        os.wallpaperCustomDeleteConfirm = false;
         if (os.wallpaperIdx >= cols) {
           os.wallpaperIdx -= cols;
         } else {
@@ -1790,24 +1817,29 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'hit';
       }
       if (dir === 'down') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.wallpaperIdx =
           os.wallpaperIdx + cols < total ? os.wallpaperIdx + cols : os.wallpaperIdx % cols;
         return 'hit';
       }
     } else {
       if (dir === 'left') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
         return 'hit';
       }
       if (dir === 'right') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.wallpaperIdx = (os.wallpaperIdx + 1) % total;
         return 'hit';
       }
       if (dir === 'up') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.cycleWallpaperDim(-1);
         return 'hit';
       }
       if (dir === 'down') {
+        os.wallpaperCustomDeleteConfirm = false;
         os.cycleWallpaperDim(1);
         return 'hit';
       }
@@ -1816,8 +1848,13 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       const isCustom = os.wallpaperIdx === REAL_POSTCARDS.length + 1;
       if (isCustom) {
         if (!os.wallpaperCustomUri) {
+          os.wallpaperCustomDeleteConfirm = false;
           os.pickAndCropCustomWallpaper();
           return 'hit';
+        }
+        if (os.wallpaperCustomDeleteConfirm) {
+          os.removeCustomWallpaper();
+          return 'explode';
         }
         if (os.wallpaperViewMode === 'preview' && os.wallpaperId === 'custom') {
           os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
@@ -1829,6 +1866,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'powerup';
       }
 
+      os.wallpaperCustomDeleteConfirm = false;
       const nextId =
         os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
       if (os.wallpaperViewMode === 'preview' && os.wallpaperId === nextId && nextId !== 'none') {

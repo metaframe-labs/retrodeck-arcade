@@ -388,6 +388,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ wallpaperId = 'none';
   /** @internal */ wallpaperCustomUri: string | null = null;
   /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS, 21 = CUSTOM
+  /** @internal */ wallpaperCustomDeleteConfirm = false;
   /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark
   /** @internal */ wallpaperCleanPreview = false;
   /** @internal */ wallpaperViewMode: 'preview' | 'grid3x2' | 'grid4x3' = 'preview';
@@ -703,8 +704,23 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.wallpaperCustomUri = uri;
     this.wallpaperId = 'custom';
     this.wallpaperIdx = REAL_POSTCARDS.length + 1;
+    this.wallpaperCustomDeleteConfirm = false;
     AsyncStorage.setItem(WALLPAPER_CUSTOM_URI_KEY, uri).catch(() => {});
     AsyncStorage.setItem(WALLPAPER_STORAGE_KEY, 'custom').catch(() => {});
+  }
+
+  /** @internal */ removeCustomWallpaper() {
+    this.wallpaperCustomUri = null;
+    this.wallpaperCustomDeleteConfirm = false;
+    if (this.wallpaperId === 'custom') {
+      this.wallpaperId = 'none';
+      this.wallpaperIdx = 0;
+      AsyncStorage.setItem(WALLPAPER_STORAGE_KEY, 'none').catch(() => {});
+    }
+    AsyncStorage.removeItem(WALLPAPER_CUSTOM_URI_KEY).catch(() => {});
+    this.smsBanner = this.lang === 'tr' ? '[X] Özel duvar kağıdı silindi' : '[X] Custom wallpaper removed';
+    this.smsBannerTimer = 2.5;
+    this.cb.onPlaySound?.('explode');
   }
 
   /** @internal */ async pickAndCropCustomWallpaper() {
