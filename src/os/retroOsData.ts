@@ -11,6 +11,7 @@ export const LIVE_AI_SMS_STORAGE_KEY = '@retrodeck8_live_ai_sms_v1';
 export const LIVE_SMS_HISTORY_STORAGE_KEY = '@retrodeck8_live_sms_history_v1';
 export const CONTACTS_STORAGE_KEY = '@retrodeck8_contacts_v1';
 export const WALLPAPER_STORAGE_KEY = '@retrodeck8_wallpaper_v1';
+export const WALLPAPER_CUSTOM_URI_KEY = '@retrodeck8_wallpaper_custom_uri_v1';
 export const WALLPAPER_DIM_STORAGE_KEY = '@retrodeck8_wallpaper_dim_v1';
 export const MENU_STYLE_STORAGE_KEY = '@retrodeck8_menu_style_v1';
 

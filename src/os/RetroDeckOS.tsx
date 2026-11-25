@@ -155,6 +155,7 @@ import {
   LIVE_SMS_HISTORY_STORAGE_KEY,
   CONTACTS_STORAGE_KEY,
   WALLPAPER_STORAGE_KEY,
+  WALLPAPER_CUSTOM_URI_KEY,
   WALLPAPER_DIM_STORAGE_KEY,
   WALLPAPER_DIM_OPACITIES,
   MENU_STYLE_STORAGE_KEY,
@@ -379,7 +380,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ menuStylePickerIdx = 0;
   /** @internal */ xboxBladeIdx = 0;
   /** @internal */ wallpaperId = 'none';
-  /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS
+  /** @internal */ wallpaperCustomUri: string | null = null;
+  /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS, 21 = CUSTOM
   /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark
   /** @internal */ wallpaperCleanPreview = false;
   /** @internal */ wallpaperViewMode: 'preview' | 'grid3x2' | 'grid4x3' = 'preview';
@@ -598,10 +600,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
       .catch(() => {});
     AsyncStorage.getItem(WALLPAPER_STORAGE_KEY)
       .then((savedId) => {
-        if (savedId && (savedId === 'none' || REAL_POSTCARDS.some((p) => p.id === savedId))) {
+        if (savedId && (savedId === 'none' || savedId === 'custom' || REAL_POSTCARDS.some((p) => p.id === savedId))) {
           this.wallpaperId = savedId;
-          const foundIdx = REAL_POSTCARDS.findIndex((p) => p.id === savedId);
-          this.wallpaperIdx = foundIdx >= 0 ? foundIdx + 1 : 0;
+          if (savedId === 'custom') {
+            this.wallpaperIdx = REAL_POSTCARDS.length + 1;
+          } else {
+            const foundIdx = REAL_POSTCARDS.findIndex((p) => p.id === savedId);
+            this.wallpaperIdx = foundIdx >= 0 ? foundIdx + 1 : 0;
+          }
+        }
+      })
+      .catch(() => {});
+    AsyncStorage.getItem(WALLPAPER_CUSTOM_URI_KEY)
+      .then((savedUri) => {
+        if (savedUri) {
+          this.wallpaperCustomUri = savedUri;
         }
       })
       .catch(() => {});
@@ -635,8 +648,16 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.setMenuStyle(DESKTOP_MENU_STYLES[nextIdx]);
   }
 
-  /** @internal */ getActiveWallpaper(): { id: string; title: string; image: any } | null {
+  /** @internal */ getActiveWallpaper(): { id: string; title: string; image: any; isCustom?: boolean } | null {
     if (!this.wallpaperId || this.wallpaperId === 'none') return null;
+    if (this.wallpaperId === 'custom' && this.wallpaperCustomUri) {
+      return {
+        id: 'custom',
+        title: this.lang === 'tr' ? 'GALERİ RESMİ' : 'GALLERY PHOTO',
+        image: { uri: this.wallpaperCustomUri },
+        isCustom: true,
+      };
+    }
     return REAL_POSTCARDS.find((p) => p.id === this.wallpaperId) || null;
   }
 
@@ -645,21 +666,72 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   /** @internal */ setWallpaperById(nextId: string) {
-    const valid = nextId === 'none' || REAL_POSTCARDS.some((p) => p.id === nextId);
+    const valid = nextId === 'none' || nextId === 'custom' || REAL_POSTCARDS.some((p) => p.id === nextId);
     this.wallpaperId = valid ? nextId : 'none';
-    const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
-    this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    if (this.wallpaperId === 'custom') {
+      this.wallpaperIdx = REAL_POSTCARDS.length + 1;
+    } else {
+      const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
+      this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    }
     AsyncStorage.setItem(WALLPAPER_STORAGE_KEY, this.wallpaperId).catch(() => {});
   }
 
+  /** @internal */ setCustomWallpaperUri(uri: string) {
+    this.wallpaperCustomUri = uri;
+    this.wallpaperId = 'custom';
+    this.wallpaperIdx = REAL_POSTCARDS.length + 1;
+    AsyncStorage.setItem(WALLPAPER_CUSTOM_URI_KEY, uri).catch(() => {});
+    AsyncStorage.setItem(WALLPAPER_STORAGE_KEY, 'custom').catch(() => {});
+  }
+
+  /** @internal */ async pickAndCropCustomWallpaper() {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const ImagePicker = require('expo-image-picker');
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        this.smsBanner = this.lang === 'tr' ? '[!] Galeri izni gerekli' : '[!] Gallery permission needed';
+        this.smsBannerTimer = 2.5;
+        this.cb.onPlaySound?.('die');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions?.Images ?? 'images',
+        allowsEditing: true,
+        aspect: [4, 3], // Perfect 4:3 fit for RetroDeck OS display
+        quality: 0.9,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]?.uri) {
+        this.setCustomWallpaperUri(result.assets[0].uri);
+        this.smsBanner = this.lang === 'tr' ? '[✓] Duvar kağıdı ayarlandı' : '[✓] Wallpaper updated';
+        this.smsBannerTimer = 2.5;
+        this.cb.onPlaySound?.('powerup');
+      }
+    } catch {
+      this.smsBanner = this.lang === 'tr' ? '[!] Resim seçilemedi' : '[!] Failed to pick image';
+      this.smsBannerTimer = 2.5;
+      this.cb.onPlaySound?.('die');
+    }
+  }
+
   /** @internal */ cycleWallpaper(delta: number) {
-    const total = REAL_POSTCARDS.length + 1; // 0 = none, 1..20 = scenes
+    const total = REAL_POSTCARDS.length + 2; // 0 = none, 1..20 = scenes, 21 = custom
     const curIdx =
       this.wallpaperId === 'none'
         ? 0
+        : this.wallpaperId === 'custom'
+        ? REAL_POSTCARDS.length + 1
         : Math.max(0, REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId) + 1);
     const nextIdx = (curIdx + delta + total) % total;
-    const nextId = nextIdx === 0 ? 'none' : REAL_POSTCARDS[nextIdx - 1].id;
+    const nextId =
+      nextIdx === 0
+        ? 'none'
+        : nextIdx === REAL_POSTCARDS.length + 1
+        ? 'custom'
+        : REAL_POSTCARDS[nextIdx - 1].id;
     this.setWallpaperById(nextId);
   }
 
@@ -670,8 +742,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
   }
 
   /** @internal */ openWallpaperGallery() {
-    const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
-    this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    if (this.wallpaperId === 'custom') {
+      this.wallpaperIdx = REAL_POSTCARDS.length + 1;
+    } else {
+      const idx = REAL_POSTCARDS.findIndex((p) => p.id === this.wallpaperId);
+      this.wallpaperIdx = idx >= 0 ? idx + 1 : 0;
+    }
     this.wallpaperCleanPreview = false;
     this.cb.onRequestKeyboard?.(false);
     this.app = 'wallpapers';

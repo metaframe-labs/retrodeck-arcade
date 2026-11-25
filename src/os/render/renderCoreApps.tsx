@@ -3100,11 +3100,32 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
 export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
   const L = os.lang;
   const totalScenes = REAL_POSTCARDS.length;
+  const isCustomIdx = os.wallpaperIdx === totalScenes + 1;
   const isNone = os.wallpaperIdx === 0;
-  const previewCard = isNone ? null : REAL_POSTCARDS[os.wallpaperIdx - 1] || REAL_POSTCARDS[0];
+
+  const previewCard: { id: string; title: string; image: any; isCustom?: boolean } | null = isNone
+    ? null
+    : isCustomIdx
+    ? os.wallpaperCustomUri
+      ? {
+          id: 'custom',
+          title: pickLang(L, 'MY PHOTO (CROP)', 'BENIM RESMIM (KIRPILMIS)'),
+          image: { uri: os.wallpaperCustomUri },
+          isCustom: true,
+        }
+      : {
+          id: 'custom',
+          title: pickLang(L, '+ PICK FROM GALLERY', '+ GALERIDEN RESIM SEC'),
+          image: null,
+          isCustom: true,
+        }
+    : REAL_POSTCARDS[os.wallpaperIdx - 1] || REAL_POSTCARDS[0];
+
   const currentActiveId = os.wallpaperId || 'none';
   const isApplied = isNone
     ? currentActiveId === 'none'
+    : isCustomIdx
+    ? currentActiveId === 'custom'
     : previewCard?.id === currentActiveId;
 
   const dimLabels = [
@@ -3128,7 +3149,7 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
     const cols = is3x2 ? 3 : 4;
     const rows = is3x2 ? 2 : 3;
     const pageSize = cols * rows;
-    const totalEntries = totalScenes + 1; // 0 = OFF, 1..N = scenes
+    const totalEntries = totalScenes + 2; // 0 = OFF, 1..N = scenes, N+1 = custom
     const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
     const curPage = Math.min(totalPages - 1, Math.floor(os.wallpaperIdx / pageSize));
     const pageStart = curPage * pageSize;
@@ -3180,19 +3201,31 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                 if (idx >= totalEntries) {
                   return <View key={`sp-w-${c}`} style={styles.deskTileSpacer} />;
                 }
-                const card = idx === 0 ? null : REAL_POSTCARDS[idx - 1];
+                const isCustomEntry = idx === totalScenes + 1;
+                const card = idx === 0 ? null : isCustomEntry ? (os.wallpaperCustomUri ? { id: 'custom', title: 'PHOTO', image: { uri: os.wallpaperCustomUri } } : null) : REAL_POSTCARDS[idx - 1];
                 const sel = idx === os.wallpaperIdx;
-                const activeItem = card ? card.id === currentActiveId : currentActiveId === 'none';
+                const activeItem = isCustomEntry ? currentActiveId === 'custom' : card ? card.id === currentActiveId : currentActiveId === 'none';
 
                 return (
                   <Pressable
-                    key={card ? card.id : '__none__'}
+                    key={isCustomEntry ? '__custom__' : card ? card.id : '__none__'}
                     onPress={() => {
                       os.wallpaperIdx = idx;
-                      os.setWallpaperById(card ? card.id : 'none');
-                      os.smsBanner = card ? `[WP] ${card.title}` : `[WP] ${tOs('off', L)}`;
-                      os.smsBannerTimer = 2.0;
-                      os.cb.onPlaySound?.('powerup');
+                      if (isCustomEntry) {
+                        if (!os.wallpaperCustomUri) {
+                          os.pickAndCropCustomWallpaper();
+                        } else {
+                          os.setWallpaperById('custom');
+                          os.smsBanner = `[WP] ${pickLang(L, 'MY PHOTO', 'BENIM RESMIM')}`;
+                          os.smsBannerTimer = 2.0;
+                          os.cb.onPlaySound?.('powerup');
+                        }
+                      } else {
+                        os.setWallpaperById(card ? card.id : 'none');
+                        os.smsBanner = card ? `[WP] ${card.title}` : `[WP] ${tOs('off', L)}`;
+                        os.smsBannerTimer = 2.0;
+                        os.cb.onPlaySound?.('powerup');
+                      }
                     }}
                     style={{
                       flex: 1,
@@ -3206,7 +3239,22 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                       alignItems: 'center',
                     }}
                   >
-                    {card ? (
+                    {isCustomEntry ? (
+                      card ? (
+                        <Image
+                          source={card.image}
+                          style={{ width: '100%', height: '100%' }}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                          <Ionicons name="camera" size={14} color={fg} />
+                          <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: fg, marginTop: 1 }}>
+                            +CROP
+                          </Text>
+                        </View>
+                      )
+                    ) : card ? (
                       <Image
                         source={card.image}
                         style={{ width: '100%', height: '100%' }}
@@ -3394,6 +3442,46 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
             </Pressable>
           </View>
 
+          {/* Center Card when custom image hasn't been picked yet */}
+          {isCustomIdx && !os.wallpaperCustomUri && (
+            <Pressable
+              onPress={() => {
+                os.pickAndCropCustomWallpaper();
+              }}
+              style={{
+                borderWidth: 1.5,
+                borderStyle: 'dashed',
+                borderColor: fg,
+                paddingVertical: 18,
+                paddingHorizontal: 12,
+                alignItems: 'center',
+                gap: 5,
+                backgroundColor: hexWithAlpha(fg, 0.08),
+              }}
+            >
+              <Ionicons name="images" size={26} color={fg} />
+              <Text style={{ fontFamily: monoFont, fontSize: 9.5, fontWeight: '900', color: fg }}>
+                {pickLang(L, 'SELECT & CROP FROM GALLERY', 'GALERIDEN SEC VE KIRP')}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 7.5,
+                  fontWeight: '800',
+                  color: fg,
+                  opacity: 0.85,
+                  textAlign: 'center',
+                }}
+              >
+                {pickLang(
+                  L,
+                  'PRESS [A] OR TAP TO PICK YOUR OWN 4:3 WALLPAPER',
+                  '[A] BAS VEYA DOKUN, KENDI 4:3 DUVAR KAGIDINI AYARLA'
+                )}
+              </Text>
+            </Pressable>
+          )}
+
           {/* Center Card only when OFF (solid LCD mode) */}
           {!previewCard && (
             <View
@@ -3461,7 +3549,9 @@ export function renderWallpapers(os: RetroDeckOS, fg: string, bg: string) {
                 color: fg,
               }}
             >
-              {isApplied && previewCard
+              {isCustomIdx && !os.wallpaperCustomUri
+                ? pickLang(L, '[A] PICK/CROP', '[A] RESIM SEC')
+                : isApplied && previewCard
                 ? pickLang(L, '[A]/TAP FULLSCREEN', '[A]/DOKUN TAM EKRAN')
                 : pickLang(L, '[A] APPLY', '[A] UYGULA')}
             </Text>

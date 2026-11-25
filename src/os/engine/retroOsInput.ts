@@ -151,7 +151,7 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
 
   // Wallpaper Gallery numeric keypad support (4/6/*/# scene, 2/8 contrast dim, 0 clean preview, OK apply)
   if (os.app === 'wallpapers') {
-    const total = REAL_POSTCARDS.length + 1;
+    const total = REAL_POSTCARDS.length + 2; // 0 = none, 1..20 = scenes, 21 = custom photo
     if (key === '4' || key === '*') {
       os.wallpaperIdx = (os.wallpaperIdx + total - 1) % total;
       os.cb.onPlaySound?.('hit');
@@ -172,6 +172,24 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
       }
       os.cb.onPlaySound?.('hit');
     } else if (key === 'OK') {
+      const isCustom = os.wallpaperIdx === REAL_POSTCARDS.length + 1;
+      if (isCustom) {
+        if (!os.wallpaperCustomUri) {
+          os.pickAndCropCustomWallpaper();
+          return;
+        }
+        if (os.wallpaperViewMode === 'preview' && os.wallpaperId === 'custom') {
+          os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+          os.cb.onPlaySound?.('hit');
+          return;
+        }
+        os.setWallpaperById('custom');
+        os.smsBanner = `[WP] ${os.lang === 'tr' ? 'BENİM RESMİM' : 'MY PHOTO'}`;
+        os.smsBannerTimer = 2.0;
+        os.cb.onPlaySound?.('powerup');
+        return;
+      }
+
       const nextId =
         os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
       if (os.wallpaperViewMode === 'preview' && os.wallpaperId === nextId && nextId !== 'none') {
@@ -1741,7 +1759,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'wallpapers') {
-    const total = REAL_POSTCARDS.length + 1;
+    const total = REAL_POSTCARDS.length + 2; // 0 = none, 1..20 = scenes, 21 = custom photo
     if (os.wallpaperViewMode === 'grid3x2' || os.wallpaperViewMode === 'grid4x3') {
       const cols = os.wallpaperViewMode === 'grid3x2' ? 3 : 4;
       if (dir === 'left') {
@@ -1787,6 +1805,22 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       }
     }
     if (pressA) {
+      const isCustom = os.wallpaperIdx === REAL_POSTCARDS.length + 1;
+      if (isCustom) {
+        if (!os.wallpaperCustomUri) {
+          os.pickAndCropCustomWallpaper();
+          return 'hit';
+        }
+        if (os.wallpaperViewMode === 'preview' && os.wallpaperId === 'custom') {
+          os.wallpaperCleanPreview = !os.wallpaperCleanPreview;
+          return 'hit';
+        }
+        os.setWallpaperById('custom');
+        os.smsBanner = `[WP] ${os.lang === 'tr' ? 'BENİM RESMİM' : 'MY PHOTO'}`;
+        os.smsBannerTimer = 2.2;
+        return 'powerup';
+      }
+
       const nextId =
         os.wallpaperIdx === 0 ? 'none' : REAL_POSTCARDS[os.wallpaperIdx - 1]?.id || 'none';
       if (os.wallpaperViewMode === 'preview' && os.wallpaperId === nextId && nextId !== 'none') {
