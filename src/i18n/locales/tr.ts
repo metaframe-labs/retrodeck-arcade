@@ -48,6 +48,7 @@ export const trLocale: LocaleBundle = {
     setupPalette: 'PALET',
     setupWallpaper: 'DUVAR KAGIDI',
     setupMenuStyle: 'MENU STILI',
+    setupMenuStylePickerTitle: 'MASAUSTU STILLERI GALERISI',
     menuStyleGrid: 'IZGARA 4x3',
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'LISTE',

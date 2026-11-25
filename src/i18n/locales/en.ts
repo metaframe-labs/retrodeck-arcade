@@ -46,6 +46,7 @@ export const enLocale = {
     setupPalette: 'PALETTE',
     setupWallpaper: 'WALLPAPER',
     setupMenuStyle: 'MENU STYLE',
+    setupMenuStylePickerTitle: 'DESKTOP STYLE GALLERY',
     menuStyleGrid: 'GRID 4x3',
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'RETRO LIST',

@@ -375,6 +375,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Setup, Wallpaper & Format Simulation state
   /** @internal */ setupIdx = 0;
+  /** @internal */ setupSubPage: 'main' | 'menu_style' = 'main';
+  /** @internal */ menuStylePickerIdx = 0;
   /** @internal */ wallpaperId = 'none';
   /** @internal */ wallpaperIdx = 0; // 0 = NONE, 1..20 = REAL_POSTCARDS
   /** @internal */ wallpaperDimIdx = 1; // 0 = Bright, 1 = Balanced, 2 = Dark

@@ -2709,6 +2709,8 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
   const isPro = os.cb.getIsPro?.() ?? false;
   const L = os.lang;
   const activeWall = os.getActiveWallpaper();
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+
   const menuStyleLabelMap = {
     grid: tOs('menuStyleGrid', L),
     nokia: tOs('menuStyleNokia', L),
@@ -2723,6 +2725,106 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     pipboy: tOs('menuStylePipboy', L),
     ipod_classic: tOs('menuStyleIpod', L),
   };
+
+  // SUB-PAGE: Dedicated Desktop Style Picker Screen
+  if (os.setupSubPage === 'menu_style') {
+    const totalStyles = DESKTOP_MENU_STYLES.length;
+    const curStyle = DESKTOP_MENU_STYLES[os.menuStylePickerIdx] || DESKTOP_MENU_STYLES[0];
+    const isCurApplied = curStyle === os.menuStyle;
+
+    // Windowed list of 5 visible styles
+    const PAGE_SIZE = 5;
+    const maxStart = Math.max(0, totalStyles - PAGE_SIZE);
+    const startIdx = Math.max(0, Math.min(os.menuStylePickerIdx - 2, maxStart));
+    const visibleStyles = DESKTOP_MENU_STYLES.slice(startIdx, startIdx + PAGE_SIZE);
+
+    return (
+      <View style={styles.listWrap}>
+        {/* Header with Title and Index */}
+        <View style={[styles.compHeader, { marginBottom: 3 }]}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            {tOs('setupMenuStylePickerTitle', L)}
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {os.menuStylePickerIdx + 1}/{totalStyles}
+          </Text>
+        </View>
+
+        {/* Styles List */}
+        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+          {visibleStyles.map((styleKey, i) => {
+            const actualIdx = startIdx + i;
+            const isSelected = actualIdx === os.menuStylePickerIdx;
+            const isApplied = styleKey === os.menuStyle;
+            const label = menuStyleLabelMap[styleKey];
+
+            return (
+              <View
+                key={styleKey}
+                style={[
+                  styles.setupRow,
+                  {
+                    borderColor: fg,
+                    backgroundColor: isSelected ? fg : 'transparent',
+                    marginBottom: 3,
+                    paddingVertical: 3.5,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.setupTxt,
+                    { color: isSelected ? bg : fg, flex: 1 },
+                    isSelected && { fontWeight: '900' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {isSelected ? '▶ ' : '  '}
+                  {label}
+                </Text>
+                {isApplied && (
+                  <View
+                    style={{
+                      backgroundColor: isSelected ? bg : fg,
+                      paddingHorizontal: 4,
+                      paddingVertical: 1,
+                      borderRadius: 2,
+                      marginRight: 2,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 6.5,
+                        fontWeight: '900',
+                        color: isSelected ? fg : bg,
+                      }}
+                    >
+                      {tOs('active', L)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Bottom Navigation Hints */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, height: 12 }}>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
+            [B] {pickLang(L, 'BACK', 'GERI')}
+          </Text>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0, fontWeight: '900' }]}>
+            {isCurApplied ? pickLang(L, 'ALREADY ACTIVE', 'ZATEN AKTIF') : `[A] ${pickLang(L, 'APPLY', 'UYGULA')}`}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
     `${tOs('setupPalette', L)}: ${os.cb.getPaletteName()}`,

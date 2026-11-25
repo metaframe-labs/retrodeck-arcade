@@ -639,6 +639,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   // Global B = return to desktop from any sub-app (except synth list / sms compose / format wizard / clean wallpaper preview)
   if (os.app !== 'desktop' && os.app !== 'format' && pressB) {
+    if (os.app === 'setup' && os.setupSubPage === 'menu_style') {
+      os.setupSubPage = 'main';
+      return 'hit';
+    }
     if (os.app === 'wallpapers' && os.wallpaperCleanPreview) {
       os.wallpaperCleanPreview = false;
       return 'hit';
@@ -1799,6 +1803,29 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'setup') {
+    if (os.setupSubPage === 'menu_style') {
+      const totalStyles = DESKTOP_MENU_STYLES.length;
+      if (dir === 'up') {
+        os.menuStylePickerIdx = (os.menuStylePickerIdx + totalStyles - 1) % totalStyles;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        os.menuStylePickerIdx = (os.menuStylePickerIdx + 1) % totalStyles;
+        return 'hit';
+      }
+      if (pressA) {
+        const chosenStyle = DESKTOP_MENU_STYLES[os.menuStylePickerIdx];
+        if (chosenStyle) {
+          os.menuStyle = chosenStyle;
+          AsyncStorage.setItem(MENU_STYLE_STORAGE_KEY, chosenStyle).catch(() => {});
+          os.smsBanner = `[DESKTOP] ${chosenStyle.toUpperCase()}`;
+          os.smsBannerTimer = 2.5;
+          return 'powerup';
+        }
+      }
+      return null;
+    }
+
     const totalSetupItems = 11;
     if (dir === 'up') os.setupIdx = (os.setupIdx + totalSetupItems - 1) % totalSetupItems;
     if (dir === 'down') os.setupIdx = (os.setupIdx + 1) % totalSetupItems;
@@ -1812,7 +1839,9 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'score';
       }
       if (os.setupIdx === 3) {
-        os.cycleMenuStyle(dir === 'left' ? -1 : 1);
+        const curIdx = DESKTOP_MENU_STYLES.indexOf(os.menuStyle);
+        os.menuStylePickerIdx = curIdx >= 0 ? curIdx : 0;
+        os.setupSubPage = 'menu_style';
         return 'score';
       }
       if (os.setupIdx === 4) {
@@ -1849,7 +1878,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         os.openWallpaperGallery();
         return 'score';
       } else if (os.setupIdx === 3) {
-        os.cycleMenuStyle(1);
+        // [A] Opens the dedicated Menu Style Picker page
+        const curIdx = DESKTOP_MENU_STYLES.indexOf(os.menuStyle);
+        os.menuStylePickerIdx = curIdx >= 0 ? curIdx : 0;
+        os.setupSubPage = 'menu_style';
         return 'score';
       } else if (os.setupIdx === 4) os.cb.onToggleScanlines();
       else if (os.setupIdx === 5) os.toggleClockFace();
