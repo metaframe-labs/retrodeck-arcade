@@ -1622,28 +1622,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
-        {/* Footer Blade Navigation Bar */}
-        <View
-          style={{
-            height: 14,
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingHorizontal: 8,
-            backgroundColor: activeWall ? hexWithAlpha(bg, 0.9) : 'rgba(0, 0, 0, 0.9)',
-          }}
-        >
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.5)' }}>
-            ◀ ▶ SLIDE BLADE • ▲ ▼ SELECT
-          </Text>
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: bladeAccent }}>
-            [A] LAUNCH
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   // STYLE 8: Cyberpunk / Linux Tiling Window Manager (i3 / bspwm / sway style)
   if (os.menuStyle === 'cyberpunk') {
     const total = DESKTOP_ICONS.length;
