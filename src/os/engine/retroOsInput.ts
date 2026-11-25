@@ -751,21 +751,23 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         ['setup', 'stats', 'term', 'format', 'clock'], // system
         ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'], // live
       ];
-      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
-      let bladeIdx = XBOX_BLADES.findIndex((b) => b.includes(curApp.id));
-      if (bladeIdx === -1) bladeIdx = 0;
+      
+      let bladeIdx = os.xboxBladeIdx >= 0 && os.xboxBladeIdx < XBOX_BLADES.length ? os.xboxBladeIdx : 0;
       const bladeApps = XBOX_BLADES[bladeIdx];
+      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
       let itemIdx = bladeApps.indexOf(curApp.id);
       if (itemIdx === -1) itemIdx = 0;
 
       if (dir === 'left') {
-        const nextBladeIdx = (bladeIdx + XBOX_BLADES.length - 1) % XBOX_BLADES.length;
-        const targetAppId = XBOX_BLADES[nextBladeIdx][0];
+        bladeIdx = (bladeIdx + XBOX_BLADES.length - 1) % XBOX_BLADES.length;
+        os.xboxBladeIdx = bladeIdx;
+        const targetAppId = XBOX_BLADES[bladeIdx][0];
         const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'right') {
-        const nextBladeIdx = (bladeIdx + 1) % XBOX_BLADES.length;
-        const targetAppId = XBOX_BLADES[nextBladeIdx][0];
+        bladeIdx = (bladeIdx + 1) % XBOX_BLADES.length;
+        os.xboxBladeIdx = bladeIdx;
+        const targetAppId = XBOX_BLADES[bladeIdx][0];
         const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'up') {

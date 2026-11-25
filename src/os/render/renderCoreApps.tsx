@@ -1328,9 +1328,15 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
       { id: 'live', label: 'XBOX LIVE', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.9) : '#E65100', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
     ];
 
+    let activeBladeIdx = os.xboxBladeIdx >= 0 && os.xboxBladeIdx < XBOX_BLADES.length ? os.xboxBladeIdx : 0;
+    // Verify if currentApp matches activeBlade, otherwise sync
     const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
-    let activeBladeIdx = XBOX_BLADES.findIndex((blade) => blade.appIds.includes(currentApp.id));
-    if (activeBladeIdx === -1) activeBladeIdx = 0;
+    const matchingIdx = XBOX_BLADES.findIndex((b) => b.appIds.includes(currentApp.id));
+    if (matchingIdx !== -1 && matchingIdx !== activeBladeIdx) {
+      activeBladeIdx = matchingIdx;
+      os.xboxBladeIdx = matchingIdx;
+    }
+
     const activeBlade = XBOX_BLADES[activeBladeIdx];
     const bladeApps = activeBlade.appIds.map((id) => DESKTOP_ICONS.find((icon) => icon.id === id)!).filter(Boolean);
     let itemIdxInBlade = bladeApps.findIndex((item) => item.id === currentApp.id);
@@ -1361,6 +1367,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const headerText = getContrastText(bladeAccent);
     const selBg = activeWall ? fg : bladeAccent;
     const selText = getContrastText(selBg);
+
+    // Dynamic Sliding Blades Architecture (Authentic 2005 Sliding Accordion Layout):
+    // Blades before the active blade stack on the LEFT;
+    // The active blade expands in the CENTER;
+    // Blades after the active blade stack on the RIGHT!
+    const leftBlades = XBOX_BLADES.slice(0, activeBladeIdx);
+    const rightBlades = XBOX_BLADES.slice(activeBladeIdx + 1);
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0 }]}>
@@ -1410,59 +1423,59 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           </Text>
         </View>
 
-        {/* Center Canvas: Horizontal Blade Tabs + Active Blade App List */}
-        <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden' }}>
-          {/* Blade Spine Tabs on the Left */}
-          <View style={{ width: 34, justifyContent: 'space-around', paddingVertical: 4, paddingLeft: 2 }}>
-            {XBOX_BLADES.map((blade, idx) => {
-              const isBladeActive = idx === activeBladeIdx;
-              const tabTextColor = getContrastText(blade.color);
-              return (
-                <View
-                  key={blade.id}
+        {/* Center Canvas: Authentic Sliding Accordion Blades */}
+        <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden', paddingVertical: 3 }}>
+          {/* Left Stacked Blades (Blades before active) */}
+          {leftBlades.map((b, idx) => {
+            const bTextColor = getContrastText(b.color);
+            return (
+              <View
+                key={b.id}
+                style={{
+                  width: 14,
+                  backgroundColor: b.color,
+                  borderTopRightRadius: 4,
+                  borderBottomRightRadius: 4,
+                  borderRightWidth: 1.5,
+                  borderRightColor: 'rgba(0,0,0,0.4)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 1,
+                  opacity: 0.9,
+                }}
+              >
+                <Text
                   style={{
-                    height: 24,
-                    width: isBladeActive ? 32 : 24,
-                    backgroundColor: blade.color,
-                    borderTopRightRadius: 6,
-                    borderBottomRightRadius: 6,
-                    justifyContent: 'center',
-                    paddingLeft: 4,
-                    borderWidth: 1,
-                    borderColor: isBladeActive ? (tabTextColor === '#FFFFFF' ? '#FFFFFF' : '#0F172A') : 'rgba(0,0,0,0.4)',
-                    shadowColor: blade.color,
-                    shadowOffset: { width: 1, height: 0 },
-                    shadowOpacity: isBladeActive ? 0.8 : 0.2,
-                    shadowRadius: 3,
+                    fontFamily: monoFont,
+                    fontSize: 6.5,
+                    fontWeight: '900',
+                    color: bTextColor,
+                    transform: [{ rotate: '-90deg' }],
+                    width: 48,
+                    textAlign: 'center',
                   }}
+                  numberOfLines={1}
                 >
-                  <Text
-                    style={{
-                      fontFamily: monoFont,
-                      fontSize: 6,
-                      fontWeight: '900',
-                      color: tabTextColor,
-                    }}
-                    numberOfLines={1}
-                  >
-                    {blade.label.slice(0, 4)}
-                  </Text>
-                </View>
-              );
-            })}
-          </View>
+                  {b.label}
+                </Text>
+              </View>
+            );
+          })}
 
-          {/* Active Blade Card and App Options */}
+          {/* Active Expanded Center Blade Card */}
           <View
             style={{
               flex: 1,
-              backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'rgba(0, 0, 0, 0.8)',
-              marginVertical: 4,
-              marginRight: 6,
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.8) : 'rgba(0, 0, 0, 0.85)',
+              marginHorizontal: 3,
               borderRadius: 6,
               borderWidth: 1.5,
               borderColor: bladeAccent,
-              padding: 6,
+              padding: 5,
+              shadowColor: bladeAccent,
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.5,
+              shadowRadius: 4,
             }}
           >
             {/* Active Blade Title Header */}
@@ -1532,7 +1545,66 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               })}
             </View>
           </View>
+
+          {/* Right Stacked Blades (Blades after active) */}
+          {rightBlades.map((b) => {
+            const bTextColor = getContrastText(b.color);
+            return (
+              <View
+                key={b.id}
+                style={{
+                  width: 14,
+                  backgroundColor: b.color,
+                  borderTopLeftRadius: 4,
+                  borderBottomLeftRadius: 4,
+                  borderLeftWidth: 1.5,
+                  borderLeftColor: 'rgba(0,0,0,0.4)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginLeft: 1,
+                  opacity: 0.9,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 6.5,
+                    fontWeight: '900',
+                    color: bTextColor,
+                    transform: [{ rotate: '90deg' }],
+                    width: 48,
+                    textAlign: 'center',
+                  }}
+                  numberOfLines={1}
+                >
+                  {b.label}
+                </Text>
+              </View>
+            );
+          })}
         </View>
+
+        {/* Footer Blade Navigation Bar */}
+        <View
+          style={{
+            height: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.9) : 'rgba(0, 0, 0, 0.9)',
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.5)' }}>
+            ◀ ▶ SLIDE BLADE • ▲ ▼ SELECT
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: bladeAccent }}>
+            [A] LAUNCH
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
         {/* Footer Blade Navigation Bar */}
         <View
