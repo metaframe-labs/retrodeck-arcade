@@ -1,5 +1,6 @@
 import React from 'react';
 import { Platform, Pressable, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { pickLang } from '../../i18n/retroI18n';
 import {
   FORMAT_PRESET_IDS,
@@ -1116,12 +1117,16 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         </View>
 
         {/* Windows 11 Tray with WiFi, Sound & Clock */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingRight: 4 }}>
-          <Text style={{ fontSize: 7, color: '#A1A1AA' }}>📶 🔊</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingRight: 4 }}>
+          <Ionicons name="wifi" size={9} color="#A1A1AA" />
+          <Ionicons name="volume-medium" size={9} color="#A1A1AA" />
           {os.unreadSmsCount > 0 && (
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#FDE047' }}>
-              ✉{os.unreadSmsCount}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Ionicons name="mail" size={8} color="#FDE047" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#FDE047' }}>
+                {os.unreadSmsCount}
+              </Text>
+            </View>
           )}
           <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#E4E4E7' }}>
             {os.formatClock()}
@@ -1185,13 +1190,16 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
             paddingHorizontal: 6,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 3,
+            gap: 4,
           }}
         >
           {os.unreadSmsCount > 0 && (
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
-              ✉{os.unreadSmsCount}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Ionicons name="mail" size={8} color="#FEF08A" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
+                {os.unreadSmsCount}
+              </Text>
+            </View>
           )}
           <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#D4D4D8' }}>
             {os.formatClock()}
@@ -1273,13 +1281,17 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
             paddingHorizontal: 6,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 3,
+            gap: 4,
           }}
         >
+          <Ionicons name="volume-medium" size={9} color="#FFFFFF" />
           {os.unreadSmsCount > 0 && (
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
-              ✉{os.unreadSmsCount}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+              <Ionicons name="mail" size={8} color="#FEF08A" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#FEF08A' }}>
+                {os.unreadSmsCount}
+              </Text>
+            </View>
           )}
           <Text style={{ fontFamily: MONO_FONT, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
             {os.formatClock()}
@@ -1379,11 +1391,14 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           gap: 3,
         }}
       >
-        <Text style={{ fontSize: 6.5, color: '#222222' }}>🔊</Text>
+        <Ionicons name="volume-medium" size={9} color="#222222" />
         {os.unreadSmsCount > 0 && (
-          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#000080' }}>
-            ✉{os.unreadSmsCount}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1 }}>
+            <Ionicons name="mail" size={8} color="#000080" />
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#000080' }}>
+              {os.unreadSmsCount}
+            </Text>
+          </View>
         )}
         <Text style={{ fontFamily: MONO_FONT, fontSize: 7.8, fontWeight: '900', color: '#000000' }}>
           {os.formatClock()}
@@ -1445,17 +1460,20 @@ export function renderWinActivationScreen(os: RetroDeckOS): React.ReactNode {
             paddingHorizontal: 6,
           }}
         >
-          <Text
-            style={{
-              fontFamily: MONO_FONT,
-              fontSize: 9,
-              fontWeight: '900',
-              color: '#FFFFFF',
-              letterSpacing: 0.6,
-            }}
-          >
-            🔑 WINDOWS ACTIVATION
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="key" size={11} color="#FEF08A" />
+            <Text
+              style={{
+                fontFamily: MONO_FONT,
+                fontSize: 9,
+                fontWeight: '900',
+                color: '#FFFFFF',
+                letterSpacing: 0.6,
+              }}
+            >
+              WINDOWS ACTIVATION
+            </Text>
+          </View>
           <View
             style={{
               width: 13,
