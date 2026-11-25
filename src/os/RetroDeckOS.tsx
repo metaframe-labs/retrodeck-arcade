@@ -1347,11 +1347,12 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
     const isPureWallPreview =
       this.app === 'wallpapers' && this.wallpaperCleanPreview;
+    const isMacOsDesktop = this.app === 'desktop' && this.menuStyle === 'macos';
 
     return (
       <View style={[styles.container, { backgroundColor: bg }]}>
-        {/* OS Top Status Bar (hidden during pure buttonless wallpaper preview) */}
-        {!isPureWallPreview && (
+        {/* OS Top Status Bar (hidden during pure wallpaper preview and macOS desktop) */}
+        {!isPureWallPreview && !isMacOsDesktop && (
           (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
             renderWinPostFormatTopBar(this)
           ) : (
@@ -1432,8 +1433,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           )}
         </View>
 
-        {/* OS Footer Taskbar (hidden during pure buttonless wallpaper preview) */}
-        {!isPureWallPreview && (
+        {/* OS Footer Taskbar (hidden during pure wallpaper preview and macOS desktop) */}
+        {!isPureWallPreview && !isMacOsDesktop && (
           (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
             renderWinPostFormatTaskbar(this)
           ) : (
