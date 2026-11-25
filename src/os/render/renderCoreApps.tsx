@@ -6,7 +6,7 @@ import { PALETTE_ORDER, RETRO_PALETTES, isPaletteProLocked } from '../../theme/p
 import { RetroAudioEngine, KEYPAD_SOUND_STYLES } from '../../audio/RetroAudioEngine';
 import { somaRadioService } from '../../services/somaRadioService';
 import { styles } from '../retroOsStyles';
-import { DESKTOP_ICONS, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS } from '../retroOsData';
+import { DESKTOP_ICONS, DESKTOP_MENU_STYLES, DesktopMenuStyle, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS } from '../retroOsData';
 import { getDesktopLabel, pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
