@@ -14,6 +14,48 @@ export const WALLPAPER_STORAGE_KEY = '@retrodeck8_wallpaper_v1';
 export const WALLPAPER_CUSTOM_URI_KEY = '@retrodeck8_wallpaper_custom_uri_v1';
 export const WALLPAPER_DIM_STORAGE_KEY = '@retrodeck8_wallpaper_dim_v1';
 export const MENU_STYLE_STORAGE_KEY = '@retrodeck8_menu_style_v1';
+export const STARTUP_SOUND_STORAGE_KEY = '@retrodeck8_startup_sound_v1';
+
+export type StartupSoundId =
+  | 'auto'
+  | 'windows_xp'
+  | 'windows_95'
+  | 'windows_98'
+  | 'macos_classic'
+  | 'macos_modern'
+  | 'psp_crystal'
+  | 'ps1_legend'
+  | 'xbox_360'
+  | 'gameboy_dmg'
+  | 'sega_sonic'
+  | 'nokia_connecting'
+  | 'cyber_synth'
+  | 'pipboy_vault'
+  | 'silent';
+
+export interface StartupSoundOption {
+  id: StartupSoundId;
+  name: string;
+  tagline: string;
+}
+
+export const STARTUP_SOUND_OPTIONS: StartupSoundOption[] = [
+  { id: 'auto', name: 'AUTO (THEME ADAPTIVE)', tagline: 'Plays matching chime for active OS style/palette' },
+  { id: 'windows_xp', name: 'WINDOWS XP', tagline: 'Iconic 2001 orchestral startup chord' },
+  { id: 'windows_95', name: 'WINDOWS 95 (BRIAN ENO)', tagline: '1995 ambient slow-rise chord' },
+  { id: 'windows_98', name: 'WINDOWS 98', tagline: 'Rich corporate desktop chime' },
+  { id: 'macos_modern', name: 'MACOS F# CHIME', tagline: 'Historic Cupertino resonance chord' },
+  { id: 'macos_classic', name: 'MAC SYSTEM 7', tagline: 'Platinum Mac classic desktop chime' },
+  { id: 'psp_crystal', name: 'SONY PSP / PS3', tagline: 'Crystal shimmer wave chime' },
+  { id: 'ps1_legend', name: 'PLAYSTATION 1', tagline: '1994 deep synth pad + bell sweep' },
+  { id: 'xbox_360', name: 'XBOX 360 ORB', tagline: 'Green power ring resonance pulse' },
+  { id: 'gameboy_dmg', name: 'NINTENDO GAME BOY', tagline: 'Iconic 1989 dual ping coin drop' },
+  { id: 'sega_sonic', name: 'SEGA!', tagline: 'Genesis / Mega Drive vocal synth' },
+  { id: 'nokia_connecting', name: 'NOKIA 3310', tagline: 'Connecting People classic melody' },
+  { id: 'cyber_synth', name: 'CYBERPUNK VFD', tagline: 'Neon arpeggiator laser intro' },
+  { id: 'pipboy_vault', name: 'PIP-BOY 3000', tagline: 'Vault-Tec Geiger & tube relay click' },
+  { id: 'silent', name: 'SILENT / MUTE', tagline: 'Instant silent boot without chimes' },
+];
 
 export type DesktopMenuStyle = 'grid' | 'nokia' | 'list' | 'cards' | 'windows' | 'macos' | 'psp_xmb' | 'xbox_blades' | 'cyberpunk' | 'wii_channels' | 'pipboy' | 'ipod_classic';
 export const DESKTOP_MENU_STYLES: DesktopMenuStyle[] = ['grid', 'nokia', 'list', 'cards', 'windows', 'macos', 'psp_xmb', 'xbox_blades', 'cyberpunk', 'wii_channels', 'pipboy', 'ipod_classic'];

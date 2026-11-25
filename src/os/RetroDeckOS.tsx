@@ -159,6 +159,9 @@ import {
   WALLPAPER_DIM_STORAGE_KEY,
   WALLPAPER_DIM_OPACITIES,
   MENU_STYLE_STORAGE_KEY,
+  STARTUP_SOUND_STORAGE_KEY,
+  STARTUP_SOUND_OPTIONS,
+  StartupSoundId,
   DESKTOP_MENU_STYLES,
   DesktopMenuStyle,
   hexWithAlpha,
@@ -377,8 +380,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // Setup, Wallpaper & Format Simulation state
   /** @internal */ setupIdx = 0;
-  /** @internal */ setupSubPage: 'main' | 'menu_style' = 'main';
+  /** @internal */ setupSubPage: 'main' | 'menu_style' | 'startup_sound' = 'main';
   /** @internal */ menuStylePickerIdx = 0;
+  /** @internal */ startupSoundId: StartupSoundId = 'auto';
+  /** @internal */ startupSoundPickerIdx = 0;
   /** @internal */ xboxBladeIdx = 0;
   /** @internal */ wallpaperId = 'none';
   /** @internal */ wallpaperCustomUri: string | null = null;
@@ -634,6 +639,22 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(STARTUP_SOUND_STORAGE_KEY)
+      .then((savedSound) => {
+        if (savedSound && STARTUP_SOUND_OPTIONS.some((s) => s.id === savedSound)) {
+          this.startupSoundId = savedSound as StartupSoundId;
+          const idx = STARTUP_SOUND_OPTIONS.findIndex((s) => s.id === savedSound);
+          this.startupSoundPickerIdx = idx >= 0 ? idx : 0;
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ setStartupSound(next: StartupSoundId) {
+    this.startupSoundId = next;
+    const idx = STARTUP_SOUND_OPTIONS.findIndex((s) => s.id === next);
+    this.startupSoundPickerIdx = idx >= 0 ? idx : 0;
+    AsyncStorage.setItem(STARTUP_SOUND_STORAGE_KEY, next).catch(() => {});
   }
 
   /** @internal */ setMenuStyle(next: DesktopMenuStyle) {

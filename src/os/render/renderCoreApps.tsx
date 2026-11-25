@@ -6,7 +6,7 @@ import { PALETTE_ORDER, RETRO_PALETTES, isPaletteProLocked } from '../../theme/p
 import { RetroAudioEngine, KEYPAD_SOUND_STYLES } from '../../audio/RetroAudioEngine';
 import { somaRadioService } from '../../services/somaRadioService';
 import { styles } from '../retroOsStyles';
-import { DESKTOP_ICONS, DESKTOP_MENU_STYLES, DesktopMenuStyle, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS } from '../retroOsData';
+import { DESKTOP_ICONS, DESKTOP_MENU_STYLES, DesktopMenuStyle, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS, STARTUP_SOUND_OPTIONS } from '../retroOsData';
 import { getDesktopLabel, pickLang, tOs } from '../../i18n/retroI18n';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
@@ -3020,11 +3020,106 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
+  // SUB-PAGE 2: Dedicated Startup Sound Picker Screen
+  if (os.setupSubPage === 'startup_sound') {
+    const totalSounds = STARTUP_SOUND_OPTIONS.length;
+    const curSound = STARTUP_SOUND_OPTIONS[os.startupSoundPickerIdx] || STARTUP_SOUND_OPTIONS[0];
+    const isCurApplied = curSound.id === os.startupSoundId;
+
+    const PAGE_SIZE = 5;
+    const maxStart = Math.max(0, totalSounds - PAGE_SIZE);
+    const startIdx = Math.max(0, Math.min(os.startupSoundPickerIdx - 2, maxStart));
+    const visibleSounds = STARTUP_SOUND_OPTIONS.slice(startIdx, startIdx + PAGE_SIZE);
+
+    return (
+      <View style={styles.listWrap}>
+        <View style={[styles.compHeader, { marginBottom: 3 }]}>
+          <Text style={[styles.subHeader, { color: fg, marginBottom: 0 }]}>
+            {pickLang(L, 'STARTUP CHIME', 'ACILIS SESI')}
+          </Text>
+          <Text style={[styles.listMeta, { color: fg }]}>
+            {os.startupSoundPickerIdx + 1}/{totalSounds}
+          </Text>
+        </View>
+
+        <View style={{ flex: 1, justifyContent: 'flex-start' }}>
+          {visibleSounds.map((item, i) => {
+            const actualIdx = startIdx + i;
+            const isSelected = actualIdx === os.startupSoundPickerIdx;
+            const isApplied = item.id === os.startupSoundId;
+
+            return (
+              <View
+                key={item.id}
+                style={[
+                  styles.setupRow,
+                  {
+                    borderColor: fg,
+                    backgroundColor: isSelected ? fg : 'transparent',
+                    marginBottom: 3,
+                    paddingVertical: 3.5,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.setupTxt,
+                    { color: isSelected ? bg : fg, flex: 1 },
+                    isSelected && { fontWeight: '900' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {isSelected ? '▶ ' : '  '}
+                  {item.name}
+                </Text>
+                {isApplied && (
+                  <View
+                    style={{
+                      backgroundColor: isSelected ? bg : fg,
+                      paddingHorizontal: 4,
+                      paddingVertical: 1,
+                      borderRadius: 2,
+                      marginRight: 2,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 6.5,
+                        fontWeight: '900',
+                        color: isSelected ? fg : bg,
+                      }}
+                    >
+                      {tOs('active', L)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 4, height: 12 }}>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0 }]}>
+            [B] {pickLang(L, 'BACK', 'GERI')}
+          </Text>
+          <Text style={[styles.miniHint, { color: fg, marginTop: 0, fontWeight: '900' }]}>
+            {isCurApplied ? pickLang(L, '[A] PREVIEW TONE', '[A] DINLE') : pickLang(L, '[A] SET & PREVIEW', '[A] SEC & DINLE')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
     `${tOs('setupPalette', L)}: ${os.cb.getPaletteName()}`,
     `${tOs('setupWallpaper', L)}: ${activeWall ? activeWall.title : tOs('off', L)}`,
     `${tOs('setupMenuStyle', L)}: ${menuStyleLabelMap[os.menuStyle]}`,
+    `${pickLang(L, 'Startup Sound', 'Acilis Sesi')}: ${STARTUP_SOUND_OPTIONS.find((s) => s.id === os.startupSoundId)?.name || 'AUTO'}`,
     `${tOs('setupScanlines', L)}: ${os.cb.getScanlines() ? tOs('on', L) : tOs('off', L)}`,
     `${tOs('setupClockFace', L)}: ${os.clockFace === 'analog' ? tOs('analog', L) : tOs('digital', L)}`,
     `${tOs('setupLiveSms', L)}: ${os.liveAiSmsEnabled ? tOs('on', L) : tOs('off', L)}`,

@@ -20,6 +20,7 @@ import {
   POSTCARD_STAMPS,
   REAL_POSTCARDS,
   SMS_TONE_STORAGE_KEY,
+  STARTUP_SOUND_OPTIONS,
   TERM_PRESETS,
   WAP_BOOKMARKS,
   WEATHER_CITIES,
@@ -617,7 +618,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (!os.bootChimePlayed && os.bootTimer >= 0.15) {
       os.bootChimePlayed = true;
       const targetStyle = os.postFormatWinStyle || os.menuStyle || os.cb.getPaletteId?.() || 'default';
-      RetroAudioEngine.playStartupChime(targetStyle);
+      RetroAudioEngine.playStartupChime(os.startupSoundId || 'auto', targetStyle);
     }
 
     if (os.bootTimer >= 3.5 || pressA || pressB) {
@@ -666,7 +667,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   // Global B = return to desktop from any sub-app (except synth list / sms compose / format wizard / clean wallpaper preview)
   if (os.app !== 'desktop' && os.app !== 'format' && pressB) {
-    if (os.app === 'setup' && os.setupSubPage === 'menu_style') {
+    if (os.app === 'setup' && (os.setupSubPage === 'menu_style' || os.setupSubPage === 'startup_sound')) {
       os.setupSubPage = 'main';
       return 'hit';
     }
@@ -1871,7 +1872,31 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       return null;
     }
 
-    const totalSetupItems = 11;
+    if (os.setupSubPage === 'startup_sound') {
+      const totalSounds = STARTUP_SOUND_OPTIONS.length;
+      if (dir === 'up') {
+        os.startupSoundPickerIdx = (os.startupSoundPickerIdx + totalSounds - 1) % totalSounds;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        os.startupSoundPickerIdx = (os.startupSoundPickerIdx + 1) % totalSounds;
+        return 'hit';
+      }
+      if (pressA) {
+        const chosen = STARTUP_SOUND_OPTIONS[os.startupSoundPickerIdx];
+        if (chosen) {
+          os.setStartupSound(chosen.id);
+          const targetStyle = os.postFormatWinStyle || os.menuStyle || os.cb.getPaletteId?.() || 'default';
+          RetroAudioEngine.playStartupChime(chosen.id, targetStyle);
+          os.smsBanner = `[SOUND] ${chosen.name}`;
+          os.smsBannerTimer = 2.5;
+          return 'powerup';
+        }
+      }
+      return null;
+    }
+
+    const totalSetupItems = 12;
     if (dir === 'up') os.setupIdx = (os.setupIdx + totalSetupItems - 1) % totalSetupItems;
     if (dir === 'down') os.setupIdx = (os.setupIdx + 1) % totalSetupItems;
     if (dir === 'left' || dir === 'right') {
@@ -1890,18 +1915,24 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         return 'score';
       }
       if (os.setupIdx === 4) {
-        os.cb.onToggleScanlines();
+        const curIdx = STARTUP_SOUND_OPTIONS.findIndex((s) => s.id === os.startupSoundId);
+        os.startupSoundPickerIdx = curIdx >= 0 ? curIdx : 0;
+        os.setupSubPage = 'startup_sound';
         return 'score';
       }
       if (os.setupIdx === 5) {
-        os.toggleClockFace();
+        os.cb.onToggleScanlines();
         return 'score';
       }
       if (os.setupIdx === 6) {
-        os.toggleLiveAiSms();
+        os.toggleClockFace();
         return 'score';
       }
       if (os.setupIdx === 7) {
+        os.toggleLiveAiSms();
+        return 'score';
+      }
+      if (os.setupIdx === 8) {
         os.toggleLang();
         return 'score';
       }
@@ -1928,15 +1959,21 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         os.menuStylePickerIdx = curIdx >= 0 ? curIdx : 0;
         os.setupSubPage = 'menu_style';
         return 'score';
-      } else if (os.setupIdx === 4) os.cb.onToggleScanlines();
-      else if (os.setupIdx === 5) os.toggleClockFace();
-      else if (os.setupIdx === 6) os.toggleLiveAiSms();
-      else if (os.setupIdx === 7) os.toggleLang();
-      else if (os.setupIdx === 8) os.cb.onOpenCartVault();
-      else if (os.setupIdx === 9) {
+      } else if (os.setupIdx === 4) {
+        // [A] Opens Startup Sound Picker page
+        const curIdx = STARTUP_SOUND_OPTIONS.findIndex((s) => s.id === os.startupSoundId);
+        os.startupSoundPickerIdx = curIdx >= 0 ? curIdx : 0;
+        os.setupSubPage = 'startup_sound';
+        return 'score';
+      } else if (os.setupIdx === 5) os.cb.onToggleScanlines();
+      else if (os.setupIdx === 6) os.toggleClockFace();
+      else if (os.setupIdx === 7) os.toggleLiveAiSms();
+      else if (os.setupIdx === 8) os.toggleLang();
+      else if (os.setupIdx === 9) os.cb.onOpenCartVault();
+      else if (os.setupIdx === 10) {
         os.app = 'boot';
         os.bootTimer = 0;
-      } else if (os.setupIdx === 10) {
+      } else if (os.setupIdx === 11) {
         openFormatSimulator(os, 0, false);
         return 'explode';
       }
