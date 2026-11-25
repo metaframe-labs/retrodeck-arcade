@@ -8,7 +8,7 @@ import Purchases, {
 } from 'react-native-purchases';
 import RevenueCatUI, { PAYWALL_RESULT } from 'react-native-purchases-ui';
 
-export const REVENUECAT_API_KEY = 'test_sIXFfTgPfDmQXGqlTkwVLEBbVWJ';
+export const REVENUECAT_API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY || '';
 export const ENTITLEMENT_ID = 'retrodeck_os_pro';
 const DEBUG_REVOKED_STORAGE_KEY = '@retrodeck8_debug_pro_revoked_v1';
 /** Set to `false` before App Store / Play Store release to enforce real IAP gating */
