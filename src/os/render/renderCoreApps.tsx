@@ -926,13 +926,17 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const cardTitleColor = isClassic || isLightWallpaper ? '#0F172A' : '#FFFFFF';
     const cardSubColor = isClassic || isLightWallpaper ? '#64748B' : '#94A3B8';
 
-    // Bottom Dock Styling: on light backgrounds, dock is dark slate glass; on dark backgrounds, translucent glass
+    // Bottom Dock Styling: authentic macOS Light Mode uses semi-translucent frosted white dock with clean crisp dark/colored icon glyphs!
     const dockBg = isClassic
       ? '#E5E5E5'
       : isLightWallpaper
-      ? '#0F172A' // Solid dark background so ALL icons inside are ultra-visible!
-      : 'rgba(255, 255, 255, 0.25)';
-    const dockBorder = isClassic ? '#000000' : isLightWallpaper ? '#334155' : 'rgba(255, 255, 255, 0.45)';
+      ? 'rgba(255, 255, 255, 0.72)' // Authentic macOS Light frosted glass dock
+      : 'rgba(255, 255, 255, 0.25)'; // Translucent white dock on dark wallpapers
+    const dockBorder = isClassic
+      ? '#000000'
+      : isLightWallpaper
+      ? 'rgba(0, 0, 0, 0.12)'
+      : 'rgba(255, 255, 255, 0.45)';
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -1091,20 +1095,30 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             const realIdx = dockPageStart + idxInPage;
             const sel = realIdx === os.deskIdx;
 
-            // Tile background: colorful iOS/macOS squircle
+            // In authentic macOS Light mode:
+            // Selected item gets macOS Cupertino Accent blue tile
+            // Unselected items get clean white squircle tile with subtle shadow & dark icon glyph!
             const tileBg = sel
-              ? '#0284C7'
+              ? (isClassic ? '#000000' : '#0284C7')
               : isClassic
               ? '#FFFFFF'
               : isLightWallpaper
-              ? 'rgba(255, 255, 255, 0.18)'
+              ? '#FFFFFF' // Clean white squircle
               : 'rgba(255, 255, 255, 0.22)';
 
             const iconColor = sel
               ? '#FFFFFF'
+              : isClassic || isLightWallpaper
+              ? '#0F172A' // Dark crisp icon glyph on light dock
+              : '#FFFFFF';
+
+            const tileBorder = sel
+              ? (isClassic ? '#000000' : '#0284C7')
               : isClassic
               ? '#000000'
-              : '#FFFFFF';
+              : isLightWallpaper
+              ? 'rgba(0, 0, 0, 0.12)'
+              : 'rgba(255, 255, 255, 0.35)';
 
             return (
               <View key={item.id} style={{ alignItems: 'center' }}>
@@ -1115,9 +1129,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     borderRadius: isClassic ? 2 : 5,
                     backgroundColor: tileBg,
                     borderWidth: 1,
-                    borderColor: sel ? '#38BDF8' : isClassic ? '#000000' : 'rgba(255, 255, 255, 0.35)',
+                    borderColor: tileBorder,
                     alignItems: 'center',
                     justifyContent: 'center',
+                    shadowColor: '#000000',
+                    shadowOffset: { width: 0, height: 1 },
+                    shadowOpacity: isLightWallpaper && !sel ? 0.15 : 0,
+                    shadowRadius: 2,
+                    elevation: isLightWallpaper && !sel ? 2 : 0,
                     transform: sel ? [{ scale: 1.15 }, { translateY: -2 }] : [],
                   }}
                 >
@@ -1133,7 +1152,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     width: 3,
                     height: 3,
                     borderRadius: 1.5,
-                    backgroundColor: sel ? (isLightWallpaper ? '#38BDF8' : '#FFFFFF') : 'transparent',
+                    backgroundColor: isClassic ? '#000000' : isLightWallpaper ? '#0284C7' : '#FFFFFF',
                     marginTop: 2,
                     opacity: sel ? 1 : 0.3,
                   }}
