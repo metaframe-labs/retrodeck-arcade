@@ -107,6 +107,8 @@ export type RetroPaletteId =
   | 'windows_10'
   | 'windows_11'
   | 'macos_classic'
+  | 'macos_aqua'
+  | 'macos_sequoia'
   | 'macos_sonoma';
 
 export interface RetroPalette {
@@ -2202,9 +2204,53 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     buttonBg: '#2C2C2E',
     buttonBorder: '#636366',
   },
+  macos_aqua: {
+    id: 'macos_aqua',
+    name: 'MAC OS X AQUA',
+    tagline: 'Steve Jobs 2001 Aqua Glass & Brushed Metal',
+    category: 'STUDIO',
+    screenBg: '#E8ECF2',
+    pixelOn: '#0066CC',
+    pixelGlow: 'rgba(0, 102, 204, 0.20)',
+    scanlineColor: 'rgba(0, 0, 0, 0.05)',
+    bezelAccent: '#3399FF',
+    ledColor: '#3399FF',
+    keypadAccent: '#0066CC',
+    textMuted: '#5C6B7F',
+    isLightLcd: true,
+    chassisBg: '#D6DCE5',
+    deckBg: '#E2E7EE',
+    bezelBg: '#C4CCD8',
+    surfaceBg: '#F0F4F8',
+    surfaceBorder: '#9EB0C8',
+    buttonBg: '#DCE4EE',
+    buttonBorder: '#7FA2C7',
+  },
+  macos_sequoia: {
+    id: 'macos_sequoia',
+    name: 'MACOS SEQUOIA LIGHT',
+    tagline: 'Modern Cupertino HIG Frosted Glass & SF Charcoal',
+    category: 'STUDIO',
+    screenBg: '#F5F5F7',
+    pixelOn: '#0071E3',
+    pixelGlow: 'rgba(0, 113, 227, 0.20)',
+    scanlineColor: 'rgba(0, 0, 0, 0.04)',
+    bezelAccent: '#0071E3',
+    ledColor: '#0071E3',
+    keypadAccent: '#1D1D1F',
+    textMuted: '#6E6E73',
+    isLightLcd: true,
+    chassisBg: '#E5E5EA',
+    deckBg: '#EBEBF0',
+    bezelBg: '#D1D1D6',
+    surfaceBg: '#FFFFFF',
+    surfaceBorder: '#C7C7CC',
+    buttonBg: '#F2F2F7',
+    buttonBorder: '#AEAEB2',
+  },
   macos_sonoma: {
     id: 'macos_sonoma',
-    name: 'MACOS SONOMA',
+    name: 'MACOS SONOMA DARK',
     tagline: 'Cupertino Glass Dock & Sonoma Sunset',
     category: 'STUDIO',
     screenBg: '#1E1B2E',
@@ -2344,6 +2390,8 @@ const RAW_PALETTE_ORDER: RetroPaletteId[] = [
   'windows_10',
   'windows_11',
   'macos_classic',
+  'macos_aqua',
+  'macos_sequoia',
   'macos_sonoma',
   'horizon_dusk',
   'synthwave',

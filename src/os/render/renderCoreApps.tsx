@@ -883,8 +883,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   // STYLE 5: macOS Cupertino Desktop with Top Menu Bar & Bottom Glass Dock
   if (os.menuStyle === 'macos') {
-    const isSonoma = os.cb.getPaletteId?.() === 'macos_sonoma';
-    const isClassic = os.cb.getPaletteId?.() === 'macos_classic';
+    const palId = os.cb.getPaletteId?.();
+    const isSonoma = palId === 'macos_sonoma';
+    const isClassic = palId === 'macos_classic';
+    const isAqua = palId === 'macos_aqua';
+    const isSequoia = palId === 'macos_sequoia';
     const dockCols = 6;
     const dockPages = Math.ceil(DESKTOP_ICONS.length / dockCols);
     const dockCurPage = Math.min(dockPages - 1, Math.floor(os.deskIdx / dockCols));
@@ -988,6 +991,24 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             <View style={{ position: 'absolute', width: 260, height: 160, borderRadius: 80, backgroundColor: '#4F46E5', top: -30, left: -40, opacity: 0.65 }} />
             <View style={{ position: 'absolute', width: 220, height: 150, borderRadius: 75, backgroundColor: '#E11D48', bottom: -20, right: -30, opacity: 0.7 }} />
             <View style={{ position: 'absolute', width: 180, height: 120, borderRadius: 60, backgroundColor: '#F59E0B', bottom: 10, left: 10, opacity: 0.55 }} />
+          </View>
+        )}
+
+        {/* macOS Sequoia Light Modern Abstract Dunes Wallpaper */}
+        {isSequoia && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#EAEBF0', overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', width: 240, height: 130, borderRadius: 65, backgroundColor: '#38BDF8', top: -20, right: -30, opacity: 0.45 }} />
+            <View style={{ position: 'absolute', width: 200, height: 140, borderRadius: 70, backgroundColor: '#818CF8', bottom: -30, left: -20, opacity: 0.40 }} />
+            <View style={{ position: 'absolute', width: 170, height: 100, borderRadius: 50, backgroundColor: '#F472B6', bottom: 15, right: 20, opacity: 0.35 }} />
+          </View>
+        )}
+
+        {/* Mac OS X Aqua Iconic 2001 Blue Waves Backdrop */}
+        {isAqua && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#1E64B4', overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', left: -20, right: -20, top: 0, height: '45%', backgroundColor: '#3B8EEA', opacity: 0.8 }} />
+            <View style={{ position: 'absolute', width: 280, height: 120, borderRadius: 60, backgroundColor: '#70B4FF', top: 30, left: -40, opacity: 0.5, transform: [{ rotate: '-8deg' }] }} />
+            <View style={{ position: 'absolute', width: 260, height: 100, borderRadius: 50, backgroundColor: '#1B549E', bottom: -20, right: -20, opacity: 0.7 }} />
           </View>
         )}
 
