@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ArcadeGameInstance, ArcadeStats } from './types';
-import { RetroPalette } from '../theme/palettes';
+import { RetroPalette, isLightBackground } from '../theme/palettes';
 import { useTranslation } from '../i18n/retroI18n';
 
 interface ArcadeScreenProps {
@@ -72,6 +72,9 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
     return lines;
   }, [scanlines, size.h, palette.scanlineColor]);
 
+  const isLightBezel = isLightBackground(palette.bezelBg);
+  const bezelTextColor = isLightBezel ? '#0F172A' : '#CBD5E1';
+
   return (
     <View
       style={[
@@ -94,7 +97,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
               },
             ]}
           />
-          <Text style={styles.bezelLabel} numberOfLines={1} ellipsizeMode="tail">
+          <Text style={[styles.bezelLabel, { color: bezelTextColor }]} numberOfLines={1} ellipsizeMode="tail">
             {cartridgeTitle}
           </Text>
         </View>
