@@ -1344,8 +1344,23 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
     // Dynamic selection & highlight colors honoring the active theme / wallpaper
     const bladeAccent = activeBlade.color;
+
+    // Helper to calculate relative luminance and pick high-contrast black or white text
+    const getContrastText = (hex: string): string => {
+      const clean = hex.trim().replace('#', '');
+      if (clean.length === 6) {
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        return yiq >= 140 ? '#0F172A' : '#FFFFFF';
+      }
+      return '#FFFFFF';
+    };
+
+    const headerText = getContrastText(bladeAccent);
     const selBg = activeWall ? fg : bladeAccent;
-    const selText = activeWall ? bg : '#FFFFFF';
+    const selText = getContrastText(selBg);
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0 }]}>
@@ -1401,6 +1416,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           <View style={{ width: 34, justifyContent: 'space-around', paddingVertical: 4, paddingLeft: 2 }}>
             {XBOX_BLADES.map((blade, idx) => {
               const isBladeActive = idx === activeBladeIdx;
+              const tabTextColor = getContrastText(blade.color);
               return (
                 <View
                   key={blade.id}
@@ -1413,7 +1429,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     justifyContent: 'center',
                     paddingLeft: 4,
                     borderWidth: 1,
-                    borderColor: isBladeActive ? '#FFFFFF' : 'rgba(0,0,0,0.4)',
+                    borderColor: isBladeActive ? (tabTextColor === '#FFFFFF' ? '#FFFFFF' : '#0F172A') : 'rgba(0,0,0,0.4)',
                     shadowColor: blade.color,
                     shadowOffset: { width: 1, height: 0 },
                     shadowOpacity: isBladeActive ? 0.8 : 0.2,
@@ -1425,7 +1441,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       fontFamily: monoFont,
                       fontSize: 6,
                       fontWeight: '900',
-                      color: '#FFFFFF',
+                      color: tabTextColor,
                     }}
                     numberOfLines={1}
                   >
@@ -1462,10 +1478,10 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 marginBottom: 4,
               }}
             >
-              <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: headerText }}>
                 {activeBlade.label}
               </Text>
-              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.9)' }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: headerText, opacity: 0.9 }}>
                 {itemIdxInBlade + 1}/{bladeApps.length}
               </Text>
             </View>
@@ -1485,7 +1501,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       borderRadius: 3,
                       backgroundColor: isSelected ? selBg : 'transparent',
                       borderLeftWidth: isSelected ? 3 : 0,
-                      borderLeftColor: activeWall ? bg : '#FFFFFF',
+                      borderLeftColor: isSelected ? (selText === '#FFFFFF' ? '#FFFFFF' : '#0F172A') : 'transparent',
                     }}
                   >
                     <Ionicons
