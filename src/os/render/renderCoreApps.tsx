@@ -916,6 +916,40 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const topBarInk = isClassic || isLightWallpaper ? '#000000' : '#FFFFFF';
     const topBarSubInk = isClassic || isLightWallpaper ? '#334155' : 'rgba(255,255,255,0.75)';
 
+    // Theme Accent Color with Contrast Safety:
+    // If theme 'fg' has good contrast against the dock/card, use it! Otherwise fallback to Cupertino blue #0284C7
+    const macAccentColor = (() => {
+      if (isClassic) return '#000000';
+      const cleanFg = fg.trim().toLowerCase().replace('#', '');
+      if (cleanFg.length === 6) {
+        const r = parseInt(cleanFg.slice(0, 2), 16);
+        const g = parseInt(cleanFg.slice(2, 4), 16);
+        const b = parseInt(cleanFg.slice(4, 6), 16);
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        // On light wallpaper/dock: fg should be dark enough (yiq < 180) to contrast against white/frosted dock
+        // On dark wallpaper/dock: fg should be bright enough (yiq > 80)
+        if (isLightWallpaper) {
+          return yiq <= 190 ? fg : '#0284C7';
+        } else {
+          return yiq >= 70 ? fg : '#38BDF8';
+        }
+      }
+      return '#0284C7';
+    })();
+
+    // Contrast text inside selected icon (pure white or deep black)
+    const macAccentText = (() => {
+      const clean = macAccentColor.trim().toLowerCase().replace('#', '');
+      if (clean.length === 6) {
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        return yiq >= 140 ? '#0F172A' : '#FFFFFF';
+      }
+      return '#FFFFFF';
+    })();
+
     // Center Hero Window Card: high-contrast dark or light window card
     const cardBg = isClassic
       ? '#FFFFFF'
@@ -1037,7 +1071,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                   width: 38,
                   height: 38,
                   borderRadius: 8,
-                  backgroundColor: isLightWallpaper ? '#0284C7' : '#38BDF8',
+                  backgroundColor: macAccentColor,
                   alignItems: 'center',
                   justifyContent: 'center',
                   shadowColor: '#000000',
@@ -1049,7 +1083,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 <Ionicons
                   name={activeItem.icon}
                   size={24}
-                  color="#FFFFFF"
+                  color={macAccentText}
                 />
               </View>
               <Text
@@ -1096,10 +1130,10 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             const sel = realIdx === os.deskIdx;
 
             // In authentic macOS Light mode:
-            // Selected item gets macOS Cupertino Accent blue tile
+            // Selected item gets Theme Accent Color (macAccentColor)
             // Unselected items get clean white squircle tile with subtle shadow & dark icon glyph!
             const tileBg = sel
-              ? (isClassic ? '#000000' : '#0284C7')
+              ? macAccentColor
               : isClassic
               ? '#FFFFFF'
               : isLightWallpaper
@@ -1107,13 +1141,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               : 'rgba(255, 255, 255, 0.22)';
 
             const iconColor = sel
-              ? '#FFFFFF'
+              ? macAccentText
               : isClassic || isLightWallpaper
               ? '#0F172A' // Dark crisp icon glyph on light dock
               : '#FFFFFF';
 
             const tileBorder = sel
-              ? (isClassic ? '#000000' : '#0284C7')
+              ? macAccentColor
               : isClassic
               ? '#000000'
               : isLightWallpaper
