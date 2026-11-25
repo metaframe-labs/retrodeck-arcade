@@ -1732,6 +1732,536 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
+  // STYLE 9: Nintendo Wii Channels Grid (Wii Menu System)
+  if (os.menuStyle === 'wii_channels') {
+    const cols = 4;
+    const rows = 3;
+    const pageSize = cols * rows; // 12 TV channels per screen
+    const totalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(os.deskIdx / pageSize));
+    const pageStart = curPage * pageSize;
+    const pageSlice = DESKTOP_ICONS.slice(pageStart, pageStart + pageSize);
+    const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+
+    // Grid coordinates
+    const localIdx = os.deskIdx - pageStart;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 4, paddingVertical: 2, backgroundColor: activeWall ? 'transparent' : '#ECEFF1', justifyContent: 'space-between' }]}>
+        {renderWallBackdrop()}
+
+        {/* Wii Ambient Wave Top Decor */}
+        {!activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 28, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#CFD8DC' }}>
+            <View style={{ position: 'absolute', bottom: -10, left: '20%', width: 140, height: 20, borderRadius: 10, backgroundColor: 'rgba(3, 169, 244, 0.08)' }} />
+          </View>
+        )}
+
+        {/* Top Header: Clock + Wii Disc Slot indicator */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 6, height: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0288D1' }} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#37474F' }}>
+              Wii Menu
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: activeWall ? fg : '#78909C' }}>
+              P.{curPage + 1}/{totalPages}
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#263238' }}>
+              {os.formatClock()}
+            </Text>
+          </View>
+        </View>
+
+        {/* 4x3 Wii TV Channels Grid */}
+        <View style={{ flex: 1, justifyContent: 'space-around', marginVertical: 2 }}>
+          {Array.from({ length: rows }).map((_, r) => (
+            <View key={r} style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 4 }}>
+              {Array.from({ length: cols }).map((_, c) => {
+                const idxInSlice = r * cols + c;
+                const item = pageSlice[idxInSlice];
+                if (!item) {
+                  // Empty TV Slot with subtle static scan
+                  return (
+                    <View
+                      key={c}
+                      style={{
+                        flex: 1,
+                        height: 27,
+                        borderRadius: 6,
+                        backgroundColor: activeWall ? hexWithAlpha(bg, 0.4) : '#CFD8DC',
+                        borderWidth: 1,
+                        borderColor: activeWall ? hexWithAlpha(fg, 0.2) : '#B0BEC5',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: 0.4,
+                      }}
+                    >
+                      <Ionicons name="tv-outline" size={10} color={activeWall ? fg : '#90A4AE'} />
+                    </View>
+                  );
+                }
+
+                const isSelected = idxInSlice === localIdx;
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      flex: 1,
+                      height: 27,
+                      borderRadius: 6,
+                      backgroundColor: isSelected
+                        ? activeWall
+                          ? fg
+                          : '#FFFFFF'
+                        : activeWall
+                        ? hexWithAlpha(bg, 0.72)
+                        : '#FAFAFA',
+                      borderWidth: isSelected ? 2 : 1,
+                      borderColor: isSelected
+                        ? activeWall
+                          ? fg
+                          : '#03A9F4'
+                        : activeWall
+                        ? hexWithAlpha(fg, 0.3)
+                        : '#CFD8DC',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      shadowColor: isSelected ? '#03A9F4' : '#000000',
+                      shadowOffset: { width: 0, height: isSelected ? 2 : 1 },
+                      shadowOpacity: isSelected ? 0.6 : 0.1,
+                      shadowRadius: isSelected ? 3 : 1,
+                      transform: isSelected ? [{ scale: 1.06 }] : [],
+                    }}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={12}
+                      color={isSelected ? (activeWall ? bg : '#0288D1') : activeWall ? fg : '#455A64'}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 5.8,
+                        fontWeight: isSelected ? '900' : '700',
+                        color: isSelected ? (activeWall ? bg : '#0288D1') : activeWall ? fg : '#546E7A',
+                        marginTop: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {getDesktopLabel(item.id, item.label, os.lang).slice(0, 7)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* Bottom Bar: Wii Message Board / Start Pill */}
+        <View
+          style={{
+            height: 18,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.85) : '#FFFFFF',
+            borderTopWidth: 1,
+            borderTopColor: activeWall ? hexWithAlpha(fg, 0.3) : '#CFD8DC',
+            borderRadius: 6,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="mail" size={10} color={activeWall ? fg : '#0288D1'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: activeWall ? fg : '#455A64' }} numberOfLines={1}>
+              {getDesktopLabel(activeItem.id, activeItem.label, os.lang)}
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: activeWall ? fg : '#03A9F4',
+              paddingHorizontal: 6,
+              paddingVertical: 1.5,
+              borderRadius: 10,
+            }}
+          >
+            <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: activeWall ? bg : '#FFFFFF' }}>
+              [A] START
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 10: Fallout Pip-Boy 3000 (Monochrome Amber / Phosphor CRT with Vault Boy)
+  if (os.menuStyle === 'pipboy') {
+    const total = DESKTOP_ICONS.length;
+    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const pipTabs = ['STAT', 'INV', 'DATA', 'MAP', 'RADIO'];
+    const activeTabIdx = Math.min(4, Math.floor(os.deskIdx / 4));
+
+    // Visible 4 items in inventory list
+    const pageStart = activeTabIdx * 4;
+    const visibleApps = DESKTOP_ICONS.slice(pageStart, pageStart + 4);
+
+    const pipColor = fg;
+    const pipBg = bg;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 2, paddingVertical: 2, backgroundColor: pipBg }]}>
+        {renderWallBackdrop()}
+
+        {/* CRT Curved Frame & Scanlines Overlay */}
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            borderWidth: 2,
+            borderColor: hexWithAlpha(pipColor, 0.4),
+            borderRadius: 6,
+          }}
+        />
+
+        {/* Top Tab Bar: [ STAT ]  [ INV ]  [ DATA ]  [ MAP ]  [ RADIO ] */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-around',
+            alignItems: 'center',
+            height: 16,
+            borderBottomWidth: 1,
+            borderBottomColor: pipColor,
+            paddingHorizontal: 2,
+          }}
+        >
+          {pipTabs.map((tab, idx) => {
+            const isTabActive = idx === activeTabIdx;
+            return (
+              <View
+                key={tab}
+                style={{
+                  paddingHorizontal: 4,
+                  paddingVertical: 1,
+                  backgroundColor: isTabActive ? pipColor : 'transparent',
+                  borderRadius: 1,
+                }}
+              >
+                <Text
+                  style={{
+                    fontFamily: monoFont,
+                    fontSize: 7,
+                    fontWeight: '900',
+                    color: isTabActive ? pipBg : pipColor,
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {tab}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Center Split: Left App List & Right Vault Boy Telemetry Display */}
+        <View style={{ flex: 1, flexDirection: 'row', paddingVertical: 3, paddingHorizontal: 4, gap: 4 }}>
+          {/* Left: Inventory List */}
+          <View style={{ flex: 1.15, justifyContent: 'space-around' }}>
+            {visibleApps.map((item) => {
+              const isSelected = item.id === curItem.id;
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 2.5,
+                    paddingHorizontal: 4,
+                    backgroundColor: isSelected ? pipColor : 'transparent',
+                    borderRadius: 1,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 7.5,
+                      fontWeight: '900',
+                      color: isSelected ? pipBg : pipColor,
+                      marginRight: 3,
+                    }}
+                  >
+                    {isSelected ? '▶' : '-'}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 7.5,
+                      fontWeight: isSelected ? '900' : '700',
+                      color: isSelected ? pipBg : pipColor,
+                      flex: 1,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Right: Vault-Boy Status Monitor Tile */}
+          <View
+            style={{
+              flex: 1,
+              borderWidth: 1,
+              borderColor: pipColor,
+              borderRadius: 2,
+              padding: 4,
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              backgroundColor: hexWithAlpha(pipColor, 0.06),
+            }}
+          >
+            <View style={{ alignItems: 'center' }}>
+              <Ionicons name="body-outline" size={24} color={pipColor} />
+              <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: pipColor, marginTop: 1 }}>
+                VAULT-TEC OS
+              </Text>
+            </View>
+
+            <View style={{ width: '100%', gap: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '700', color: pipColor }}>
+                  RADS: 0
+                </Text>
+                <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '700', color: pipColor }}>
+                  CND: 100%
+                </Text>
+              </View>
+              <View style={{ width: '100%', height: 3, borderWidth: 0.5, borderColor: pipColor }}>
+                <View style={{ width: '85%', height: '100%', backgroundColor: pipColor }} />
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Footer HP / AP Status Bar */}
+        <View
+          style={{
+            height: 14,
+            borderTopWidth: 1,
+            borderTopColor: pipColor,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 4,
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: pipColor }}>
+            HP: 240/240
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: pipColor }}>
+            LEVEL: 8 • [A] SELECT
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: pipColor }}>
+            AP: 95/95
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 11: Apple iPod Classic (2001 Dual-Pane Click Wheel Interface)
+  if (os.menuStyle === 'ipod_classic') {
+    const total = DESKTOP_ICONS.length;
+    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+
+    // Virtual windowed list: display 5 items on the left menu pane
+    const PAGE_SIZE = 5;
+    const maxStart = Math.max(0, total - PAGE_SIZE);
+    const startIdx = Math.max(0, Math.min(os.deskIdx - 2, maxStart));
+    const visibleApps = DESKTOP_ICONS.slice(startIdx, startIdx + PAGE_SIZE);
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0, backgroundColor: activeWall ? 'transparent' : '#FFFFFF', justifyContent: 'space-between' }]}>
+        {renderWallBackdrop()}
+
+        {/* Top Classic iPod Header: Play Status, Title, Battery */}
+        <View
+          style={{
+            height: 16,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.85) : '#E0E0E0',
+            borderBottomWidth: 1,
+            borderBottomColor: activeWall ? hexWithAlpha(fg, 0.3) : '#BDBDBD',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <Ionicons name="play" size={8} color={activeWall ? fg : '#212121'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#212121' }}>
+              iPod
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: activeWall ? fg : '#616161' }}>
+              {os.formatClock()}
+            </Text>
+            <Ionicons name="battery-full" size={10} color={activeWall ? fg : '#2E7D32'} />
+          </View>
+        </View>
+
+        {/* Dual-Pane Center: Left Menu List, Right Album / App Hero Card */}
+        <View style={{ flex: 1, flexDirection: 'row' }}>
+          {/* Left Pane: Authentic iPod Menu with Chevron > */}
+          <View
+            style={{
+              flex: 1.1,
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.75) : '#FFFFFF',
+              borderRightWidth: 1,
+              borderRightColor: activeWall ? hexWithAlpha(fg, 0.25) : '#E0E0E0',
+              justifyContent: 'space-around',
+              paddingVertical: 2,
+            }}
+          >
+            {visibleApps.map((item, i) => {
+              const actualIdx = startIdx + i;
+              const isSelected = actualIdx === os.deskIdx;
+              return (
+                <View
+                  key={item.id}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingHorizontal: 6,
+                    paddingVertical: 2.5,
+                    backgroundColor: isSelected
+                      ? activeWall
+                        ? fg
+                        : '#0288D1'
+                      : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 8,
+                      fontWeight: isSelected ? '900' : '600',
+                      color: isSelected ? (activeWall ? bg : '#FFFFFF') : activeWall ? fg : '#212121',
+                      flex: 1,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 7.5,
+                      fontWeight: '900',
+                      color: isSelected ? (activeWall ? bg : '#FFFFFF') : activeWall ? fg : '#9E9E9E',
+                    }}
+                  >
+                    ›
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Right Pane: Album Art / Now Playing / Hero App Card */}
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.6) : '#F5F5F5',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 6,
+            }}
+          >
+            {/* Square Album Art Jewel Case */}
+            <View
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 4,
+                backgroundColor: activeWall ? fg : '#212121',
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.3,
+                shadowRadius: 3,
+                elevation: 3,
+              }}
+            >
+              <Ionicons
+                name={curItem.icon}
+                size={22}
+                color={activeWall ? bg : '#FFFFFF'}
+              />
+            </View>
+            <Text
+              style={{
+                fontFamily: monoFont,
+                fontSize: 7.5,
+                fontWeight: '900',
+                color: activeWall ? fg : '#212121',
+                marginTop: 4,
+                textAlign: 'center',
+              }}
+              numberOfLines={1}
+            >
+              {getDesktopLabel(curItem.id, curItem.label, os.lang)}
+            </Text>
+            <Text
+              style={{
+                fontFamily: monoFont,
+                fontSize: 6,
+                fontWeight: '700',
+                color: activeWall ? hexWithAlpha(fg, 0.7) : '#757575',
+                marginTop: 1,
+              }}
+            >
+              {os.deskIdx + 1} of {total}
+            </Text>
+          </View>
+        </View>
+
+        {/* Bottom Click Wheel Center Button Prompt */}
+        <View
+          style={{
+            height: 12,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.85) : '#EEEEEE',
+            borderTopWidth: 1,
+            borderTopColor: activeWall ? hexWithAlpha(fg, 0.25) : '#E0E0E0',
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '700', color: activeWall ? fg : '#757575' }}>
+            ▲▼ WHEEL • [A] SELECT
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '900', color: activeWall ? fg : '#212121' }}>
+            APPLE COMPUTER
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   // STYLE 4: Big 3x2 Cards (6 large cards per page — ideal for showcasing wallpapers!)
   if (os.menuStyle === 'cards') {
     const cardCols = 3;
@@ -2189,6 +2719,9 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     psp_xmb: tOs('menuStylePsp', L),
     xbox_blades: tOs('menuStyleXbox', L),
     cyberpunk: tOs('menuStyleCyberpunk', L),
+    wii_channels: tOs('menuStyleWii', L),
+    pipboy: tOs('menuStylePipboy', L),
+    ipod_classic: tOs('menuStyleIpod', L),
   };
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),

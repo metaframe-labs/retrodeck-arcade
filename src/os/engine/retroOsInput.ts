@@ -691,9 +691,15 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   if (os.app === 'desktop') {
     const total = DESKTOP_ICONS.length;
-    if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list' || os.menuStyle === 'macos')) {
+    if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list' || os.menuStyle === 'macos' || os.menuStyle === 'ipod_classic')) {
       if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+    } else if (!os.postFormatWinStyle && os.menuStyle === 'pipboy') {
+      // Pip-Boy 3000 Navigation: Left/Right jumps tabs (4 items per tab); Up/Down selects item
+      if (dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
+      if (dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+      if (dir === 'left') os.deskIdx = (os.deskIdx + total - 4) % total;
+      if (dir === 'right') os.deskIdx = (os.deskIdx + 4) % total;
     } else if (!os.postFormatWinStyle && os.menuStyle === 'psp_xmb') {
       // PSP XMB Navigation: Left/Right switches Category; Up/Down navigates items in category
       const XMB_CATEGORIES: string[][] = [
