@@ -29,7 +29,7 @@ Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebView
 
 ## 📱 RetroDeck OS (Nokia 3310 Desktop Environment)
 
-Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular signal bars, live battery telemetry (`expo-battery`), operator logos, keyguard lock screen with floating analog/digital clock & unread SMS indicator, and a **17-app Desktop grid** plus dedicated **`THEMES`** and **`PRO`** in-LCD modules:
+Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular signal bars, live battery telemetry (`expo-battery`), operator logos, keyguard lock screen with floating analog/digital clock & unread SMS indicator, and a **19-app Desktop grid** plus dedicated **`THEMES`** and **`PRO`** in-LCD modules:
 
 | App | Module | Description |
 | :--- | :--- | :--- |
@@ -50,6 +50,8 @@ Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular sig
 | **`SHELL`** | Unix Shell (`rdsh`) | Interactive terminal supporting `help`, `neofetch`, `ls`, `cat`, `open <game>`, `randgame`, `play <song>`, `stop`, `wap <url>`, `contacts`, `ai <prompt>`, `livesms`, `lang [en\|tr]`, `theme`, `pro`, `lock`, `reboot`, `clear`. |
 | **`STATS`** | Scoreboard | Tracks played cartridges, total points, and top high scores across all 100 games. |
 | **`SETUP`** | System & Pro | Manage **RetroDeck Pro (`PRO`)**, open the 100-palette **`THEMES`** browser, toggle **CRT Scanlines**, **Clock Face**, **Live AI SMS**, **Language (`EN / TR`)**, launch **Cartridge Vault**, or **Reboot OS**. |
+| **`WALLS`** | Wallpaper Gallery | Browse **50 pixel-art scenes** in full-screen preview or live **3×2 / 4×3 thumbnail grids**, adjust image dimming, and apply a persistent wallpaper to the desktop and keyguard. |
+| **`FORMAT`** | BIOS Format Simulator | Run a retro **simulation-only** drive format wizard with selectable media presets, animated progress, and a fake completion report. |
 
 ---
 
