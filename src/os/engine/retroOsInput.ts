@@ -613,6 +613,13 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   // Boot sequence
   if (os.app === 'boot') {
     os.bootTimer += dt;
+    // Play authentic startup chime once boot sequence starts
+    if (!os.bootChimePlayed && os.bootTimer >= 0.15) {
+      os.bootChimePlayed = true;
+      const targetStyle = os.postFormatWinStyle || os.menuStyle || os.cb.getPaletteId?.() || 'default';
+      RetroAudioEngine.playStartupChime(targetStyle);
+    }
+
     if (os.bootTimer >= 3.5 || pressA || pressB) {
       os.app = 'desktop';
       if (os.postFormatWinStyle && os.postFormatWinPendingBoot) {

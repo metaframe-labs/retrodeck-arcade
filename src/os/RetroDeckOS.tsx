@@ -214,6 +214,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
   /** @internal */ cb: RetroDeckOSCallbacks;
   /** @internal */ app: OsAppId = 'boot';
   /** @internal */ bootTimer = 0;
+  /** @internal */ bootChimePlayed = false;
   /** @internal */ uptime = 0;
   /** @internal */ lang: RetroLang = 'en';
 
@@ -1023,6 +1024,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     }
     this.app = 'boot';
     this.bootTimer = 0;
+    this.bootChimePlayed = false;
     this.deskIdx = 0;
     this.keyLocked = false;
     this.unlockStage = false;

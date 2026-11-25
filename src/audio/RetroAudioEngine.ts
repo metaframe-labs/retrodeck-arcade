@@ -496,6 +496,63 @@ export class RetroAudioEngine {
     );
   }
 
+  /**
+   * Plays authentic system startup sound chimes based on active style or palette:
+   * - windows / windows_95 / windows_xp: Brian Eno Win95 or XP orchestral chime
+   * - macos / macos_classic / macos_sonoma / macos_sequoia: Iconic Apple F-sharp Major Chord Chime
+   * - psp_xmb: Sony PS/PSP shimmering wave chime
+   * - gameboy / default: Authentic DMG-01 dual ping or Nokia connecting tune
+   */
+  public static playStartupChime(styleOrPalette?: string): void {
+    const key = (styleOrPalette || '').toLowerCase();
+
+    // 1. Windows 95 / XP / Modern Windows Chimes
+    if (key.includes('xp')) {
+      // Windows XP Startup chord: Eb - Bb - Ab - Eb - Bb
+      this.playNokiaMelody('16d#2 16a#1 16g#1 8d#1 4a#1', 130);
+      return;
+    }
+    if (key.includes('windows') || key.includes('win')) {
+      // Windows 95 Iconic Brian Eno Ambient Chime (G - D - G - B - D)
+      this.playNokiaMelody('16g1 16d1 16g2 16b2 4d2', 110);
+      return;
+    }
+
+    // 2. Apple Mac Startup Chime (Historic F# Major chord)
+    if (key.includes('mac') || key.includes('apple') || key === 'macos') {
+      // Resonant F# major chord chime: F# - A# - C# - F#2
+      this.playNokiaMelody('16f#1 16a#1 16c#2 2f#2', 95);
+      return;
+    }
+
+    // 3. Sony PlayStation / PSP Cross Media Bar Shimmer Chime
+    if (key.includes('psp') || key.includes('playstation') || key.includes('xmb')) {
+      // Ethereal rising crystal chime
+      this.playNokiaMelody('32c2 32e2 32g2 32b2 2c3', 140);
+      return;
+    }
+
+    // 4. Xbox 360 Shimmering Power Orb
+    if (key.includes('xbox')) {
+      // Deep resonant sweep & green ring pulse
+      this.playNokiaMelody('16e1 16b1 16e2 2g#2', 120);
+      return;
+    }
+
+    // 5. Game Boy / Famicom Classic Nintendo Ding
+    if (key.includes('gameboy') || key.includes('famicom') || key.includes('nintendo')) {
+      // Iconic Game Boy dual ping: B - high B
+      this.playNokiaMelody('16b1 2b2', 200);
+      return;
+    }
+
+    // 6. Default Nokia / RetroDeck OS connecting tune
+    this.playNokiaMelody(
+      '8e2 8d2 4f#1 4g#1 8c#2 8b1 4d1 4e1 8b1 8a1 4c#1 4e1 2a1',
+      180
+    );
+  }
+
   /** Plays a distinct keypad dialer tone for 0-9, *, # */
   public static playDialKey(key: string): void {
     const map: Record<string, string> = {
