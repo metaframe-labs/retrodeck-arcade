@@ -882,11 +882,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         )}
 
-        {/* Desktop Icons Grid */}
+        {/* Desktop Icons Grid (Windows Column-Major Layout: Top-to-Bottom, Left-to-Right) */}
         {Array.from({ length: rows }, (_, r) => (
           <View key={r} style={styles.deskRow}>
             {Array.from({ length: cols }, (_, c) => {
-              const idx = pageStart + r * cols + c;
+              // Windows Column-Major arrangement within current page
+              const colMajorOffset = c * rows + r;
+              const idx = pageStart + colMajorOffset;
               const item = DESKTOP_ICONS[idx];
               if (!item) {
                 return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;

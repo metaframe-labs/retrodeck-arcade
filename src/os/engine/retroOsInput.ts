@@ -694,6 +694,63 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list')) {
       if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+    } else if (Boolean(os.postFormatWinStyle) || os.menuStyle === 'windows') {
+      // Windows Desktop: Column-Major Layout (4 cols x 3 rows per page = 12 items)
+      // Icons flow Down (top to bottom within column), then Right (next column)
+      const rows = 3;
+      const cols = 4;
+      const pageSize = rows * cols;
+      const curPage = Math.floor(os.deskIdx / pageSize);
+      const pageStart = curPage * pageSize;
+      const pageCount = Math.min(pageSize, total - pageStart);
+      const localIdx = os.deskIdx - pageStart;
+      const c = Math.floor(localIdx / rows);
+      const r = localIdx % rows;
+
+      if (dir === 'up') {
+        const nextR = r > 0 ? r - 1 : rows - 1;
+        const targetLocal = c * rows + nextR;
+        if (targetLocal < pageCount) {
+          os.deskIdx = pageStart + targetLocal;
+        } else {
+          os.deskIdx = pageStart + (c * rows + (r - 1 + rows) % rows);
+          if (os.deskIdx >= total) os.deskIdx = total - 1;
+        }
+      } else if (dir === 'down') {
+        const nextR = r < rows - 1 ? r + 1 : 0;
+        const targetLocal = c * rows + nextR;
+        if (targetLocal < pageCount) {
+          os.deskIdx = pageStart + targetLocal;
+        } else {
+          os.deskIdx = pageStart + c * rows; // wrap back to top of column
+        }
+      } else if (dir === 'left') {
+        if (c > 0) {
+          const targetLocal = (c - 1) * rows + r;
+          os.deskIdx = pageStart + Math.min(targetLocal, pageCount - 1);
+        } else {
+          // Wrap to previous page or last column
+          const totalPages = Math.ceil(total / pageSize);
+          const prevPage = (curPage + totalPages - 1) % totalPages;
+          const prevPageStart = prevPage * pageSize;
+          const prevPageCount = Math.min(pageSize, total - prevPageStart);
+          const lastC = Math.floor((prevPageCount - 1) / rows);
+          const targetLocal = lastC * rows + r;
+          os.deskIdx = prevPageStart + Math.min(targetLocal, prevPageCount - 1);
+        }
+      } else if (dir === 'right') {
+        const targetLocal = (c + 1) * rows + r;
+        if (targetLocal < pageCount) {
+          os.deskIdx = pageStart + targetLocal;
+        } else {
+          // Advance to next page or wrap to first column
+          const totalPages = Math.ceil(total / pageSize);
+          const nextPage = (curPage + 1) % totalPages;
+          const nextPageStart = nextPage * pageSize;
+          const targetLocal = 0 * rows + r;
+          os.deskIdx = nextPageStart + Math.min(targetLocal, Math.min(pageSize, total - nextPageStart) - 1);
+        }
+      }
     } else {
       const cols = !os.postFormatWinStyle && os.menuStyle === 'cards' ? 3 : 4;
       if (dir === 'left') os.deskIdx = (os.deskIdx + total - 1) % total;
