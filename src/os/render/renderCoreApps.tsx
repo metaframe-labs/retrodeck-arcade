@@ -892,7 +892,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const dockSlice = DESKTOP_ICONS.slice(dockPageStart, dockPageStart + dockCols);
     const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
 
-    // Detect if the active background (wallpaper OR palette) is light/white
+    // Detect luminance of active background (wallpaper OR palette bg)
     const isLightWallpaper = (() => {
       if (isClassic) return true;
       const clean = bg.trim().toLowerCase().replace('#', '');
@@ -901,76 +901,81 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         const g = parseInt(clean.slice(2, 4), 16);
         const b = parseInt(clean.slice(4, 6), 16);
         const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-        return yiq >= 120;
+        return yiq >= 125;
       }
       return false;
     })();
 
-    // Dynamic contrast colors for macOS Menu Bar
-    const topBarBg = isClassic
-      ? '#FFFFFF'
-      : isLightWallpaper
-      ? 'rgba(255, 255, 255, 0.95)'
-      : 'rgba(255, 255, 255, 0.22)';
-    const topBarBorder = isClassic ? '#000000' : isLightWallpaper ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
-    const topBarInk = isClassic || isLightWallpaper ? '#000000' : '#FFFFFF';
-    const topBarSubInk = isClassic || isLightWallpaper ? '#334155' : 'rgba(255,255,255,0.75)';
-
-    // Theme Accent Color with Contrast Safety:
-    // If theme 'fg' has good contrast against the dock/card, use it! Otherwise fallback to Cupertino blue #0284C7
-    const macAccentColor = (() => {
-      if (isClassic) return '#000000';
-      const cleanFg = fg.trim().toLowerCase().replace('#', '');
-      if (cleanFg.length === 6) {
-        const r = parseInt(cleanFg.slice(0, 2), 16);
-        const g = parseInt(cleanFg.slice(2, 4), 16);
-        const b = parseInt(cleanFg.slice(4, 6), 16);
-        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-        // On light wallpaper/dock: fg should be dark enough (yiq < 180) to contrast against white/frosted dock
-        // On dark wallpaper/dock: fg should be bright enough (yiq > 80)
-        if (isLightWallpaper) {
-          return yiq <= 190 ? fg : '#0284C7';
-        } else {
-          return yiq >= 70 ? fg : '#38BDF8';
+    // Apple Human Interface Guidelines (HIG) Unified Color Scale
+    // Consistent frosted glass, graphite/slate typography, and harmonious translucent chrome
+    const macScale = isClassic
+      ? {
+          topBarBg: '#FFFFFF',
+          topBarBorder: '#000000',
+          topBarInk: '#000000',
+          topBarSubInk: '#4B5563',
+          cardBg: '#FFFFFF',
+          cardBorder: '#000000',
+          cardTitle: '#000000',
+          cardSub: '#555555',
+          dockBg: '#E5E5E5',
+          dockBorder: '#000000',
+          tileBg: '#FFFFFF',
+          tileBorder: '#000000',
+          tileIcon: '#000000',
+          accentBg: '#000000',
+          accentText: '#FFFFFF',
         }
-      }
-      return '#0284C7';
-    })();
+      : isLightWallpaper
+      ? {
+          // Apple Light Appearance: Frosted Vibrancy, San Francisco Graphite & Deep Charcoal
+          topBarBg: 'rgba(255, 255, 255, 0.88)',
+          topBarBorder: 'rgba(0, 0, 0, 0.12)',
+          topBarInk: '#1D1D1F',
+          topBarSubInk: '#6E6E73',
+          cardBg: 'rgba(255, 255, 255, 0.92)',
+          cardBorder: 'rgba(0, 0, 0, 0.10)',
+          cardTitle: '#1D1D1F',
+          cardSub: '#6E6E73',
+          dockBg: 'rgba(255, 255, 255, 0.78)',
+          dockBorder: 'rgba(0, 0, 0, 0.12)',
+          tileBg: 'rgba(255, 255, 255, 0.95)',
+          tileBorder: 'rgba(0, 0, 0, 0.08)',
+          tileIcon: '#1D1D1F',
+          accentBg: fg && fg.length === 7 ? fg : '#0071E3', // Apple Blue or active theme ink
+          accentText: '#FFFFFF',
+        }
+      : {
+          // Apple Dark Appearance: Frosted Dark Vibrancy & SF Off-White
+          topBarBg: 'rgba(28, 28, 30, 0.82)',
+          topBarBorder: 'rgba(255, 255, 255, 0.14)',
+          topBarInk: '#F5F5F7',
+          topBarSubInk: '#A1A1A6',
+          cardBg: 'rgba(30, 30, 32, 0.88)',
+          cardBorder: 'rgba(255, 255, 255, 0.15)',
+          cardTitle: '#F5F5F7',
+          cardSub: '#A1A1A6',
+          dockBg: 'rgba(44, 44, 46, 0.75)',
+          dockBorder: 'rgba(255, 255, 255, 0.18)',
+          tileBg: 'rgba(255, 255, 255, 0.12)',
+          tileBorder: 'rgba(255, 255, 255, 0.12)',
+          tileIcon: '#F5F5F7',
+          accentBg: fg && fg.length === 7 ? fg : '#0A84FF', // Apple Vivid Blue or active theme ink
+          accentText: '#FFFFFF',
+        };
 
-    // Contrast text inside selected icon (pure white or deep black)
-    const macAccentText = (() => {
-      const clean = macAccentColor.trim().toLowerCase().replace('#', '');
+    // Calculate contrast text for the active item accent tile
+    const activeTileText = (() => {
+      const clean = macScale.accentBg.trim().toLowerCase().replace('#', '');
       if (clean.length === 6) {
         const r = parseInt(clean.slice(0, 2), 16);
         const g = parseInt(clean.slice(2, 4), 16);
         const b = parseInt(clean.slice(4, 6), 16);
         const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-        return yiq >= 140 ? '#0F172A' : '#FFFFFF';
+        return yiq >= 150 ? '#1D1D1F' : '#FFFFFF';
       }
       return '#FFFFFF';
     })();
-
-    // Center Hero Window Card: high-contrast dark or light window card
-    const cardBg = isClassic
-      ? '#FFFFFF'
-      : isLightWallpaper
-      ? '#FFFFFF'
-      : 'rgba(15, 23, 42, 0.85)';
-    const cardBorder = isClassic ? '#000000' : isLightWallpaper ? '#CBD5E1' : 'rgba(255, 255, 255, 0.25)';
-    const cardTitleColor = isClassic || isLightWallpaper ? '#0F172A' : '#FFFFFF';
-    const cardSubColor = isClassic || isLightWallpaper ? '#64748B' : '#94A3B8';
-
-    // Bottom Dock Styling: authentic macOS Light Mode uses semi-translucent frosted white dock with clean crisp dark/colored icon glyphs!
-    const dockBg = isClassic
-      ? '#E5E5E5'
-      : isLightWallpaper
-      ? 'rgba(255, 255, 255, 0.72)' // Authentic macOS Light frosted glass dock
-      : 'rgba(255, 255, 255, 0.25)'; // Translucent white dock on dark wallpapers
-    const dockBorder = isClassic
-      ? '#000000'
-      : isLightWallpaper
-      ? 'rgba(0, 0, 0, 0.12)'
-      : 'rgba(255, 255, 255, 0.45)';
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -998,9 +1003,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         <View
           style={{
             height: 18,
-            backgroundColor: topBarBg,
+            backgroundColor: macScale.topBarBg,
             borderBottomWidth: isClassic ? 1 : 0.5,
-            borderBottomColor: topBarBorder,
+            borderBottomColor: macScale.topBarBorder,
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1008,31 +1013,31 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             borderRadius: isClassic ? 0 : 4,
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: isLightWallpaper ? 0.2 : 0,
+            shadowOpacity: isLightWallpaper ? 0.15 : 0,
             shadowRadius: 2,
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {/* Apple Logo Icon */}
-            <Ionicons name="logo-apple" size={10} color={topBarInk} />
-            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: topBarInk }}>
+            <Ionicons name="logo-apple" size={10} color={macScale.topBarInk} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: macScale.topBarInk }}>
               Finder
             </Text>
-            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: topBarSubInk }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: macScale.topBarSubInk }}>
               File
             </Text>
-            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: topBarSubInk }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: macScale.topBarSubInk }}>
               Edit
             </Text>
-            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: topBarSubInk }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: macScale.topBarSubInk }}>
               View
             </Text>
           </View>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="wifi" size={8} color={topBarInk} />
-            <Ionicons name="search" size={8} color={topBarInk} />
-            <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '700', color: topBarInk }}>
+            <Ionicons name="wifi" size={8} color={macScale.topBarInk} />
+            <Ionicons name="search" size={8} color={macScale.topBarInk} />
+            <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '700', color: macScale.topBarInk }}>
               {os.formatClock()}
             </Text>
           </View>
@@ -1042,9 +1047,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 4 }}>
           <View
             style={{
-              backgroundColor: cardBg,
+              backgroundColor: macScale.cardBg,
               borderWidth: 1,
-              borderColor: cardBorder,
+              borderColor: macScale.cardBorder,
               borderRadius: isClassic ? 2 : 8,
               paddingHorizontal: 16,
               paddingVertical: 10,
@@ -1052,7 +1057,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               justifyContent: 'center',
               shadowColor: '#000000',
               shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: isLightWallpaper ? 0.2 : 0.5,
+              shadowOpacity: isLightWallpaper ? 0.18 : 0.45,
               shadowRadius: 5,
               elevation: 4,
             }}
@@ -1071,7 +1076,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                   width: 38,
                   height: 38,
                   borderRadius: 8,
-                  backgroundColor: macAccentColor,
+                  backgroundColor: macScale.accentBg,
                   alignItems: 'center',
                   justifyContent: 'center',
                   shadowColor: '#000000',
@@ -1083,7 +1088,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 <Ionicons
                   name={activeItem.icon}
                   size={24}
-                  color={macAccentText}
+                  color={activeTileText}
                 />
               </View>
               <Text
@@ -1091,14 +1096,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                   fontFamily: monoFont,
                   fontSize: 9.5,
                   fontWeight: '900',
-                  color: cardTitleColor,
+                  color: macScale.cardTitle,
                   marginTop: 5,
                   letterSpacing: 0.5,
                 }}
               >
                 {getDesktopLabel(activeItem.id, activeItem.label, os.lang)}
               </Text>
-              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: cardSubColor, marginTop: 1 }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: macScale.cardSub, marginTop: 1 }}>
                 {pickLang(os.lang, `App ${os.deskIdx + 1} of ${DESKTOP_ICONS.length} • [A] Launch`, `Uygulama ${os.deskIdx + 1}/${DESKTOP_ICONS.length} • [A] Ac`)}
               </Text>
             </View>
@@ -1109,9 +1114,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         <View
           style={{
             alignSelf: 'center',
-            backgroundColor: dockBg,
+            backgroundColor: macScale.dockBg,
             borderWidth: 1,
-            borderColor: dockBorder,
+            borderColor: macScale.dockBorder,
             borderRadius: isClassic ? 3 : 10,
             flexDirection: 'row',
             alignItems: 'center',
@@ -1120,7 +1125,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             gap: 6,
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.45,
+            shadowOpacity: isLightWallpaper ? 0.2 : 0.45,
             shadowRadius: 5,
             elevation: 5,
           }}
@@ -1129,30 +1134,17 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             const realIdx = dockPageStart + idxInPage;
             const sel = realIdx === os.deskIdx;
 
-            // In authentic macOS Light mode:
-            // Selected item gets Theme Accent Color (macAccentColor)
-            // Unselected items get clean white squircle tile with subtle shadow & dark icon glyph!
             const tileBg = sel
-              ? macAccentColor
-              : isClassic
-              ? '#FFFFFF'
-              : isLightWallpaper
-              ? '#FFFFFF' // Clean white squircle
-              : 'rgba(255, 255, 255, 0.22)';
+              ? macScale.accentBg
+              : macScale.tileBg;
 
             const iconColor = sel
-              ? macAccentText
-              : isClassic || isLightWallpaper
-              ? '#0F172A' // Dark crisp icon glyph on light dock
-              : '#FFFFFF';
+              ? activeTileText
+              : macScale.tileIcon;
 
             const tileBorder = sel
-              ? macAccentColor
-              : isClassic
-              ? '#000000'
-              : isLightWallpaper
-              ? 'rgba(0, 0, 0, 0.12)'
-              : 'rgba(255, 255, 255, 0.35)';
+              ? macScale.accentBg
+              : macScale.tileBorder;
 
             return (
               <View key={item.id} style={{ alignItems: 'center' }}>
