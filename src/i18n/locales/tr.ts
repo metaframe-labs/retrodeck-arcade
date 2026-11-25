@@ -329,7 +329,7 @@ export const trLocale: LocaleBundle = {
     // App.tsx shell
     brandTitle: 'RETRODECK OS',
     carts: 'KARTUS',
-    osBtn: 'OS',
+    osBtn: 'MENÜ',
     pause: 'DURAKLAT',
     resume: 'DEVAM',
     reboot: 'YENIDEN',

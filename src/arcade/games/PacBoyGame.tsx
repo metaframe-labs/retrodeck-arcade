@@ -63,8 +63,9 @@ export class PacBoyGame implements ArcadeGameInstance {
   private pacY = 15;
   private pacDir: Point = { x: 0, y: 0 };
   private pacNextDir: Point = { x: 0, y: 0 };
-  private pacSpeed = 5.2; // grid tiles per second
+  private pacSpeed = 3.2; // grid tiles per second (one notch slower, authentic arcade)
   private mouthAngle = 0; // for chewing animation
+  private deathTimer = 0; // pause delay when caught by ghost
 
   // Maze State
   private walls = new Set<string>();
@@ -112,6 +113,7 @@ export class PacBoyGame implements ArcadeGameInstance {
     this.isMenu = true;
     this.levelClear = false;
     this.frightenTimer = 0;
+    this.deathTimer = 0;
     this.particles = [];
 
     this.loadMaze();
@@ -142,8 +144,8 @@ export class PacBoyGame implements ArcadeGameInstance {
   private resetPositions(): void {
     this.pacX = 9;
     this.pacY = 15;
-    this.pacDir = { x: 0, y: 0 };
-    this.pacNextDir = { x: 0, y: 0 };
+    this.pacDir = { x: -1, y: 0 };
+    this.pacNextDir = { x: -1, y: 0 };
 
     this.ghosts = [
       {
@@ -153,7 +155,7 @@ export class PacBoyGame implements ArcadeGameInstance {
         y: 7,
         dir: { x: -1, y: 0 },
         nextDir: { x: -1, y: 0 },
-        speed: 4.6,
+        speed: 2.8,
         isFrightened: false,
         isEaten: false,
         spawnX: 9,
@@ -163,40 +165,40 @@ export class PacBoyGame implements ArcadeGameInstance {
         id: this.nextEntityId++,
         name: 'Pinky',
         x: 9,
-        y: 9,
-        dir: { x: 0, y: -1 },
-        nextDir: { x: 0, y: -1 },
-        speed: 4.4,
+        y: 7,
+        dir: { x: 1, y: 0 },
+        nextDir: { x: 1, y: 0 },
+        speed: 2.6,
         isFrightened: false,
         isEaten: false,
         spawnX: 9,
-        spawnY: 9,
+        spawnY: 7,
       },
       {
         id: this.nextEntityId++,
         name: 'Inky',
         x: 8,
-        y: 9,
-        dir: { x: 1, y: 0 },
-        nextDir: { x: 1, y: 0 },
-        speed: 4.2,
+        y: 7,
+        dir: { x: -1, y: 0 },
+        nextDir: { x: -1, y: 0 },
+        speed: 2.4,
         isFrightened: false,
         isEaten: false,
         spawnX: 8,
-        spawnY: 9,
+        spawnY: 7,
       },
       {
         id: this.nextEntityId++,
         name: 'Clyde',
         x: 10,
-        y: 9,
-        dir: { x: -1, y: 0 },
-        nextDir: { x: -1, y: 0 },
-        speed: 4.0,
+        y: 7,
+        dir: { x: 1, y: 0 },
+        nextDir: { x: 1, y: 0 },
+        speed: 2.2,
         isFrightened: false,
         isEaten: false,
         spawnX: 10,
-        spawnY: 9,
+        spawnY: 7,
       },
     ];
   }
@@ -246,6 +248,27 @@ export class PacBoyGame implements ArcadeGameInstance {
       return triggeredSound;
     }
 
+    // Death Pause Handling (1.5s freeze when caught)
+    if (this.deathTimer > 0) {
+      this.deathTimer -= dt;
+      // Animate explosion particles during pause
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= p.decay * dt;
+        if (p.life <= 0) {
+          this.particles.splice(i, 1);
+        }
+      }
+
+      if (this.deathTimer <= 0) {
+        this.resetPositions();
+      }
+      this.lastA = input.a;
+      return triggeredSound;
+    }
+
     // Frighten Timer countdown
     if (this.frightenTimer > 0) {
       this.frightenTimer -= dt;
@@ -267,7 +290,9 @@ export class PacBoyGame implements ArcadeGameInstance {
 
     // Mouth Chomp Animation
     if (this.pacDir.x !== 0 || this.pacDir.y !== 0) {
-      this.mouthAngle = Math.abs(Math.sin(Date.now() * 0.015)) * 0.45;
+      this.mouthAngle = Math.abs(Math.sin(Date.now() * 0.012)); // 0.0 to 1.0 (smooth chomp)
+    } else {
+      this.mouthAngle = 0.5;
     }
 
     // Check Dot Eating
@@ -316,7 +341,7 @@ export class PacBoyGame implements ArcadeGameInstance {
           triggeredSound = 'score';
           this.createSparks(ORIGIN_X + ghost.x * TILE_SIZE, ORIGIN_Y + ghost.y * TILE_SIZE);
         } else if (!ghost.isEaten) {
-          // Pac-Man caught
+          // Pac-Man caught: freeze for 1.5 seconds
           this.createExplosion(ORIGIN_X + this.pacX * TILE_SIZE, ORIGIN_Y + this.pacY * TILE_SIZE);
           this.lives--;
           if (this.lives <= 0) {
@@ -324,7 +349,7 @@ export class PacBoyGame implements ArcadeGameInstance {
             this.lastA = input.a;
             return 'gameover';
           } else {
-            this.resetPositions();
+            this.deathTimer = 1.5; // Pause for 1.5 seconds before respawn
             this.lastA = input.a;
             return 'die';
           }
@@ -412,18 +437,25 @@ export class PacBoyGame implements ArcadeGameInstance {
       if (g.x < -1) g.x = COLS;
       else if (g.x > COLS) g.x = -1;
 
-      // When near center of a tile, pick next direction
+      // Check if entering a new tile cell
       const currentGx = Math.round(g.x);
       const currentGy = Math.round(g.y);
-      if (Math.abs(g.x - currentGx) < 0.15 && Math.abs(g.y - currentGy) < 0.15) {
+      const distFromCenter = Math.hypot(g.x - currentGx, g.y - currentGy);
+
+      if (distFromCenter < effectiveSpeed * dt * 0.9) {
         g.x = currentGx;
         g.y = currentGy;
 
-        // Valid directions excluding reverse
-        const validDirs = DIRS.filter((d) => {
-          if (d.x === -g.dir.x && d.y === -g.dir.y) return false; // No immediate 180 turn
+        // Valid directions excluding 180 reverse unless trapped
+        let validDirs = DIRS.filter((d) => {
+          if (d.x === -g.dir.x && d.y === -g.dir.y) return false;
           return !this.isWall(currentGx + d.x, currentGy + d.y);
         });
+
+        // If trapped in a dead end, allow reverse turn
+        if (validDirs.length === 0) {
+          validDirs = DIRS.filter((d) => !this.isWall(currentGx + d.x, currentGy + d.y));
+        }
 
         if (validDirs.length > 0) {
           if (g.isFrightened) {
@@ -513,6 +545,10 @@ export class PacBoyGame implements ArcadeGameInstance {
   public renderEntities(palette: RetroPalette): React.ReactNode {
     const isLight = !!palette.isLightLcd;
     const pixelColor = palette.pixelOn;
+    // Eye white must contrast with ghost body (pixelColor in normal, screenBg or dimmed in frightened)
+    // and eye pupil must contrast with the sclera
+    const eyeScleraColor = palette.screenBg;
+    const eyePupilColor = palette.pixelOn;
 
     return (
       <View style={StyleSheet.absoluteFill}>
@@ -586,51 +622,69 @@ export class PacBoyGame implements ArcadeGameInstance {
           })}
 
           {/* Pac-Man Character */}
-          {!this.gameOver && (
-            <View
-              style={[
-                styles.pacmanWrap,
-                {
-                  left: this.pacX * TILE_SIZE + 1,
-                  top: this.pacY * TILE_SIZE + 1,
-                  width: TILE_SIZE - 2,
-                  height: TILE_SIZE - 2,
-                },
-              ]}
-            >
+          {!this.gameOver && this.deathTimer <= 0 && (() => {
+            const rotDeg =
+              this.pacDir.x === 1
+                ? '0deg'
+                : this.pacDir.x === -1
+                ? '180deg'
+                : this.pacDir.y === 1
+                ? '90deg'
+                : this.pacDir.y === -1
+                ? '270deg'
+                : '180deg';
+
+            // Mouth angle: 10deg (nearly closed) to 48deg (wide open)
+            const openDeg = 10 + this.mouthAngle * 38;
+
+            return (
               <View
                 style={[
-                  styles.pacBody,
+                  styles.pacmanWrap,
                   {
-                    backgroundColor: pixelColor,
-                    borderRadius: (TILE_SIZE - 2) / 2,
+                    left: this.pacX * TILE_SIZE + 1,
+                    top: this.pacY * TILE_SIZE + 1,
+                    width: TILE_SIZE - 2,
+                    height: TILE_SIZE - 2,
+                    transform: [{ rotate: rotDeg }],
                   },
                 ]}
               >
-                {/* Chewing mouth cutout */}
+                {/* Top Half of Pac-Man */}
                 <View
                   style={[
-                    styles.pacMouth,
+                    styles.pacHalf,
                     {
-                      backgroundColor: isLight ? palette.screenBg : '#000',
+                      backgroundColor: pixelColor,
+                      borderTopLeftRadius: 5,
+                      borderTopRightRadius: 5,
                       transform: [
-                        {
-                          rotate:
-                            this.pacDir.x === 1
-                              ? '0deg'
-                              : this.pacDir.x === -1
-                              ? '180deg'
-                              : this.pacDir.y === 1
-                              ? '90deg'
-                              : '270deg',
-                        },
+                        { translateY: 2.25 },
+                        { rotate: `-${openDeg / 2}deg` },
+                        { translateY: -2.25 },
+                      ],
+                    },
+                  ]}
+                />
+                {/* Bottom Half of Pac-Man */}
+                <View
+                  style={[
+                    styles.pacHalf,
+                    {
+                      backgroundColor: pixelColor,
+                      borderBottomLeftRadius: 5,
+                      borderBottomRightRadius: 5,
+                      transform: [
+                        { translateY: -2.25 },
+                        { rotate: `${openDeg / 2}deg` },
+                        { translateY: 2.25 },
                       ],
                     },
                   ]}
                 />
               </View>
-            </View>
-          )}
+            );
+          })()}
 
           {/* Ghosts */}
           {this.ghosts.map((g) => {
@@ -670,18 +724,56 @@ export class PacBoyGame implements ArcadeGameInstance {
                     <View
                       style={[
                         styles.ghostEye,
-                        { backgroundColor: isLight ? palette.screenBg : '#FFF' },
+                        {
+                          backgroundColor: eyeScleraColor,
+                          borderWidth: 0.5,
+                          borderColor: eyePupilColor,
+                        },
                       ]}
                     >
-                      <View style={[styles.ghostPupil, { backgroundColor: pixelColor }]} />
+                      <View
+                        style={[
+                          styles.ghostPupil,
+                          {
+                            backgroundColor: eyePupilColor,
+                            transform: [
+                              {
+                                translateX: g.dir.x * 0.5,
+                              },
+                              {
+                                translateY: g.dir.y * 0.5,
+                              },
+                            ],
+                          },
+                        ]}
+                      />
                     </View>
                     <View
                       style={[
                         styles.ghostEye,
-                        { backgroundColor: isLight ? palette.screenBg : '#FFF' },
+                        {
+                          backgroundColor: eyeScleraColor,
+                          borderWidth: 0.5,
+                          borderColor: eyePupilColor,
+                        },
                       ]}
                     >
-                      <View style={[styles.ghostPupil, { backgroundColor: pixelColor }]} />
+                      <View
+                        style={[
+                          styles.ghostPupil,
+                          {
+                            backgroundColor: eyePupilColor,
+                            transform: [
+                              {
+                                translateX: g.dir.x * 0.5,
+                              },
+                              {
+                                translateY: g.dir.y * 0.5,
+                              },
+                            ],
+                          },
+                        ]}
+                      />
                     </View>
                   </View>
                 </View>
@@ -766,19 +858,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  pacBody: {
+  pacHalf: {
     width: 9,
-    height: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  pacMouth: {
-    position: 'absolute',
-    right: 0,
-    width: 4.5,
     height: 4.5,
-    borderTopLeftRadius: 4.5,
   },
   ghostWrap: {
     position: 'absolute',

@@ -327,7 +327,7 @@ export const enLocale = {
     // App.tsx shell
     brandTitle: 'RETRODECK OS',
     carts: 'CARTS',
-    osBtn: 'OS',
+    osBtn: 'MENU',
     pause: 'PAUSE',
     resume: 'RESUME',
     reboot: 'REBOOT',
