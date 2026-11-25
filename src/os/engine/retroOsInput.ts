@@ -694,6 +694,85 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list' || os.menuStyle === 'macos')) {
       if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+    } else if (!os.postFormatWinStyle && os.menuStyle === 'psp_xmb') {
+      // PSP XMB Navigation: Left/Right switches Category; Up/Down navigates items in category
+      const XMB_CATEGORIES: string[][] = [
+        ['setup', 'stats', 'term', 'format'], // settings
+        ['arcade'], // games
+        ['radio', 'synth', 'wallpapers'], // media
+        ['wap', 'ai', 'sms', 'contacts', 'phone'], // network
+        ['notes', 'paint', 'calc', 'weather', 'clock', 'profiles'], // tools
+      ];
+      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+      let catIdx = XMB_CATEGORIES.findIndex((cat) => cat.includes(curApp.id));
+      if (catIdx === -1) catIdx = 1;
+      const catApps = XMB_CATEGORIES[catIdx];
+      let itemIdx = catApps.indexOf(curApp.id);
+      if (itemIdx === -1) itemIdx = 0;
+
+      if (dir === 'left') {
+        const nextCatIdx = (catIdx + XMB_CATEGORIES.length - 1) % XMB_CATEGORIES.length;
+        const targetAppId = XMB_CATEGORIES[nextCatIdx][0];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'right') {
+        const nextCatIdx = (catIdx + 1) % XMB_CATEGORIES.length;
+        const targetAppId = XMB_CATEGORIES[nextCatIdx][0];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'up') {
+        const nextItemIdx = (itemIdx + catApps.length - 1) % catApps.length;
+        const targetAppId = catApps[nextItemIdx];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'down') {
+        const nextItemIdx = (itemIdx + 1) % catApps.length;
+        const targetAppId = catApps[nextItemIdx];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      }
+    } else if (!os.postFormatWinStyle && os.menuStyle === 'xbox_blades') {
+      // Xbox 360 Blades Navigation: Left/Right slides active Blade; Up/Down selects item
+      const XBOX_BLADES: string[][] = [
+        ['arcade', 'synth'], // games
+        ['radio', 'wallpapers', 'paint'], // media
+        ['setup', 'stats', 'term', 'format', 'clock'], // system
+        ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'], // live
+      ];
+      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+      let bladeIdx = XBOX_BLADES.findIndex((b) => b.includes(curApp.id));
+      if (bladeIdx === -1) bladeIdx = 0;
+      const bladeApps = XBOX_BLADES[bladeIdx];
+      let itemIdx = bladeApps.indexOf(curApp.id);
+      if (itemIdx === -1) itemIdx = 0;
+
+      if (dir === 'left') {
+        const nextBladeIdx = (bladeIdx + XBOX_BLADES.length - 1) % XBOX_BLADES.length;
+        const targetAppId = XBOX_BLADES[nextBladeIdx][0];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'right') {
+        const nextBladeIdx = (bladeIdx + 1) % XBOX_BLADES.length;
+        const targetAppId = XBOX_BLADES[nextBladeIdx][0];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'up') {
+        const nextItemIdx = (itemIdx + bladeApps.length - 1) % bladeApps.length;
+        const targetAppId = bladeApps[nextItemIdx];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      } else if (dir === 'down') {
+        const nextItemIdx = (itemIdx + 1) % bladeApps.length;
+        const targetAppId = bladeApps[nextItemIdx];
+        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        if (targetIdx !== -1) os.deskIdx = targetIdx;
+      }
+    } else if (!os.postFormatWinStyle && os.menuStyle === 'cyberpunk') {
+      // Cyberpunk Tiling WM: Up/Down moves cursor; Left/Right jumps 5 items (workspaces)
+      if (dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
+      if (dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
+      if (dir === 'left') os.deskIdx = (os.deskIdx + total - 5) % total;
+      if (dir === 'right') os.deskIdx = (os.deskIdx + 5) % total;
     } else if (Boolean(os.postFormatWinStyle) || os.menuStyle === 'windows') {
       // Windows Desktop: Column-Major Layout (4 cols x 3 rows per page = 12 items)
       // Icons flow Down (top to bottom within column), then Right (next column)

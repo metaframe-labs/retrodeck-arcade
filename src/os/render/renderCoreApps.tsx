@@ -1067,6 +1067,635 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
+  // STYLE 6: Sony PlayStation Portable (PSP) / PS3 XMB (Cross Media Bar)
+  if (os.menuStyle === 'psp_xmb') {
+    // 5 Categories: Settings, Games, Media, Network, Tools
+    const XMB_CATEGORIES: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; appIds: string[] }[] = [
+      { id: 'settings', label: pickLang(os.lang, 'SETTINGS', 'AYARLAR'), icon: 'settings', appIds: ['setup', 'stats', 'term', 'format'] },
+      { id: 'games', label: pickLang(os.lang, 'GAME', 'OYUN'), icon: 'game-controller', appIds: ['arcade'] },
+      { id: 'media', label: pickLang(os.lang, 'MEDIA', 'MEDYA'), icon: 'musical-notes', appIds: ['radio', 'synth', 'wallpapers'] },
+      { id: 'network', label: pickLang(os.lang, 'NETWORK', 'AG'), icon: 'globe', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone'] },
+      { id: 'tools', label: pickLang(os.lang, 'EXTRAS', 'EKSTRALAR'), icon: 'briefcase', appIds: ['notes', 'paint', 'calc', 'weather', 'clock', 'profiles'] },
+    ];
+
+    const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    let activeCatIdx = XMB_CATEGORIES.findIndex((cat) => cat.appIds.includes(currentApp.id));
+    if (activeCatIdx === -1) activeCatIdx = 1; // default to Games
+    const activeCat = XMB_CATEGORIES[activeCatIdx];
+    const catApps = activeCat.appIds.map((id) => DESKTOP_ICONS.find((icon) => icon.id === id)!).filter(Boolean);
+    let itemIdxInCat = catApps.findIndex((item) => item.id === currentApp.id);
+    if (itemIdxInCat === -1) itemIdxInCat = 0;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', justifyContent: 'space-between', paddingHorizontal: 0, paddingVertical: 4 }]}>
+        {renderWallBackdrop()}
+
+        {/* Dynamic PSP/PS3 Ambient Wave Ribbons */}
+        {!activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -20, right: -20, top: 0, bottom: 0, backgroundColor: '#0A0E1A', overflow: 'hidden' }}>
+            {/* Wave 1 */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 40,
+                left: -30,
+                width: 380,
+                height: 120,
+                borderRadius: 90,
+                borderWidth: 2.5,
+                borderColor: 'rgba(56, 189, 248, 0.28)',
+                transform: [{ rotate: '-12deg' }, { scaleX: 1.2 }],
+              }}
+            />
+            {/* Wave 2 */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 55,
+                left: -10,
+                width: 360,
+                height: 100,
+                borderRadius: 80,
+                borderWidth: 2,
+                borderColor: 'rgba(168, 85, 247, 0.22)',
+                transform: [{ rotate: '-7deg' }, { scaleX: 1.1 }],
+              }}
+            />
+            {/* Wave 3 Glow Fill */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 75,
+                left: 20,
+                width: 320,
+                height: 80,
+                backgroundColor: 'rgba(14, 165, 233, 0.08)',
+                transform: [{ rotate: '-5deg' }],
+              }}
+            />
+          </View>
+        )}
+
+        {/* Top PSP Info Bar */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, height: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="hardware-chip-outline" size={10} color={activeWall ? fg : '#38BDF8'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#F8FAFC', letterSpacing: 0.8 }}>
+              PSP-3000
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="wifi" size={9} color={activeWall ? fg : '#94A3B8'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '700', color: activeWall ? fg : '#F8FAFC' }}>
+              {os.formatClock()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Horizontal Category Bar (Cross Media Bar - Horizontal Axis) */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            paddingVertical: 5,
+            paddingHorizontal: 8,
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.72) : 'rgba(15, 23, 42, 0.65)',
+            borderTopWidth: 1,
+            borderBottomWidth: 1,
+            borderColor: activeWall ? hexWithAlpha(fg, 0.2) : 'rgba(255, 255, 255, 0.12)',
+          }}
+        >
+          {XMB_CATEGORIES.map((cat, idx) => {
+            const isCatActive = idx === activeCatIdx;
+            return (
+              <View key={cat.id} style={{ alignItems: 'center', width: 44 }}>
+                <View
+                  style={{
+                    width: isCatActive ? 28 : 22,
+                    height: isCatActive ? 28 : 22,
+                    borderRadius: 14,
+                    backgroundColor: isCatActive ? '#38BDF8' : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    shadowColor: '#38BDF8',
+                    shadowOffset: { width: 0, height: 0 },
+                    shadowOpacity: isCatActive ? 0.9 : 0,
+                    shadowRadius: 6,
+                  }}
+                >
+                  <Ionicons
+                    name={cat.icon}
+                    size={isCatActive ? 16 : 13}
+                    color={isCatActive ? '#0F172A' : activeWall ? fg : 'rgba(255, 255, 255, 0.6)'}
+                  />
+                </View>
+                {isCatActive && (
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 6.8,
+                      fontWeight: '900',
+                      color: activeWall ? fg : '#38BDF8',
+                      marginTop: 2,
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {cat.label}
+                  </Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Vertical Sub-Items List under Active Category (Vertical Axis) */}
+        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 4 }}>
+          {catApps.map((item, idx) => {
+            const isItemSel = idx === itemIdxInCat;
+            return (
+              <View
+                key={item.id}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 3.5,
+                  paddingHorizontal: 8,
+                  marginVertical: 1.5,
+                  borderRadius: 4,
+                  backgroundColor: isItemSel
+                    ? activeWall
+                      ? fg
+                      : 'rgba(56, 189, 248, 0.28)'
+                    : 'transparent',
+                  borderWidth: isItemSel ? 1 : 0,
+                  borderColor: activeWall ? fg : '#38BDF8',
+                }}
+              >
+                <View
+                  style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 4,
+                    backgroundColor: isItemSel ? (activeWall ? bg : '#38BDF8') : 'rgba(255, 255, 255, 0.1)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 8,
+                  }}
+                >
+                  <Ionicons
+                    name={item.icon}
+                    size={12}
+                    color={isItemSel ? (activeWall ? fg : '#0F172A') : activeWall ? fg : '#FFFFFF'}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 8.5,
+                      fontWeight: isItemSel ? '900' : '600',
+                      color: isItemSel
+                        ? activeWall
+                          ? bg
+                          : '#FFFFFF'
+                        : activeWall
+                        ? fg
+                        : 'rgba(255, 255, 255, 0.75)',
+                    }}
+                    numberOfLines={1}
+                  >
+                    {getDesktopLabel(item.id, item.label, os.lang)}
+                  </Text>
+                </View>
+                {isItemSel && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: activeWall ? bg : '#38BDF8' }}>
+                      [A] ENTER
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
+        </View>
+
+        {/* Bottom D-Pad Prompt */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, height: 14 }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.45)' }}>
+            ◀ ▶ CATEGORY • ▲ ▼ SELECT
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: activeWall ? fg : '#38BDF8' }}>
+            SONY XMB™
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 7: Xbox 360 Blades Dashboard (2005 Original Dashboard)
+  if (os.menuStyle === 'xbox_blades') {
+    // 4 Classic Xbox 360 Blades: Marketplace/Games, Media, System, Live
+    const XBOX_BLADES: { id: string; label: string; color: string; appIds: string[] }[] = [
+      { id: 'games', label: 'GAMES', color: '#107C10', appIds: ['arcade', 'synth'] },
+      { id: 'media', label: 'MEDIA', color: '#0078D7', appIds: ['radio', 'wallpapers', 'paint'] },
+      { id: 'system', label: 'SYSTEM', color: '#5C2D91', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
+      { id: 'live', label: 'XBOX LIVE', color: '#FF8C00', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
+    ];
+
+    const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    let activeBladeIdx = XBOX_BLADES.findIndex((blade) => blade.appIds.includes(currentApp.id));
+    if (activeBladeIdx === -1) activeBladeIdx = 0;
+    const activeBlade = XBOX_BLADES[activeBladeIdx];
+    const bladeApps = activeBlade.appIds.map((id) => DESKTOP_ICONS.find((icon) => icon.id === id)!).filter(Boolean);
+    let itemIdxInBlade = bladeApps.findIndex((item) => item.id === currentApp.id);
+    if (itemIdxInBlade === -1) itemIdxInBlade = 0;
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0 }]}>
+        {renderWallBackdrop()}
+
+        {/* Xbox 360 Industrial Curved Gradient Backdrop */}
+        {!activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#1A1C1E' }}>
+            {/* Subtle silver curved sphere gradient */}
+            <View
+              style={{
+                position: 'absolute',
+                top: -60,
+                right: -60,
+                width: 220,
+                height: 220,
+                borderRadius: 110,
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              }}
+            />
+            {/* Top green Xbox glow highlight */}
+            <View style={{ height: 3, backgroundColor: activeBlade.color }} />
+          </View>
+        )}
+
+        {/* Header: Gamertag & Live Status */}
+        <View
+          style={{
+            height: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            borderBottomWidth: 1,
+            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: activeBlade.color }} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+              RETRO_PLAYER_360
+            </Text>
+          </View>
+          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: '#107C10' }}>
+            ● 100 G
+          </Text>
+        </View>
+
+        {/* Center Canvas: Horizontal Blade Tabs + Active Blade App List */}
+        <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden' }}>
+          {/* Blade Spine Tabs on the Left */}
+          <View style={{ width: 34, justifyContent: 'space-around', paddingVertical: 4, paddingLeft: 2 }}>
+            {XBOX_BLADES.map((blade, idx) => {
+              const isBladeActive = idx === activeBladeIdx;
+              return (
+                <View
+                  key={blade.id}
+                  style={{
+                    height: 24,
+                    width: isBladeActive ? 32 : 24,
+                    backgroundColor: blade.color,
+                    borderTopRightRadius: 6,
+                    borderBottomRightRadius: 6,
+                    justifyContent: 'center',
+                    paddingLeft: 4,
+                    borderWidth: 1,
+                    borderColor: isBladeActive ? '#FFFFFF' : 'rgba(0,0,0,0.4)',
+                    shadowColor: blade.color,
+                    shadowOffset: { width: 1, height: 0 },
+                    shadowOpacity: isBladeActive ? 0.8 : 0.2,
+                    shadowRadius: 3,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 6,
+                      fontWeight: '900',
+                      color: '#FFFFFF',
+                    }}
+                    numberOfLines={1}
+                  >
+                    {blade.label.slice(0, 4)}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Active Blade Card and App Options */}
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              marginVertical: 4,
+              marginRight: 6,
+              borderRadius: 6,
+              borderWidth: 1.5,
+              borderColor: activeBlade.color,
+              padding: 6,
+            }}
+          >
+            {/* Active Blade Title Header */}
+            <View
+              style={{
+                backgroundColor: activeBlade.color,
+                paddingHorizontal: 6,
+                paddingVertical: 2,
+                borderRadius: 3,
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 4,
+              }}
+            >
+              <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+                {activeBlade.label}
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
+                {itemIdxInBlade + 1}/{bladeApps.length}
+              </Text>
+            </View>
+
+            {/* List of Apps in Active Blade */}
+            <View style={{ flex: 1, justifyContent: 'space-around' }}>
+              {bladeApps.slice(0, 4).map((item, idx) => {
+                const isSelected = idx === itemIdxInBlade;
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: 3,
+                      paddingHorizontal: 6,
+                      borderRadius: 3,
+                      backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
+                      borderLeftWidth: isSelected ? 3 : 0,
+                      borderLeftColor: activeBlade.color,
+                    }}
+                  >
+                    <Ionicons
+                      name={item.icon}
+                      size={12}
+                      color={isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 8,
+                        fontWeight: isSelected ? '900' : '600',
+                        color: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.75)',
+                        flex: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {getDesktopLabel(item.id, item.label, os.lang)}
+                    </Text>
+                    {isSelected && (
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: activeBlade.color }}>
+                        ▶
+                      </Text>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Footer Blade Navigation Bar */}
+        <View
+          style={{
+            height: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 8,
+            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>
+            ◀ ▶ SLIDE BLADE • ▲ ▼ SELECT
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: '#107C10' }}>
+            [A] LAUNCH
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 8: Cyberpunk / Linux Tiling Window Manager (i3 / bspwm / sway style)
+  if (os.menuStyle === 'cyberpunk') {
+    const total = DESKTOP_ICONS.length;
+    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const workspaces = ['1:SYS', '2:NET', '3:MEDIA', '4:EXTRA'];
+    const activeWsIdx = Math.min(3, Math.floor(os.deskIdx / 5));
+
+    // Visible terminal list window (5 items)
+    const listPage = Math.floor(os.deskIdx / 5);
+    const visibleApps = DESKTOP_ICONS.slice(listPage * 5, listPage * 5 + 5);
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0, backgroundColor: '#050811' }]}>
+        {renderWallBackdrop()}
+
+        {/* Tiling Polybar / Status Bar */}
+        <View
+          style={{
+            height: 16,
+            backgroundColor: '#0F172A',
+            borderBottomWidth: 1,
+            borderBottomColor: '#22D3EE',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 6,
+          }}
+        >
+          {/* Workspaces */}
+          <View style={{ flexDirection: 'row', gap: 2 }}>
+            {workspaces.map((ws, i) => {
+              const isWsActive = i === activeWsIdx;
+              return (
+                <View
+                  key={ws}
+                  style={{
+                    backgroundColor: isWsActive ? '#22D3EE' : '#1E293B',
+                    paddingHorizontal: 4,
+                    paddingVertical: 1,
+                    borderRadius: 2,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: monoFont,
+                      fontSize: 6.8,
+                      fontWeight: '900',
+                      color: isWsActive ? '#050811' : '#94A3B8',
+                    }}
+                  >
+                    {ws}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Telemetry */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: '#4ADE80' }}>
+              CPU: 32%
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: '#F43F5E' }}>
+              MEM: 128MB
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: '#F8FAFC' }}>
+              {os.formatClock()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Tiled Layout: Split Left (Neofetch/Hero) and Right (Dmenu / App Launcher) */}
+        <View style={{ flex: 1, flexDirection: 'row', padding: 4, gap: 4 }}>
+          {/* Left Tile: Neofetch Terminal Pane */}
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: '#0A0F1D',
+              borderWidth: 1,
+              borderColor: '#1E293B',
+              borderRadius: 3,
+              padding: 5,
+              justifyContent: 'space-between',
+            }}
+          >
+            <View>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: '#22D3EE', marginBottom: 2 }}>
+                ┌─[ retrodeck@kernel-8 ]
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '700', color: '#F43F5E' }}>
+                OS: RetroDeck Linux v6.8
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '700', color: '#F59E0B' }}>
+                WM: i3-gaps (tiling)
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '700', color: '#10B981' }}>
+                UP: {Math.floor(os.uptime)}s
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '700', color: '#A855F7' }}>
+                PKGS: 19 (pacman)
+              </Text>
+            </View>
+
+            {/* Selected Target Preview */}
+            <View style={{ backgroundColor: '#050811', padding: 4, borderWidth: 1, borderColor: '#22D3EE', borderRadius: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name={curItem.icon} size={12} color="#22D3EE" />
+                <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: '#22D3EE' }} numberOfLines={1}>
+                  {curItem.id}.sh
+                </Text>
+              </View>
+              <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '700', color: '#94A3B8', marginTop: 1 }}>
+                EXEC: [A] RETURN
+              </Text>
+            </View>
+          </View>
+
+          {/* Right Tile: Dmenu / Interactive App Terminal Launcher */}
+          <View
+            style={{
+              flex: 1.15,
+              backgroundColor: '#0A0F1D',
+              borderWidth: 1,
+              borderColor: '#22D3EE',
+              borderRadius: 3,
+              padding: 4,
+            }}
+          >
+            <View style={{ backgroundColor: '#22D3EE', paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3 }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: '#050811' }}>
+                $ dmenu_run ({os.deskIdx + 1}/{total})
+              </Text>
+            </View>
+
+            <View style={{ flex: 1, justifyContent: 'space-around' }}>
+              {visibleApps.map((item) => {
+                const isSelected = item.id === curItem.id;
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 4,
+                      paddingVertical: 1.5,
+                      backgroundColor: isSelected ? '#22D3EE' : 'transparent',
+                      borderRadius: 2,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 7.5,
+                        fontWeight: '900',
+                        color: isSelected ? '#050811' : '#4ADE80',
+                        marginRight: 4,
+                      }}
+                    >
+                      {isSelected ? '▶' : '$'}
+                    </Text>
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 7.5,
+                        fontWeight: isSelected ? '900' : '600',
+                        color: isSelected ? '#050811' : '#F8FAFC',
+                        flex: 1,
+                      }}
+                      numberOfLines={1}
+                    >
+                      {getDesktopLabel(item.id, item.label, os.lang)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Footer Prompt */}
+        <View style={{ height: 12, backgroundColor: '#0F172A', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 6 }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '700', color: '#64748B' }}>
+            [MOD]+[▲▼] NAVIGATE • [MOD]+[A] EXEC
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '900', color: '#22D3EE' }}>
+            WS: #{activeWsIdx + 1}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   // STYLE 4: Big 3x2 Cards (6 large cards per page — ideal for showcasing wallpapers!)
   if (os.menuStyle === 'cards') {
     const cardCols = 3;
@@ -1521,6 +2150,9 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     cards: tOs('menuStyleCards', L),
     windows: tOs('menuStyleWindows', L),
     macos: tOs('menuStyleMacos', L),
+    psp_xmb: tOs('menuStylePsp', L),
+    xbox_blades: tOs('menuStyleXbox', L),
+    cyberpunk: tOs('menuStyleCyberpunk', L),
   };
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),
