@@ -1326,11 +1326,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   // STYLE 7: Xbox 360 Blades Dashboard (2005 Original Dashboard)
   if (os.menuStyle === 'xbox_blades') {
     // 4 Classic Xbox 360 Blades: Marketplace/Games, Media, System, Live
+    // Use theme fg color when active wallpaper or custom theme palette is chosen, or authentic Xbox colors
+    const primaryThemeColor = fg;
     const XBOX_BLADES: { id: string; label: string; color: string; appIds: string[] }[] = [
-      { id: 'games', label: 'GAMES', color: '#107C10', appIds: ['arcade', 'synth'] },
-      { id: 'media', label: 'MEDIA', color: '#0078D7', appIds: ['radio', 'wallpapers', 'paint'] },
-      { id: 'system', label: 'SYSTEM', color: '#5C2D91', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
-      { id: 'live', label: 'XBOX LIVE', color: '#FF8C00', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
+      { id: 'games', label: 'GAMES', color: activeWall ? primaryThemeColor : '#107C10', appIds: ['arcade', 'synth'] },
+      { id: 'media', label: 'MEDIA', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.8) : '#1E88E5', appIds: ['radio', 'wallpapers', 'paint'] },
+      { id: 'system', label: 'SYSTEM', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.65) : '#8E24AA', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
+      { id: 'live', label: 'XBOX LIVE', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.9) : '#E65100', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
     ];
 
     const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
@@ -1341,13 +1343,24 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     let itemIdxInBlade = bladeApps.findIndex((item) => item.id === currentApp.id);
     if (itemIdxInBlade === -1) itemIdxInBlade = 0;
 
+    // Windowed scrolling for apps in active blade: show 4 items around selected item
+    const totalBladeApps = bladeApps.length;
+    const maxVisibleBlade = Math.min(4, totalBladeApps);
+    const bladeStartIdx = Math.max(0, Math.min(itemIdxInBlade - 1, totalBladeApps - maxVisibleBlade));
+    const visibleBladeApps = bladeApps.slice(bladeStartIdx, bladeStartIdx + maxVisibleBlade);
+
+    // Dynamic selection & highlight colors honoring the active theme / wallpaper
+    const bladeAccent = activeBlade.color;
+    const selBg = activeWall ? fg : bladeAccent;
+    const selText = activeWall ? bg : '#FFFFFF';
+
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0 }]}>
         {renderWallBackdrop()}
 
         {/* Xbox 360 Industrial Curved Gradient Backdrop */}
         {!activeWall && (
-          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#1A1C1E' }}>
+          <View pointerEvents="none" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#141618' }}>
             {/* Subtle silver curved sphere gradient */}
             <View
               style={{
@@ -1357,11 +1370,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 width: 220,
                 height: 220,
                 borderRadius: 110,
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                backgroundColor: 'rgba(255, 255, 255, 0.04)',
               }}
             />
-            {/* Top green Xbox glow highlight */}
-            <View style={{ height: 3, backgroundColor: activeBlade.color }} />
+            {/* Top Blade glow highlight */}
+            <View style={{ height: 3, backgroundColor: bladeAccent }} />
           </View>
         )}
 
@@ -1373,18 +1386,18 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: 8,
-            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.85) : 'rgba(0, 0, 0, 0.75)',
             borderBottomWidth: 1,
-            borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+            borderBottomColor: activeWall ? hexWithAlpha(fg, 0.25) : 'rgba(255, 255, 255, 0.1)',
           }}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: activeBlade.color }} />
-            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: bladeAccent }} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#FFFFFF' }}>
               RETRO_PLAYER_360
             </Text>
           </View>
-          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: '#107C10' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: bladeAccent }}>
             ● 100 G
           </Text>
         </View>
@@ -1434,19 +1447,19 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           <View
             style={{
               flex: 1,
-              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              backgroundColor: activeWall ? hexWithAlpha(bg, 0.78) : 'rgba(0, 0, 0, 0.8)',
               marginVertical: 4,
               marginRight: 6,
               borderRadius: 6,
               borderWidth: 1.5,
-              borderColor: activeBlade.color,
+              borderColor: bladeAccent,
               padding: 6,
             }}
           >
             {/* Active Blade Title Header */}
             <View
               style={{
-                backgroundColor: activeBlade.color,
+                backgroundColor: bladeAccent,
                 paddingHorizontal: 6,
                 paddingVertical: 2,
                 borderRadius: 3,
@@ -1459,33 +1472,33 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
                 {activeBlade.label}
               </Text>
-              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.85)' }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: 'rgba(255,255,255,0.9)' }}>
                 {itemIdxInBlade + 1}/{bladeApps.length}
               </Text>
             </View>
 
-            {/* List of Apps in Active Blade */}
+            {/* List of Apps in Active Blade (windowed scroll) */}
             <View style={{ flex: 1, justifyContent: 'space-around' }}>
-              {bladeApps.slice(0, 4).map((item, idx) => {
-                const isSelected = idx === itemIdxInBlade;
+              {visibleBladeApps.map((item) => {
+                const isSelected = item.id === currentApp.id;
                 return (
                   <View
                     key={item.id}
                     style={{
                       flexDirection: 'row',
                       alignItems: 'center',
-                      paddingVertical: 3,
+                      paddingVertical: 3.5,
                       paddingHorizontal: 6,
                       borderRadius: 3,
-                      backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
+                      backgroundColor: isSelected ? selBg : 'transparent',
                       borderLeftWidth: isSelected ? 3 : 0,
-                      borderLeftColor: activeBlade.color,
+                      borderLeftColor: activeWall ? bg : '#FFFFFF',
                     }}
                   >
                     <Ionicons
                       name={item.icon}
                       size={12}
-                      color={isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.6)'}
+                      color={isSelected ? selText : activeWall ? fg : 'rgba(255, 255, 255, 0.65)'}
                       style={{ marginRight: 6 }}
                     />
                     <Text
@@ -1493,7 +1506,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         fontFamily: monoFont,
                         fontSize: 8,
                         fontWeight: isSelected ? '900' : '600',
-                        color: isSelected ? '#FFFFFF' : 'rgba(255, 255, 255, 0.75)',
+                        color: isSelected ? selText : activeWall ? fg : 'rgba(255, 255, 255, 0.75)',
                         flex: 1,
                       }}
                       numberOfLines={1}
@@ -1501,7 +1514,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       {getDesktopLabel(item.id, item.label, os.lang)}
                     </Text>
                     {isSelected && (
-                      <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: activeBlade.color }}>
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: selText }}>
                         ▶
                       </Text>
                     )}
@@ -1520,13 +1533,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingHorizontal: 8,
-            backgroundColor: 'rgba(0, 0, 0, 0.85)',
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.9) : 'rgba(0, 0, 0, 0.9)',
           }}
         >
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: 'rgba(255,255,255,0.5)' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.5)' }}>
             ◀ ▶ SLIDE BLADE • ▲ ▼ SELECT
           </Text>
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: '#107C10' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: bladeAccent }}>
             [A] LAUNCH
           </Text>
         </View>
