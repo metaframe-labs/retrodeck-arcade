@@ -304,75 +304,498 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const isWin11 = !winStyle && os.cb.getPaletteId?.() === 'windows_11';
     const isWin95 = !winStyle && (os.cb.getPaletteId?.() === 'windows_95' || (!isXp && !isWin8 && !isWin10 && !isWin11));
 
-    // Authentic Windows Icon Color Palettes & Shapes
-    const getWinIconStyle = (itemId: string, sel: boolean) => {
-      let iconColor = sel ? '#FFFFFF' : '#FFD700';
-      let badgeBg = '#FFFFFF';
-      let badgeTxt = '#000080';
+    // Authentic, Professional Windows Desktop Icon Renderer
+    const renderWinDesktopIcon = (itemId: string, sel: boolean) => {
+      const activeColor = sel ? '#FFFFFF' : undefined;
 
       switch (itemId) {
+        // 1. ARCADE / GAMES: Authentic Win32 Game Controller / Arcade Cabinet
         case 'arcade':
-          iconColor = sel ? '#FFFFFF' : '#FF3B30';
-          break;
-        case 'radio':
-          iconColor = sel ? '#FFFFFF' : '#FF9500';
-          break;
-        case 'ai':
-          iconColor = sel ? '#FFFFFF' : '#5856D6';
-          break;
-        case 'wap':
-          iconColor = sel ? '#FFFFFF' : '#007AFF';
-          break;
-        case 'synth':
-          iconColor = sel ? '#FFFFFF' : '#AF52DE';
-          break;
-        case 'phone':
-          iconColor = sel ? '#FFFFFF' : '#34C759';
-          break;
-        case 'contacts':
-          iconColor = sel ? '#FFFFFF' : '#FFCC00';
-          break;
-        case 'sms':
-          iconColor = sel ? '#FFFFFF' : '#FF2D55';
-          break;
-        case 'profiles':
-          iconColor = sel ? '#FFFFFF' : '#30B0C7';
-          break;
-        case 'calc':
-          iconColor = sel ? '#FFFFFF' : '#32D74B';
-          break;
-        case 'clock':
-          iconColor = sel ? '#FFFFFF' : '#0A84FF';
-          break;
-        case 'paint':
-          iconColor = sel ? '#FFFFFF' : '#FF375F';
-          break;
-        case 'weather':
-          iconColor = sel ? '#FFFFFF' : '#64D2FF';
-          break;
-        case 'notes':
-          iconColor = sel ? '#FFFFFF' : '#FFD60A';
-          break;
-        case 'term':
-          iconColor = sel ? '#FFFFFF' : '#30D158';
-          break;
-        case 'stats':
-          iconColor = sel ? '#FFFFFF' : '#BF5AF2';
-          break;
-        case 'setup':
-          iconColor = sel ? '#FFFFFF' : '#8E8E93';
-          break;
-        case 'wallpapers':
-          iconColor = sel ? '#FFFFFF' : '#AC8E68';
-          break;
-        case 'format':
-          iconColor = sel ? '#FFFFFF' : '#FF453A';
-          break;
-        default:
-          iconColor = sel ? '#FFFFFF' : '#0055EA';
-      }
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 20,
+                  height: 14,
+                  backgroundColor: sel ? '#2563EB' : '#3B82F6',
+                  borderRadius: 4,
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#1D4ED8',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingHorizontal: 2,
+                }}
+              >
+                {/* D-Pad cross */}
+                <View style={{ width: 6, height: 6, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ position: 'absolute', width: 2, height: 6, backgroundColor: '#FFFFFF' }} />
+                  <View style={{ position: 'absolute', width: 6, height: 2, backgroundColor: '#FFFFFF' }} />
+                </View>
+                {/* 2 AB Buttons */}
+                <View style={{ flexDirection: 'row', gap: 1 }}>
+                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#EF4444' }} />
+                  <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#FBBF24' }} />
+                </View>
+              </View>
+            </View>
+          );
 
-      return { iconColor, badgeBg, badgeTxt };
+        // 2. WAP / INTERNET: Classic Blue Internet Explorer "e" / World Globe
+        case 'wap':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  borderWidth: 1.5,
+                  borderColor: sel ? '#FFFFFF' : '#0284C7',
+                  backgroundColor: sel ? '#0284C7' : '#E0F2FE',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ fontFamily: monoFont, fontSize: 11, fontWeight: '900', color: sel ? '#FFFFFF' : '#0369A1', fontStyle: 'italic', marginTop: -2 }}>
+                  e
+                </Text>
+                {/* Golden Orbit Ring */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    width: 22,
+                    height: 8,
+                    borderRadius: 4,
+                    borderWidth: 1,
+                    borderColor: '#F59E0B',
+                    transform: [{ rotate: '-25deg' }],
+                  }}
+                />
+              </View>
+            </View>
+          );
+
+        // 3. RADIO / MEDIA PLAYER: Windows Media Player CD with Jewel Case
+        case 'radio':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#64748B',
+                  backgroundColor: sel ? '#475569' : '#CBD5E1',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Hologram track circle */}
+                <View style={{ width: 10, height: 10, borderRadius: 5, borderWidth: 1, borderColor: '#38BDF8', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#0F172A' }} />
+                </View>
+                <View style={{ position: 'absolute', right: 1, bottom: 1, width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="play" size={5} color="#FFFFFF" />
+                </View>
+              </View>
+            </View>
+          );
+
+        // 4. CHAT / AI: Microsoft Outlook / Messenger Two Connected People
+        case 'ai':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 19,
+                  height: 15,
+                  backgroundColor: sel ? '#0369A1' : '#0284C7',
+                  borderRadius: 3,
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#0C4A6E',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: '#38BDF8' }} />
+                  <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#F8FAFC' }} />
+                </View>
+                <View style={{ width: 11, height: 2, backgroundColor: '#BAE6FD', borderRadius: 1, marginTop: 2 }} />
+              </View>
+            </View>
+          );
+
+        // 5. NOTES: Classic Windows Notepad yellow legal pad with blue lines
+        case 'notes':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 16,
+                  height: 19,
+                  backgroundColor: '#FEF08A',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#CA8A04',
+                  borderRadius: 1,
+                  paddingHorizontal: 2,
+                  paddingVertical: 2,
+                  gap: 2,
+                }}
+              >
+                <View style={{ width: '100%', height: 1.5, backgroundColor: '#EF4444' }} />
+                <View style={{ width: '80%', height: 1, backgroundColor: '#3B82F6' }} />
+                <View style={{ width: '90%', height: 1, backgroundColor: '#3B82F6' }} />
+                <View style={{ width: '60%', height: 1, backgroundColor: '#3B82F6' }} />
+              </View>
+            </View>
+          );
+
+        // 6. PAINT: Windows Paintbrush & Artist Palette
+        case 'paint':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 16,
+                  backgroundColor: '#E2E8F0',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#64748B',
+                  borderRadius: 8,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-around',
+                  paddingHorizontal: 1,
+                }}
+              >
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#EF4444' }} />
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#10B981' }} />
+                <View style={{ width: 3, height: 3, borderRadius: 1.5, backgroundColor: '#3B82F6' }} />
+              </View>
+              {/* Slanted wooden brush */}
+              <View
+                style={{
+                  position: 'absolute',
+                  width: 3,
+                  height: 18,
+                  backgroundColor: '#B45309',
+                  borderRadius: 1,
+                  borderTopWidth: 4,
+                  borderTopColor: '#1E293B',
+                  transform: [{ rotate: '40deg' }],
+                }}
+              />
+            </View>
+          );
+
+        // 7. CALC: Windows Calculator with grid buttons
+        case 'calc':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 16,
+                  height: 19,
+                  backgroundColor: sel ? '#1E293B' : '#334155',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#0F172A',
+                  borderRadius: 2,
+                  padding: 1.5,
+                  gap: 1.5,
+                }}
+              >
+                {/* LCD Screen */}
+                <View style={{ width: '100%', height: 4, backgroundColor: '#86EFAC', borderRadius: 1, justifyContent: 'center', alignItems: 'flex-end', paddingRight: 1 }}>
+                  <Text style={{ fontSize: 3.5, fontWeight: '900', color: '#064E3B' }}>0.</Text>
+                </View>
+                {/* Number Grid */}
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 1, justifyContent: 'center' }}>
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <View key={i} style={{ width: 3.5, height: 3, backgroundColor: i === 5 ? '#F59E0B' : '#E2E8F0', borderRadius: 0.5 }} />
+                  ))}
+                </View>
+              </View>
+            </View>
+          );
+
+        // 8. CLOCK: Windows Clock / Timed Task
+        case 'clock':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: sel ? '#1E3A8A' : '#EFF6FF',
+                  borderWidth: 1.5,
+                  borderColor: sel ? '#FFFFFF' : '#1D4ED8',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {/* Clock Hands */}
+                <View style={{ position: 'absolute', width: 1.5, height: 5, backgroundColor: sel ? '#FFFFFF' : '#0F172A', top: 3.5 }} />
+                <View style={{ position: 'absolute', width: 5, height: 1.5, backgroundColor: sel ? '#FFFFFF' : '#0F172A', left: 8 }} />
+                <View style={{ width: 2.5, height: 2.5, borderRadius: 1.5, backgroundColor: '#EF4444' }} />
+              </View>
+            </View>
+          );
+
+        // 9. SHELL / TERM: Windows Command Prompt (MS-DOS C:\>)
+        case 'term':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 19,
+                  height: 16,
+                  backgroundColor: '#000000',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#64748B',
+                  borderRadius: 1,
+                  padding: 1.5,
+                }}
+              >
+                {/* Titlebar */}
+                <View style={{ height: 2.5, backgroundColor: '#1E293B', marginBottom: 1 }} />
+                <Text style={{ fontFamily: monoFont, fontSize: 5, fontWeight: '900', color: '#4ADE80', lineHeight: 6 }}>
+                  {`C:\\>_`}
+                </Text>
+              </View>
+            </View>
+          );
+
+        // 10. SETUP: Windows Control Panel (Gears & Wrench)
+        case 'setup':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 3,
+                  backgroundColor: sel ? '#475569' : '#94A3B8',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#334155',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="settings" size={12} color="#FFFFFF" />
+              </View>
+            </View>
+          );
+
+        // 11. WALLPAPERS: My Pictures / Picture Frame
+        case 'wallpapers':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 19,
+                  height: 16,
+                  backgroundColor: '#FEF9C3',
+                  borderWidth: 1.5,
+                  borderColor: sel ? '#FFFFFF' : '#B45309',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                  justifyContent: 'flex-end',
+                }}
+              >
+                {/* Sun and Mountain */}
+                <View style={{ position: 'absolute', top: 2, right: 3, width: 3.5, height: 3.5, borderRadius: 2, backgroundColor: '#F59E0B' }} />
+                <View style={{ width: 14, height: 7, backgroundColor: '#15803D', transform: [{ rotate: '45deg' }], left: -3, bottom: -4 }} />
+                <View style={{ width: 12, height: 6, backgroundColor: '#166534', transform: [{ rotate: '-40deg' }], right: -2, bottom: -4 }} />
+              </View>
+            </View>
+          );
+
+        // 12. FORMAT: 3.5" Floppy Disk (A:) / Hard Disk (C:)
+        case 'format':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 17,
+                  height: 18,
+                  backgroundColor: sel ? '#1E293B' : '#0284C7',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#0369A1',
+                  borderRadius: 1.5,
+                  alignItems: 'center',
+                  paddingTop: 1,
+                }}
+              >
+                {/* Silver Metal Slider */}
+                <View style={{ width: 10, height: 6, backgroundColor: '#E2E8F0', borderRadius: 0.5, borderBottomWidth: 1, borderColor: '#94A3B8' }} />
+                {/* Paper Label */}
+                <View style={{ width: 12, height: 7, backgroundColor: '#FFFFFF', marginTop: 1.5, borderRadius: 0.5, padding: 0.5 }}>
+                  <View style={{ width: '70%', height: 1, backgroundColor: '#EF4444' }} />
+                  <View style={{ width: '90%', height: 1, backgroundColor: '#3B82F6', marginTop: 1 }} />
+                </View>
+              </View>
+            </View>
+          );
+
+        // 13. SYNTH / MUSIC: Windows Media Audio Wave
+        case 'synth':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 4,
+                  backgroundColor: sel ? '#581C87' : '#9333EA',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#6B21A8',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="musical-notes" size={11} color="#FFFFFF" />
+              </View>
+            </View>
+          );
+
+        // 14. CONTACTS: Windows Address Book (Rolodex)
+        case 'contacts':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 17,
+                  height: 18,
+                  backgroundColor: '#B45309',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#78350F',
+                  borderRadius: 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 12, height: 12, backgroundColor: '#FEF3C7', borderRadius: 1, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="person" size={7} color="#92400E" />
+                </View>
+              </View>
+            </View>
+          );
+
+        // 15. SMS / MAIL: Classic Outlook Express Stamped Envelope
+        case 'sms':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 19,
+                  height: 14,
+                  backgroundColor: '#FFFFFF',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#64748B',
+                  borderRadius: 1,
+                  overflow: 'hidden',
+                }}
+              >
+                {/* Blue flap diagonal lines */}
+                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 7, borderBottomWidth: 1, borderColor: '#0284C7' }} />
+                <View style={{ position: 'absolute', bottom: 1, right: 2, width: 4, height: 3, backgroundColor: '#EF4444' }} />
+              </View>
+            </View>
+          );
+
+        // 16. PHONE: Dial-Up Modem / Phone Handset
+        case 'phone':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: sel ? '#15803D' : '#22C55E',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#166534',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Ionicons name="call" size={10} color="#FFFFFF" />
+              </View>
+            </View>
+          );
+
+        // 17. STATS: System Performance Monitor (CPU & Memory Graph)
+        case 'stats':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 19,
+                  height: 16,
+                  backgroundColor: '#0F172A',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#475569',
+                  borderRadius: 1,
+                  padding: 1.5,
+                  justifyContent: 'flex-end',
+                }}
+              >
+                {/* Bar chart columns */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1.5, height: 10 }}>
+                  <View style={{ width: 2.5, height: 4, backgroundColor: '#22C55E' }} />
+                  <View style={{ width: 2.5, height: 8, backgroundColor: '#EAB308' }} />
+                  <View style={{ width: 2.5, height: 6, backgroundColor: '#22C55E' }} />
+                  <View style={{ width: 2.5, height: 10, backgroundColor: '#EF4444' }} />
+                </View>
+              </View>
+            </View>
+          );
+
+        // 18. WEATHER: Windows Weather Forecast Radar
+        case 'weather':
+          return (
+            <View style={{ width: 22, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: 9,
+                  backgroundColor: sel ? '#0284C7' : '#38BDF8',
+                  borderWidth: 1,
+                  borderColor: sel ? '#FFFFFF' : '#0369A1',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FBBF24', position: 'absolute', top: 3, left: 3 }} />
+                <View style={{ width: 11, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF', position: 'absolute', bottom: 3, right: 3 }} />
+              </View>
+            </View>
+          );
+
+        // Default Fallback
+        default:
+          return (
+            <View
+              style={{
+                width: 18,
+                height: 18,
+                borderRadius: 2,
+                backgroundColor: '#3B82F6',
+                borderWidth: 1,
+                borderColor: '#1D4ED8',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Ionicons name="folder" size={11} color="#FFFFFF" />
+            </View>
+          );
+      }
     };
 
     const selHighlight = isXp
@@ -469,7 +892,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
               }
               const sel = idx === os.deskIdx;
-              const { iconColor, badgeBg, badgeTxt } = getWinIconStyle(item.id, sel);
+              const badgeBg = '#FFFFFF';
+              const badgeTxt = '#000080';
               return (
                 <View
                   key={item.id}
@@ -487,25 +911,17 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                   }}
                 >
                   <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-                    {/* Icon container with subtle 3D drop-shadow effect in Windows */}
-                    <Ionicons
-                      name={item.icon}
-                      size={20}
-                      color={iconColor}
-                      style={{
-                        textShadowColor: 'rgba(0,0,0,0.65)',
-                        textShadowOffset: { width: 1, height: 1 },
-                        textShadowRadius: 2,
-                      }}
-                    />
+                    {/* Authentic Win32 Detailed Professional Icon */}
+                    {renderWinDesktopIcon(item.id, sel)}
+
                     {/* Authentic miniature Windows desktop shortcut curved overlay badge */}
                     <View
                       style={{
                         position: 'absolute',
-                        left: -6,
-                        bottom: -2,
-                        width: 8,
-                        height: 8,
+                        left: -5,
+                        bottom: -3,
+                        width: 7,
+                        height: 7,
                         backgroundColor: badgeBg,
                         borderWidth: 0.5,
                         borderColor: '#222222',
@@ -514,7 +930,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         borderRadius: isWin11 ? 2 : 0,
                       }}
                     >
-                      <Text style={{ fontSize: 6, fontWeight: '900', color: badgeTxt, lineHeight: 7 }}>
+                      <Text style={{ fontSize: 5.5, fontWeight: '900', color: badgeTxt, lineHeight: 6.5 }}>
                         ↗
                       </Text>
                     </View>
