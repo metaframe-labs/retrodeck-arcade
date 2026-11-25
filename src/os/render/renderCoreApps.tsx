@@ -1086,13 +1086,17 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     let itemIdxInCat = catApps.findIndex((item) => item.id === currentApp.id);
     if (itemIdxInCat === -1) itemIdxInCat = 0;
 
+    // Theme Accent & Selection Colors
+    const pspAccent = fg;
+    const pspBg = bg;
+
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', justifyContent: 'space-between', paddingHorizontal: 0, paddingVertical: 4 }]}>
         {renderWallBackdrop()}
 
-        {/* Dynamic PSP/PS3 Ambient Wave Ribbons */}
+        {/* Dynamic PSP/PS3 Ambient Wave Ribbons adapted to active theme */}
         {!activeWall && (
-          <View pointerEvents="none" style={{ position: 'absolute', left: -20, right: -20, top: 0, bottom: 0, backgroundColor: '#0A0E1A', overflow: 'hidden' }}>
+          <View pointerEvents="none" style={{ position: 'absolute', left: -20, right: -20, top: 0, bottom: 0, backgroundColor: hexWithAlpha(pspBg, 0.95), overflow: 'hidden' }}>
             {/* Wave 1 */}
             <View
               style={{
@@ -1102,8 +1106,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 width: 380,
                 height: 120,
                 borderRadius: 90,
-                borderWidth: 2.5,
-                borderColor: 'rgba(56, 189, 248, 0.28)',
+                borderWidth: 2,
+                borderColor: hexWithAlpha(pspAccent, 0.35),
                 transform: [{ rotate: '-12deg' }, { scaleX: 1.2 }],
               }}
             />
@@ -1116,8 +1120,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 width: 360,
                 height: 100,
                 borderRadius: 80,
-                borderWidth: 2,
-                borderColor: 'rgba(168, 85, 247, 0.22)',
+                borderWidth: 1.5,
+                borderColor: hexWithAlpha(pspAccent, 0.22),
                 transform: [{ rotate: '-7deg' }, { scaleX: 1.1 }],
               }}
             />
@@ -1129,7 +1133,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 left: 20,
                 width: 320,
                 height: 80,
-                backgroundColor: 'rgba(14, 165, 233, 0.08)',
+                backgroundColor: hexWithAlpha(pspAccent, 0.08),
                 transform: [{ rotate: '-5deg' }],
               }}
             />
@@ -1139,14 +1143,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         {/* Top PSP Info Bar */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, height: 16 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Ionicons name="hardware-chip-outline" size={10} color={activeWall ? fg : '#38BDF8'} />
-            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#F8FAFC', letterSpacing: 0.8 }}>
+            <Ionicons name="hardware-chip-outline" size={10} color={pspAccent} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: pspAccent, letterSpacing: 0.8 }}>
               PSP-3000
             </Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Ionicons name="wifi" size={9} color={activeWall ? fg : '#94A3B8'} />
-            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '700', color: activeWall ? fg : '#F8FAFC' }}>
+            <Ionicons name="wifi" size={9} color={pspAccent} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '700', color: pspAccent }}>
               {os.formatClock()}
             </Text>
           </View>
@@ -1160,10 +1164,10 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             justifyContent: 'space-around',
             paddingVertical: 5,
             paddingHorizontal: 8,
-            backgroundColor: activeWall ? hexWithAlpha(bg, 0.72) : 'rgba(15, 23, 42, 0.65)',
+            backgroundColor: activeWall ? hexWithAlpha(bg, 0.72) : hexWithAlpha(bg, 0.65),
             borderTopWidth: 1,
             borderBottomWidth: 1,
-            borderColor: activeWall ? hexWithAlpha(fg, 0.2) : 'rgba(255, 255, 255, 0.12)',
+            borderColor: hexWithAlpha(pspAccent, 0.2),
           }}
         >
           {XMB_CATEGORIES.map((cat, idx) => {
@@ -1175,19 +1179,19 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     width: isCatActive ? 28 : 22,
                     height: isCatActive ? 28 : 22,
                     borderRadius: 14,
-                    backgroundColor: isCatActive ? '#38BDF8' : 'transparent',
+                    backgroundColor: isCatActive ? pspAccent : 'transparent',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    shadowColor: '#38BDF8',
+                    shadowColor: pspAccent,
                     shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: isCatActive ? 0.9 : 0,
-                    shadowRadius: 6,
+                    shadowOpacity: isCatActive ? 0.7 : 0,
+                    shadowRadius: 5,
                   }}
                 >
                   <Ionicons
                     name={cat.icon}
                     size={isCatActive ? 16 : 13}
-                    color={isCatActive ? '#0F172A' : activeWall ? fg : 'rgba(255, 255, 255, 0.6)'}
+                    color={isCatActive ? pspBg : hexWithAlpha(pspAccent, 0.65)}
                   />
                 </View>
                 {isCatActive && (
@@ -1196,7 +1200,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       fontFamily: monoFont,
                       fontSize: 6.8,
                       fontWeight: '900',
-                      color: activeWall ? fg : '#38BDF8',
+                      color: pspAccent,
                       marginTop: 2,
                       letterSpacing: 0.5,
                     }}
@@ -1214,7 +1218,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           // Authentic PSP XMB displays max 3 items centered on the active item: [Previous, Selected, Next]
           const totalItems = catApps.length;
           // Determine 3 visible window items around itemIdxInCat
-          const windowSize = Math.min(3, totalItems);
           const visibleIndices: number[] = [];
           if (totalItems <= 3) {
             for (let i = 0; i < totalItems; i++) visibleIndices.push(i);
@@ -1230,7 +1233,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               {/* Category Items Counter / Indicator if more than 3 items */}
               {totalItems > 3 && (
                 <View style={{ alignItems: 'flex-end', marginBottom: 2, paddingRight: 4 }}>
-                  <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: activeWall ? fg : 'rgba(255,255,255,0.45)' }}>
+                  <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: hexWithAlpha(pspAccent, 0.6) }}>
                     ▲ ▼ {itemIdxInCat + 1}/{totalItems}
                   </Text>
                 </View>
@@ -1249,13 +1252,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       paddingHorizontal: isItemSel ? 10 : 8,
                       marginVertical: 2,
                       borderRadius: 4,
-                      backgroundColor: isItemSel
-                        ? activeWall
-                          ? fg
-                          : 'rgba(56, 189, 248, 0.28)'
-                        : 'transparent',
+                      backgroundColor: isItemSel ? pspAccent : 'transparent',
                       borderWidth: isItemSel ? 1 : 0,
-                      borderColor: activeWall ? fg : '#38BDF8',
+                      borderColor: pspAccent,
                       opacity: isItemSel ? 1 : 0.45,
                       transform: isItemSel ? [{ scale: 1.03 }] : [{ scale: 0.95 }],
                     }}
@@ -1265,7 +1264,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         width: isItemSel ? 22 : 18,
                         height: isItemSel ? 22 : 18,
                         borderRadius: 4,
-                        backgroundColor: isItemSel ? (activeWall ? bg : '#38BDF8') : 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: isItemSel ? pspBg : hexWithAlpha(pspAccent, 0.15),
                         alignItems: 'center',
                         justifyContent: 'center',
                         marginRight: 8,
@@ -1274,7 +1273,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       <Ionicons
                         name={item.icon}
                         size={isItemSel ? 13 : 11}
-                        color={isItemSel ? (activeWall ? fg : '#0F172A') : activeWall ? fg : '#FFFFFF'}
+                        color={isItemSel ? pspAccent : pspAccent}
                       />
                     </View>
                     <View style={{ flex: 1 }}>
@@ -1283,13 +1282,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                           fontFamily: monoFont,
                           fontSize: isItemSel ? 9 : 7.8,
                           fontWeight: isItemSel ? '900' : '600',
-                          color: isItemSel
-                            ? activeWall
-                              ? bg
-                              : '#FFFFFF'
-                            : activeWall
-                            ? fg
-                            : 'rgba(255, 255, 255, 0.75)',
+                          color: isItemSel ? pspBg : pspAccent,
                         }}
                         numberOfLines={1}
                       >
@@ -1298,7 +1291,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     </View>
                     {isItemSel && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                        <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: activeWall ? bg : '#38BDF8' }}>
+                        <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: pspBg }}>
                           [A] ENTER
                         </Text>
                       </View>
@@ -1312,10 +1305,10 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
         {/* Bottom D-Pad Prompt */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, height: 14 }}>
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.45)' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: hexWithAlpha(pspAccent, 0.5) }}>
             ◀ ▶ CATEGORY • ▲ ▼ SELECT
           </Text>
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: activeWall ? fg : '#38BDF8' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: pspAccent }}>
             SONY XMB™
           </Text>
         </View>
