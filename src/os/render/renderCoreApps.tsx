@@ -892,49 +892,47 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const dockSlice = DESKTOP_ICONS.slice(dockPageStart, dockPageStart + dockCols);
     const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
 
-    // Detect if the active background (wallpaper or palette) is light/white
+    // Detect if the active background (wallpaper OR palette) is light/white
     const isLightWallpaper = (() => {
       if (isClassic) return true;
-      if (activeWall) {
-        const clean = bg.trim().toLowerCase().replace('#', '');
-        if (clean.length === 6) {
-          const r = parseInt(clean.slice(0, 2), 16);
-          const g = parseInt(clean.slice(2, 4), 16);
-          const b = parseInt(clean.slice(4, 6), 16);
-          const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-          return yiq >= 130;
-        }
+      const clean = bg.trim().toLowerCase().replace('#', '');
+      if (clean.length === 6) {
+        const r = parseInt(clean.slice(0, 2), 16);
+        const g = parseInt(clean.slice(2, 4), 16);
+        const b = parseInt(clean.slice(4, 6), 16);
+        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+        return yiq >= 120;
       }
       return false;
     })();
 
-    // Dynamic contrast colors for macOS Menu Bar, Card, and Dock
+    // Dynamic contrast colors for macOS Menu Bar
     const topBarBg = isClassic
       ? '#FFFFFF'
       : isLightWallpaper
-      ? 'rgba(255, 255, 255, 0.85)'
+      ? 'rgba(255, 255, 255, 0.95)'
       : 'rgba(255, 255, 255, 0.22)';
-    const topBarBorder = isClassic ? '#000000' : isLightWallpaper ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.35)';
-    const topBarInk = isClassic || isLightWallpaper ? '#0F172A' : '#FFFFFF';
-    const topBarSubInk = isClassic || isLightWallpaper ? '#475569' : 'rgba(255,255,255,0.75)';
+    const topBarBorder = isClassic ? '#000000' : isLightWallpaper ? 'rgba(0, 0, 0, 0.25)' : 'rgba(255, 255, 255, 0.35)';
+    const topBarInk = isClassic || isLightWallpaper ? '#000000' : '#FFFFFF';
+    const topBarSubInk = isClassic || isLightWallpaper ? '#334155' : 'rgba(255,255,255,0.75)';
 
-    // Center Hero Window Card
+    // Center Hero Window Card: high-contrast dark or light window card
     const cardBg = isClassic
       ? '#FFFFFF'
       : isLightWallpaper
-      ? 'rgba(255, 255, 255, 0.92)'
-      : 'rgba(0, 0, 0, 0.65)';
-    const cardBorder = isClassic ? '#000000' : isLightWallpaper ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.25)';
+      ? '#FFFFFF'
+      : 'rgba(15, 23, 42, 0.85)';
+    const cardBorder = isClassic ? '#000000' : isLightWallpaper ? '#CBD5E1' : 'rgba(255, 255, 255, 0.25)';
     const cardTitleColor = isClassic || isLightWallpaper ? '#0F172A' : '#FFFFFF';
-    const cardSubColor = isClassic || isLightWallpaper ? '#475569' : '#CBD5E1';
+    const cardSubColor = isClassic || isLightWallpaper ? '#64748B' : '#94A3B8';
 
-    // Bottom Dock Styling
+    // Bottom Dock Styling: on light backgrounds, dock is dark slate glass; on dark backgrounds, translucent glass
     const dockBg = isClassic
       ? '#E5E5E5'
       : isLightWallpaper
-      ? 'rgba(15, 23, 42, 0.85)' // Dark frosted glass dock on light wallpapers for maximum icon pop!
-      : 'rgba(255, 255, 255, 0.25)'; // Translucent white dock on dark wallpapers
-    const dockBorder = isClassic ? '#000000' : isLightWallpaper ? 'rgba(0, 0, 0, 0.35)' : 'rgba(255, 255, 255, 0.45)';
+      ? '#0F172A' // Solid dark background so ALL icons inside are ultra-visible!
+      : 'rgba(255, 255, 255, 0.25)';
+    const dockBorder = isClassic ? '#000000' : isLightWallpaper ? '#334155' : 'rgba(255, 255, 255, 0.45)';
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -972,7 +970,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             borderRadius: isClassic ? 0 : 4,
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: isLightWallpaper ? 0.15 : 0,
+            shadowOpacity: isLightWallpaper ? 0.2 : 0,
             shadowRadius: 2,
           }}
         >
@@ -1010,37 +1008,53 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
               borderWidth: 1,
               borderColor: cardBorder,
               borderRadius: isClassic ? 2 : 8,
-              paddingHorizontal: 14,
-              paddingVertical: 8,
+              paddingHorizontal: 16,
+              paddingVertical: 10,
               alignItems: 'center',
               justifyContent: 'center',
               shadowColor: '#000000',
               shadowOffset: { width: 0, height: 3 },
-              shadowOpacity: isLightWallpaper ? 0.25 : 0.45,
-              shadowRadius: 4,
+              shadowOpacity: isLightWallpaper ? 0.2 : 0.5,
+              shadowRadius: 5,
               elevation: 4,
             }}
           >
             {/* macOS Window Titlebar Dots (Red, Yellow, Green) */}
-            <View style={{ flexDirection: 'row', gap: 3, position: 'absolute', top: 4, left: 6 }}>
+            <View style={{ flexDirection: 'row', gap: 3, position: 'absolute', top: 5, left: 6 }}>
               <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#EF4444' }} />
               <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#F59E0B' }} />
               <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10B981' }} />
             </View>
 
-            <View style={{ marginTop: 4, alignItems: 'center' }}>
-              <Ionicons
-                name={activeItem.icon}
-                size={28}
-                color={cardTitleColor}
-              />
+            <View style={{ marginTop: 2, alignItems: 'center' }}>
+              {/* Distinct colored container for icon so it pops on ANY background */}
+              <View
+                style={{
+                  width: 38,
+                  height: 38,
+                  borderRadius: 8,
+                  backgroundColor: isLightWallpaper ? '#0284C7' : '#38BDF8',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3,
+                }}
+              >
+                <Ionicons
+                  name={activeItem.icon}
+                  size={24}
+                  color="#FFFFFF"
+                />
+              </View>
               <Text
                 style={{
                   fontFamily: monoFont,
                   fontSize: 9.5,
                   fontWeight: '900',
                   color: cardTitleColor,
-                  marginTop: 4,
+                  marginTop: 5,
                   letterSpacing: 0.5,
                 }}
               >
@@ -1068,23 +1082,23 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             gap: 6,
             shadowColor: '#000000',
             shadowOffset: { width: 0, height: 3 },
-            shadowOpacity: 0.4,
-            shadowRadius: 4,
-            elevation: 4,
+            shadowOpacity: 0.45,
+            shadowRadius: 5,
+            elevation: 5,
           }}
         >
           {dockSlice.map((item, idxInPage) => {
             const realIdx = dockPageStart + idxInPage;
             const sel = realIdx === os.deskIdx;
-            
-            // Tile background & icon colors ensuring solid visibility
+
+            // Tile background: colorful iOS/macOS squircle
             const tileBg = sel
-              ? (isClassic ? '#000000' : '#0284C7')
+              ? '#0284C7'
               : isClassic
               ? '#FFFFFF'
               : isLightWallpaper
-              ? 'rgba(255, 255, 255, 0.2)'
-              : 'rgba(255, 255, 255, 0.25)';
+              ? 'rgba(255, 255, 255, 0.18)'
+              : 'rgba(255, 255, 255, 0.22)';
 
             const iconColor = sel
               ? '#FFFFFF'
@@ -1101,7 +1115,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     borderRadius: isClassic ? 2 : 5,
                     backgroundColor: tileBg,
                     borderWidth: 1,
-                    borderColor: sel ? '#FFFFFF' : isClassic ? '#000000' : 'rgba(255, 255, 255, 0.35)',
+                    borderColor: sel ? '#38BDF8' : isClassic ? '#000000' : 'rgba(255, 255, 255, 0.35)',
                     alignItems: 'center',
                     justifyContent: 'center',
                     transform: sel ? [{ scale: 1.15 }, { translateY: -2 }] : [],
@@ -1119,7 +1133,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     width: 3,
                     height: 3,
                     borderRadius: 1.5,
-                    backgroundColor: isClassic ? '#000000' : '#FFFFFF',
+                    backgroundColor: sel ? (isLightWallpaper ? '#38BDF8' : '#FFFFFF') : 'transparent',
                     marginTop: 2,
                     opacity: sel ? 1 : 0.3,
                   }}
