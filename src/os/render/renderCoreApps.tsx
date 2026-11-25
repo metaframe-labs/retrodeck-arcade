@@ -1146,17 +1146,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     color={iconColor}
                   />
                 </View>
-                {/* Active Indicator Dot under Icon */}
-                <View
-                  style={{
-                    width: 3,
-                    height: 3,
-                    borderRadius: 1.5,
-                    backgroundColor: isClassic ? '#000000' : isLightWallpaper ? '#0284C7' : '#FFFFFF',
-                    marginTop: 2,
-                    opacity: sel ? 1 : 0.3,
-                  }}
-                />
               </View>
             );
           })}
