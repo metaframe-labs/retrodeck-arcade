@@ -1318,14 +1318,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   // STYLE 7: Xbox 360 Blades Dashboard (2005 Original Dashboard)
   if (os.menuStyle === 'xbox_blades') {
-    // 4 Classic Xbox 360 Blades: Marketplace/Games, Media, System, Live
-    // Use theme fg color when active wallpaper or custom theme palette is chosen, or authentic Xbox colors
-    const primaryThemeColor = fg;
+    // 4 Classic Xbox 360 Blades: Marketplace/Games (Green), Media (Blue), System (Purple), Live (Orange)
+    // Always use vibrant, authentic high-saturation Xbox blade colors so tabs never turn washed-out white/transparent!
     const XBOX_BLADES: { id: string; label: string; color: string; appIds: string[] }[] = [
-      { id: 'games', label: 'GAMES', color: activeWall ? primaryThemeColor : '#107C10', appIds: ['arcade', 'synth'] },
-      { id: 'media', label: 'MEDIA', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.8) : '#1E88E5', appIds: ['radio', 'wallpapers', 'paint'] },
-      { id: 'system', label: 'SYSTEM', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.65) : '#8E24AA', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
-      { id: 'live', label: 'XBOX LIVE', color: activeWall ? hexWithAlpha(primaryThemeColor, 0.9) : '#E65100', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
+      { id: 'games', label: 'GAMES', color: '#107C10', appIds: ['arcade', 'synth'] },
+      { id: 'media', label: 'MEDIA', color: '#0078D7', appIds: ['radio', 'wallpapers', 'paint'] },
+      { id: 'system', label: 'SYSTEM', color: '#5C2D91', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
+      { id: 'live', label: 'XBOX LIVE', color: '#D83B01', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
     ];
 
     let activeBladeIdx = os.xboxBladeIdx >= 0 && os.xboxBladeIdx < XBOX_BLADES.length ? os.xboxBladeIdx : 0;
@@ -1348,39 +1347,17 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const bladeStartIdx = Math.max(0, Math.min(itemIdxInBlade - 1, totalBladeApps - maxVisibleBlade));
     const visibleBladeApps = bladeApps.slice(bladeStartIdx, bladeStartIdx + maxVisibleBlade);
 
-    // Dynamic selection & highlight colors honoring the active theme / wallpaper
+    // Active blade theme accent
     const bladeAccent = activeBlade.color;
 
-    // Strict contrast helper: returns true if the background is bright/light
-    const isBrightBg = (colorStr: string): boolean => {
-      const c = colorStr.trim().toLowerCase();
-      if (c === '#fff' || c === '#ffffff' || c === 'white' || c.startsWith('#edf') || c.startsWith('#f1') || c.startsWith('#f8') || c.startsWith('#ea')) {
-        return true;
-      }
-      const clean = c.replace('#', '');
-      if (clean.length === 6) {
-        const r = parseInt(clean.slice(0, 2), 16);
-        const g = parseInt(clean.slice(2, 4), 16);
-        const b = parseInt(clean.slice(4, 6), 16);
-        const yiq = (r * 299 + g * 587 + b * 114) / 1000;
-        return yiq >= 128;
-      }
-      return false;
-    };
+    // Selection highlight inside the central card
+    const selBg = bladeAccent;
+    const selText = '#FFFFFF';
 
-    // If background is bright, FORCE deep solid black #000000, never white!
-    const getContrastText = (hex: string): string => {
-      return isBrightBg(hex) ? '#000000' : '#FFFFFF';
-    };
-
-    // Check center card background brightness
-    const isCenterCardBright = activeWall ? isBrightBg(bg) : false;
-    const unselectedItemText = isCenterCardBright ? '#111827' : '#FFFFFF';
-    const unselectedIconColor = isCenterCardBright ? '#374151' : 'rgba(255, 255, 255, 0.75)';
-
-    const headerText = getContrastText(bladeAccent);
-    const selBg = activeWall ? fg : bladeAccent;
-    const selText = getContrastText(selBg);
+    // Center card styling (dark glass to ensure maximum contrast over any wallpaper)
+    const centerCardBg = 'rgba(15, 23, 42, 0.88)';
+    const unselectedItemText = '#F8FAFC';
+    const unselectedIconColor = 'rgba(255, 255, 255, 0.75)';
 
     // Dynamic Sliding Blades Architecture (Authentic 2005 Sliding Accordion Layout):
     // Blades before the active blade stack on the LEFT;
@@ -1428,7 +1405,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
             <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: bladeAccent }} />
-            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? (isBrightBg(bg) ? '#000000' : fg) : '#FFFFFF' }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: activeWall ? fg : '#FFFFFF' }}>
               RETRO_PLAYER_360
             </Text>
           </View>
@@ -1441,7 +1418,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         <View style={{ flex: 1, flexDirection: 'row', overflow: 'hidden', paddingVertical: 3 }}>
           {/* Left Stacked Blades (Blades before active) */}
           {leftBlades.map((b) => {
-            const bTextColor = getContrastText(b.color);
             return (
               <View
                 key={b.id}
@@ -1463,10 +1439,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     fontFamily: monoFont,
                     fontSize: 6.5,
                     fontWeight: '900',
-                    color: bTextColor,
+                    color: '#FFFFFF',
                     transform: [{ rotate: '-90deg' }],
                     width: 48,
                     textAlign: 'center',
+                    textShadowColor: 'rgba(0,0,0,0.8)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 1,
                   }}
                   numberOfLines={1}
                 >
@@ -1480,11 +1459,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           <View
             style={{
               flex: 1,
-              backgroundColor: activeWall ? hexWithAlpha(bg, 0.9) : 'rgba(0, 0, 0, 0.85)',
+              backgroundColor: centerCardBg,
               marginHorizontal: 3,
               borderRadius: 6,
               borderWidth: 1.5,
-              borderColor: isCenterCardBright ? '#000000' : bladeAccent,
+              borderColor: bladeAccent,
               padding: 5,
               shadowColor: bladeAccent,
               shadowOffset: { width: 0, height: 2 },
@@ -1503,14 +1482,12 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 marginBottom: 4,
-                borderWidth: isBrightBg(bladeAccent) ? 1 : 0,
-                borderColor: '#000000',
               }}
             >
-              <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: headerText }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
                 {activeBlade.label}
               </Text>
-              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: headerText }}>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: '#FFFFFF' }}>
                 {itemIdxInBlade + 1}/{bladeApps.length}
               </Text>
             </View>
@@ -1530,7 +1507,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       borderRadius: 3,
                       backgroundColor: isSelected ? selBg : 'transparent',
                       borderLeftWidth: isSelected ? 3 : 0,
-                      borderLeftColor: isSelected ? (isBrightBg(selBg) ? '#000000' : '#FFFFFF') : 'transparent',
+                      borderLeftColor: '#FFFFFF',
                     }}
                   >
                     <Ionicons
@@ -1564,7 +1541,6 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
           {/* Right Stacked Blades (Blades after active) */}
           {rightBlades.map((b) => {
-            const bTextColor = getContrastText(b.color);
             return (
               <View
                 key={b.id}
@@ -1586,10 +1562,13 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     fontFamily: monoFont,
                     fontSize: 6.5,
                     fontWeight: '900',
-                    color: bTextColor,
+                    color: '#FFFFFF',
                     transform: [{ rotate: '90deg' }],
                     width: 48,
                     textAlign: 'center',
+                    textShadowColor: 'rgba(0,0,0,0.8)',
+                    textShadowOffset: { width: 1, height: 1 },
+                    textShadowRadius: 1,
                   }}
                   numberOfLines={1}
                 >
@@ -1611,10 +1590,10 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             backgroundColor: activeWall ? hexWithAlpha(bg, 0.9) : 'rgba(0, 0, 0, 0.9)',
           }}
         >
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? (isBrightBg(bg) ? '#000000' : fg) : 'rgba(255,255,255,0.5)' }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '700', color: activeWall ? fg : 'rgba(255,255,255,0.5)' }}>
             ◀ ▶ SLIDE BLADE • ▲ ▼ SELECT
           </Text>
-          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: isBrightBg(bg) ? '#000000' : bladeAccent }}>
+          <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: bladeAccent }}>
             [A] LAUNCH
           </Text>
         </View>
