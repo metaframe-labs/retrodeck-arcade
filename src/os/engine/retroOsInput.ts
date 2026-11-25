@@ -691,7 +691,7 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
 
   if (os.app === 'desktop') {
     const total = DESKTOP_ICONS.length;
-    if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list')) {
+    if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list' || os.menuStyle === 'macos')) {
       if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
     } else if (Boolean(os.postFormatWinStyle) || os.menuStyle === 'windows') {

@@ -105,7 +105,9 @@ export type RetroPaletteId =
   | 'windows_xp'
   | 'windows_8'
   | 'windows_10'
-  | 'windows_11';
+  | 'windows_11'
+  | 'macos_classic'
+  | 'macos_sonoma';
 
 export interface RetroPalette {
   id: RetroPaletteId;
@@ -2178,6 +2180,50 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     buttonBg: '#1E293B',
     buttonBorder: '#475569',
   },
+  macos_classic: {
+    id: 'macos_classic',
+    name: 'MAC OS SYSTEM 7',
+    tagline: 'Classic Platinum Gray & Apple Rainbow',
+    category: 'PAPER',
+    screenBg: '#C0C0C0',
+    pixelOn: '#000000',
+    pixelGlow: 'rgba(0, 0, 0, 0.20)',
+    scanlineColor: 'rgba(0, 0, 0, 0.08)',
+    bezelAccent: '#61A951',
+    ledColor: '#61A951',
+    keypadAccent: '#000000',
+    textMuted: '#555555',
+    isLightLcd: true,
+    chassisBg: '#1C1C1E',
+    deckBg: '#2C2C2E',
+    bezelBg: '#1C1C1E',
+    surfaceBg: '#3A3A3C',
+    surfaceBorder: '#555558',
+    buttonBg: '#2C2C2E',
+    buttonBorder: '#636366',
+  },
+  macos_sonoma: {
+    id: 'macos_sonoma',
+    name: 'MACOS SONOMA',
+    tagline: 'Cupertino Glass Dock & Sonoma Sunset',
+    category: 'STUDIO',
+    screenBg: '#1E1B2E',
+    pixelOn: '#38BDF8',
+    pixelGlow: 'rgba(56, 189, 248, 0.25)',
+    scanlineColor: 'rgba(0, 0, 0, 0.10)',
+    bezelAccent: '#F43F5E',
+    ledColor: '#38BDF8',
+    keypadAccent: '#6366F1',
+    textMuted: '#94A3B8',
+    isLightLcd: false,
+    chassisBg: '#0F0E17',
+    deckBg: '#181622',
+    bezelBg: '#0F0E17',
+    surfaceBg: '#232032',
+    surfaceBorder: '#3B3654',
+    buttonBg: '#1D1A2A',
+    buttonBorder: '#6366F1',
+  },
 };
 
 export const FREE_PALETTE_ORDER: RetroPaletteId[] = [
@@ -2297,6 +2343,8 @@ const RAW_PALETTE_ORDER: RetroPaletteId[] = [
   'windows_8',
   'windows_10',
   'windows_11',
+  'macos_classic',
+  'macos_sonoma',
   'horizon_dusk',
   'synthwave',
   'vaporwave',

@@ -881,6 +881,192 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
+  // STYLE 5: macOS Cupertino Desktop with Top Menu Bar & Bottom Glass Dock
+  if (os.menuStyle === 'macos') {
+    const isSonoma = os.cb.getPaletteId?.() === 'macos_sonoma';
+    const isClassic = os.cb.getPaletteId?.() === 'macos_classic';
+    const dockCols = 6;
+    const dockPages = Math.ceil(DESKTOP_ICONS.length / dockCols);
+    const dockCurPage = Math.min(dockPages - 1, Math.floor(os.deskIdx / dockCols));
+    const dockPageStart = dockCurPage * dockCols;
+    const dockSlice = DESKTOP_ICONS.slice(dockPageStart, dockPageStart + dockCols);
+    const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+
+    return (
+      <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
+        {/* Render wallpaper backdrop if active */}
+        {renderWallBackdrop()}
+
+        {/* macOS Sonoma Abstract Colorful Horizon Wallpaper */}
+        {isSonoma && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#0B0A12', overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', width: 260, height: 160, borderRadius: 80, backgroundColor: '#4F46E5', top: -30, left: -40, opacity: 0.65 }} />
+            <View style={{ position: 'absolute', width: 220, height: 150, borderRadius: 75, backgroundColor: '#E11D48', bottom: -20, right: -30, opacity: 0.7 }} />
+            <View style={{ position: 'absolute', width: 180, height: 120, borderRadius: 60, backgroundColor: '#F59E0B', bottom: 10, left: 10, opacity: 0.55 }} />
+          </View>
+        )}
+
+        {/* macOS Classic Platinum Desk (System 7 Pinstripes) */}
+        {isClassic && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#808080' }}>
+            {/* Fine 50% dither pattern emulation */}
+            <View style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: 'rgba(255, 255, 255, 0.12)' }} />
+          </View>
+        )}
+
+        {/* macOS Top Menu Bar ( Finder File Edit View Go Window Help) */}
+        <View
+          style={{
+            height: 18,
+            backgroundColor: isClassic ? '#FFFFFF' : 'rgba(255, 255, 255, 0.22)',
+            borderBottomWidth: isClassic ? 1 : 0.5,
+            borderBottomColor: isClassic ? '#000000' : 'rgba(255, 255, 255, 0.35)',
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingHorizontal: 6,
+            borderRadius: isClassic ? 0 : 4,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {/* Apple Logo Icon */}
+            <Ionicons name="logo-apple" size={10} color={isClassic ? '#000000' : '#FFFFFF'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '900', color: isClassic ? '#000000' : '#FFFFFF' }}>
+              Finder
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: isClassic ? '#555555' : 'rgba(255,255,255,0.75)' }}>
+              File
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: isClassic ? '#555555' : 'rgba(255,255,255,0.75)' }}>
+              Edit
+            </Text>
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '600', color: isClassic ? '#555555' : 'rgba(255,255,255,0.75)' }}>
+              View
+            </Text>
+          </View>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="wifi" size={8} color={isClassic ? '#000000' : '#FFFFFF'} />
+            <Ionicons name="search" size={8} color={isClassic ? '#000000' : '#FFFFFF'} />
+            <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '700', color: isClassic ? '#000000' : '#FFFFFF' }}>
+              {os.formatClock()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Center Canvas with Hero App Preview Card */}
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 4 }}>
+          <View
+            style={{
+              backgroundColor: isClassic ? '#FFFFFF' : 'rgba(0, 0, 0, 0.45)',
+              borderWidth: 1,
+              borderColor: isClassic ? '#000000' : 'rgba(255, 255, 255, 0.25)',
+              borderRadius: isClassic ? 2 : 8,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.35,
+              shadowRadius: 3,
+            }}
+          >
+            {/* macOS Window Titlebar Dots (Red, Yellow, Green) */}
+            <View style={{ flexDirection: 'row', gap: 3, position: 'absolute', top: 4, left: 6 }}>
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#EF4444' }} />
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#F59E0B' }} />
+              <View style={{ width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#10B981' }} />
+            </View>
+
+            <View style={{ marginTop: 4, alignItems: 'center' }}>
+              <Ionicons
+                name={activeItem.icon}
+                size={28}
+                color={isClassic ? '#000000' : '#FFFFFF'}
+              />
+              <Text
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 9.5,
+                  fontWeight: '900',
+                  color: isClassic ? '#000000' : '#FFFFFF',
+                  marginTop: 4,
+                  letterSpacing: 0.5,
+                }}
+              >
+                {getDesktopLabel(activeItem.id, activeItem.label, os.lang)}
+              </Text>
+              <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: isClassic ? '#555555' : '#94A3B8', marginTop: 1 }}>
+                {pickLang(os.lang, `App ${os.deskIdx + 1} of ${DESKTOP_ICONS.length} • [A] Launch`, `Uygulama ${os.deskIdx + 1}/${DESKTOP_ICONS.length} • [A] Ac`)}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* macOS Bottom Glass Floating Dock */}
+        <View
+          style={{
+            alignSelf: 'center',
+            backgroundColor: isClassic ? '#E5E5E5' : 'rgba(255, 255, 255, 0.22)',
+            borderWidth: 1,
+            borderColor: isClassic ? '#000000' : 'rgba(255, 255, 255, 0.45)',
+            borderRadius: isClassic ? 3 : 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 6,
+            paddingVertical: 3,
+            gap: 6,
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 3 },
+            shadowOpacity: 0.4,
+            shadowRadius: 4,
+            elevation: 4,
+          }}
+        >
+          {dockSlice.map((item, idxInPage) => {
+            const realIdx = dockPageStart + idxInPage;
+            const sel = realIdx === os.deskIdx;
+            return (
+              <View key={item.id} style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: isClassic ? 2 : 5,
+                    backgroundColor: sel ? (isClassic ? '#000000' : '#0284C7') : isClassic ? '#FFFFFF' : 'rgba(255, 255, 255, 0.25)',
+                    borderWidth: 1,
+                    borderColor: sel ? '#FFFFFF' : isClassic ? '#000000' : 'rgba(255, 255, 255, 0.35)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: sel ? [{ scale: 1.15 }, { translateY: -2 }] : [],
+                  }}
+                >
+                  <Ionicons
+                    name={item.icon}
+                    size={13}
+                    color={sel ? '#FFFFFF' : isClassic ? '#000000' : '#FFFFFF'}
+                  />
+                </View>
+                {/* Active Indicator Dot under Icon */}
+                <View
+                  style={{
+                    width: 3,
+                    height: 3,
+                    borderRadius: 1.5,
+                    backgroundColor: isClassic ? '#000000' : '#FFFFFF',
+                    marginTop: 2,
+                    opacity: sel ? 1 : 0.3,
+                  }}
+                />
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
+
   // STYLE 4: Big 3x2 Cards (6 large cards per page — ideal for showcasing wallpapers!)
   if (os.menuStyle === 'cards') {
     const cardCols = 3;
@@ -1334,6 +1520,7 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     list: tOs('menuStyleList', L),
     cards: tOs('menuStyleCards', L),
     windows: tOs('menuStyleWindows', L),
+    macos: tOs('menuStyleMacos', L),
   };
   const items = [
     isPro ? tOs('setupProActive', L) : tOs('setupProUpgrade', L),

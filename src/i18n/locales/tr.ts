@@ -53,6 +53,7 @@ export const trLocale: LocaleBundle = {
     menuStyleList: 'LISTE',
     menuStyleCards: 'BUYUK KART',
     menuStyleWindows: 'WINDOWS MASAUSTU',
+    menuStyleMacos: 'MACOS MASAUSTU',
     setupScanlines: 'CRT TARAMA',
     setupClockFace: 'SAAT TIPI',
     setupLiveSms: 'OTONOM SIM-SMS',

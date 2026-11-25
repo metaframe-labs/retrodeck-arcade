@@ -14,8 +14,8 @@ export const WALLPAPER_STORAGE_KEY = '@retrodeck8_wallpaper_v1';
 export const WALLPAPER_DIM_STORAGE_KEY = '@retrodeck8_wallpaper_dim_v1';
 export const MENU_STYLE_STORAGE_KEY = '@retrodeck8_menu_style_v1';
 
-export type DesktopMenuStyle = 'grid' | 'nokia' | 'list' | 'cards' | 'windows';
-export const DESKTOP_MENU_STYLES: DesktopMenuStyle[] = ['grid', 'nokia', 'list', 'cards', 'windows'];
+export type DesktopMenuStyle = 'grid' | 'nokia' | 'list' | 'cards' | 'windows' | 'macos';
+export const DESKTOP_MENU_STYLES: DesktopMenuStyle[] = ['grid', 'nokia', 'list', 'cards', 'windows', 'macos'];
 
 export const WALLPAPER_DIM_OPACITIES = [0.18, 0.36, 0.56] as const;
 

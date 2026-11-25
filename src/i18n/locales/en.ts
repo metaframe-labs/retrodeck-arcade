@@ -51,6 +51,7 @@ export const enLocale = {
     menuStyleList: 'RETRO LIST',
     menuStyleCards: 'BIG CARDS',
     menuStyleWindows: 'WINDOWS DESKTOP',
+    menuStyleMacos: 'MACOS DESKTOP',
     setupScanlines: 'CRT SCANLINES',
     setupClockFace: 'CLOCK FACE',
     setupLiveSms: 'AUTONOMOUS SIM-SMS',
