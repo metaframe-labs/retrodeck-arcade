@@ -561,7 +561,8 @@ export class RetroAudioEngine {
           await SafeExpoAudio.setAudioModeAsync({
             playsInSilentMode: true,
             interruptionMode: 'mixWithOthers',
-            shouldPlayInBackground: false,
+            shouldPlayInBackground: true,
+            staysActiveInBackground: true,
           });
         }
 

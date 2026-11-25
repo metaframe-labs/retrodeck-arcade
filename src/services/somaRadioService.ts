@@ -115,6 +115,14 @@ class SomaRadioService {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('expo-audio');
       this.safeExpoAudio = mod?.createAudioPlayer ? mod : mod?.default ? mod.default : mod;
+      if (this.safeExpoAudio?.setAudioModeAsync) {
+        this.safeExpoAudio.setAudioModeAsync({
+          playsInSilentMode: true,
+          interruptionMode: 'mixWithOthers',
+          shouldPlayInBackground: true,
+          staysActiveInBackground: true,
+        }).catch(() => {});
+      }
     } catch {
       this.safeExpoAudio = null;
     }
@@ -238,6 +246,16 @@ class SomaRadioService {
 
       // Native mobile: use expo-audio
       if (this.safeExpoAudio?.createAudioPlayer) {
+        if (this.safeExpoAudio.setAudioModeAsync) {
+          try {
+            await this.safeExpoAudio.setAudioModeAsync({
+              playsInSilentMode: true,
+              interruptionMode: 'mixWithOthers',
+              shouldPlayInBackground: true,
+              staysActiveInBackground: true,
+            });
+          } catch {}
+        }
         if (this.player) {
           try {
             this.player.pause();
@@ -246,6 +264,7 @@ class SomaRadioService {
         this.player = this.safeExpoAudio.createAudioPlayer(channel.streamUrl, {
           updateInterval: 1000,
           downloadFirst: false,
+          staysActiveInBackground: true,
         });
         if (this.player) {
           this.player.volume = this.volume;
