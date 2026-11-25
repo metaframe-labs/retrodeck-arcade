@@ -1209,76 +1209,106 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           })}
         </View>
 
-        {/* Vertical Sub-Items List under Active Category (Vertical Axis) */}
-        <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 12, paddingVertical: 4 }}>
-          {catApps.map((item, idx) => {
-            const isItemSel = idx === itemIdxInCat;
-            return (
-              <View
-                key={item.id}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingVertical: 3.5,
-                  paddingHorizontal: 8,
-                  marginVertical: 1.5,
-                  borderRadius: 4,
-                  backgroundColor: isItemSel
-                    ? activeWall
-                      ? fg
-                      : 'rgba(56, 189, 248, 0.28)'
-                    : 'transparent',
-                  borderWidth: isItemSel ? 1 : 0,
-                  borderColor: activeWall ? fg : '#38BDF8',
-                }}
-              >
-                <View
-                  style={{
-                    width: 20,
-                    height: 20,
-                    borderRadius: 4,
-                    backgroundColor: isItemSel ? (activeWall ? bg : '#38BDF8') : 'rgba(255, 255, 255, 0.1)',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 8,
-                  }}
-                >
-                  <Ionicons
-                    name={item.icon}
-                    size={12}
-                    color={isItemSel ? (activeWall ? fg : '#0F172A') : activeWall ? fg : '#FFFFFF'}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={{
-                      fontFamily: monoFont,
-                      fontSize: 8.5,
-                      fontWeight: isItemSel ? '900' : '600',
-                      color: isItemSel
-                        ? activeWall
-                          ? bg
-                          : '#FFFFFF'
-                        : activeWall
-                        ? fg
-                        : 'rgba(255, 255, 255, 0.75)',
-                    }}
-                    numberOfLines={1}
-                  >
-                    {getDesktopLabel(item.id, item.label, os.lang)}
+        {/* Vertical Sub-Items List under Active Category (Vertical Axis - Windowed Carousel) */}
+        {(() => {
+          // Authentic PSP XMB displays max 3 items centered on the active item: [Previous, Selected, Next]
+          const totalItems = catApps.length;
+          // Determine 3 visible window items around itemIdxInCat
+          const windowSize = Math.min(3, totalItems);
+          const visibleIndices: number[] = [];
+          if (totalItems <= 3) {
+            for (let i = 0; i < totalItems; i++) visibleIndices.push(i);
+          } else {
+            // Center the selected item: prev, current, next
+            const prev = (itemIdxInCat - 1 + totalItems) % totalItems;
+            const next = (itemIdxInCat + 1) % totalItems;
+            visibleIndices.push(prev, itemIdxInCat, next);
+          }
+
+          return (
+            <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 2 }}>
+              {/* Category Items Counter / Indicator if more than 3 items */}
+              {totalItems > 3 && (
+                <View style={{ alignItems: 'flex-end', marginBottom: 2, paddingRight: 4 }}>
+                  <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: activeWall ? fg : 'rgba(255,255,255,0.45)' }}>
+                    ▲ ▼ {itemIdxInCat + 1}/{totalItems}
                   </Text>
                 </View>
-                {isItemSel && (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-                    <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: activeWall ? bg : '#38BDF8' }}>
-                      [A] ENTER
-                    </Text>
+              )}
+
+              {visibleIndices.map((realIdx) => {
+                const item = catApps[realIdx];
+                const isItemSel = realIdx === itemIdxInCat;
+                return (
+                  <View
+                    key={item.id}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingVertical: isItemSel ? 5 : 3,
+                      paddingHorizontal: isItemSel ? 10 : 8,
+                      marginVertical: 2,
+                      borderRadius: 4,
+                      backgroundColor: isItemSel
+                        ? activeWall
+                          ? fg
+                          : 'rgba(56, 189, 248, 0.28)'
+                        : 'transparent',
+                      borderWidth: isItemSel ? 1 : 0,
+                      borderColor: activeWall ? fg : '#38BDF8',
+                      opacity: isItemSel ? 1 : 0.45,
+                      transform: isItemSel ? [{ scale: 1.03 }] : [{ scale: 0.95 }],
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: isItemSel ? 22 : 18,
+                        height: isItemSel ? 22 : 18,
+                        borderRadius: 4,
+                        backgroundColor: isItemSel ? (activeWall ? bg : '#38BDF8') : 'rgba(255, 255, 255, 0.1)',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: 8,
+                      }}
+                    >
+                      <Ionicons
+                        name={item.icon}
+                        size={isItemSel ? 13 : 11}
+                        color={isItemSel ? (activeWall ? fg : '#0F172A') : activeWall ? fg : '#FFFFFF'}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontFamily: monoFont,
+                          fontSize: isItemSel ? 9 : 7.8,
+                          fontWeight: isItemSel ? '900' : '600',
+                          color: isItemSel
+                            ? activeWall
+                              ? bg
+                              : '#FFFFFF'
+                            : activeWall
+                            ? fg
+                            : 'rgba(255, 255, 255, 0.75)',
+                        }}
+                        numberOfLines={1}
+                      >
+                        {getDesktopLabel(item.id, item.label, os.lang)}
+                      </Text>
+                    </View>
+                    {isItemSel && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                        <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: activeWall ? bg : '#38BDF8' }}>
+                          [A] ENTER
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-            );
-          })}
-        </View>
+                );
+              })}
+            </View>
+          );
+        })()}
 
         {/* Bottom D-Pad Prompt */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10, height: 14 }}>
