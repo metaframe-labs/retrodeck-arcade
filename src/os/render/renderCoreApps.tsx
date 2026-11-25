@@ -300,51 +300,166 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   if (isWinDesktop) {
     const isXp = winStyle === 'winxp' || (!winStyle && os.cb.getPaletteId?.() === 'windows_xp');
     const isWin8 = !winStyle && os.cb.getPaletteId?.() === 'windows_8';
+    const isWin10 = !winStyle && os.cb.getPaletteId?.() === 'windows_10';
     const isWin11 = !winStyle && os.cb.getPaletteId?.() === 'windows_11';
-    const selHighlight = isXp ? '#2B65CE' : isWin8 ? '#2D89EF' : isWin11 ? '#0067C0' : '#000080';
+    const isWin95 = !winStyle && (os.cb.getPaletteId?.() === 'windows_95' || (!isXp && !isWin8 && !isWin10 && !isWin11));
+
+    // Authentic Windows Icon Color Palettes & Shapes
+    const getWinIconStyle = (itemId: string, sel: boolean) => {
+      let iconColor = sel ? '#FFFFFF' : '#FFD700';
+      let badgeBg = '#FFFFFF';
+      let badgeTxt = '#000080';
+
+      switch (itemId) {
+        case 'arcade':
+          iconColor = sel ? '#FFFFFF' : '#FF3B30';
+          break;
+        case 'radio':
+          iconColor = sel ? '#FFFFFF' : '#FF9500';
+          break;
+        case 'ai':
+          iconColor = sel ? '#FFFFFF' : '#5856D6';
+          break;
+        case 'wap':
+          iconColor = sel ? '#FFFFFF' : '#007AFF';
+          break;
+        case 'synth':
+          iconColor = sel ? '#FFFFFF' : '#AF52DE';
+          break;
+        case 'phone':
+          iconColor = sel ? '#FFFFFF' : '#34C759';
+          break;
+        case 'contacts':
+          iconColor = sel ? '#FFFFFF' : '#FFCC00';
+          break;
+        case 'sms':
+          iconColor = sel ? '#FFFFFF' : '#FF2D55';
+          break;
+        case 'profiles':
+          iconColor = sel ? '#FFFFFF' : '#30B0C7';
+          break;
+        case 'calc':
+          iconColor = sel ? '#FFFFFF' : '#32D74B';
+          break;
+        case 'clock':
+          iconColor = sel ? '#FFFFFF' : '#0A84FF';
+          break;
+        case 'paint':
+          iconColor = sel ? '#FFFFFF' : '#FF375F';
+          break;
+        case 'weather':
+          iconColor = sel ? '#FFFFFF' : '#64D2FF';
+          break;
+        case 'notes':
+          iconColor = sel ? '#FFFFFF' : '#FFD60A';
+          break;
+        case 'term':
+          iconColor = sel ? '#FFFFFF' : '#30D158';
+          break;
+        case 'stats':
+          iconColor = sel ? '#FFFFFF' : '#BF5AF2';
+          break;
+        case 'setup':
+          iconColor = sel ? '#FFFFFF' : '#8E8E93';
+          break;
+        case 'wallpapers':
+          iconColor = sel ? '#FFFFFF' : '#AC8E68';
+          break;
+        case 'format':
+          iconColor = sel ? '#FFFFFF' : '#FF453A';
+          break;
+        default:
+          iconColor = sel ? '#FFFFFF' : '#0055EA';
+      }
+
+      return { iconColor, badgeBg, badgeTxt };
+    };
+
+    const selHighlight = isXp
+      ? '#2B65CE'
+      : isWin8
+      ? '#2D89EF'
+      : isWin10
+      ? '#0078D7'
+      : isWin11
+      ? '#0067C0'
+      : '#000080';
+
     return (
       <View style={[styles.deskGrid, { position: 'relative' }]}>
-        {/* Render wallpaper backdrop if active */}
+        {/* Render custom wallpaper backdrop if active */}
         {renderWallBackdrop()}
 
-        {/* Windows XP Bliss Rolling Green Meadow Backdrop (when XP and no custom wallpaper) */}
+        {/* 1) Windows XP: Authentic Bliss Meadow Backdrop (Sky + Soft Fluffy Clouds + Green Rolling Hills) */}
         {isXp && !activeWall && (
-          <View
-            pointerEvents="none"
-            style={{
-              position: 'absolute',
-              left: -8,
-              right: -8,
-              bottom: -6,
-              height: 54,
-              overflow: 'hidden',
-            }}
-          >
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, overflow: 'hidden' }}>
+            {/* XP Sky Gradient Blocks */}
+            <View style={{ height: '35%', backgroundColor: '#2B70DE' }} />
+            <View style={{ height: '25%', backgroundColor: '#4C8EEB' }} />
+            <View style={{ height: '40%', backgroundColor: '#75AFF7' }} />
+            
+            {/* XP Fluffy White Cloud Wisps */}
+            <View style={{ position: 'absolute', top: 8, left: 14, width: 60, height: 16, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.7)' }} />
+            <View style={{ position: 'absolute', top: 14, left: 34, width: 44, height: 18, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.85)' }} />
+            <View style={{ position: 'absolute', top: 12, right: 28, width: 72, height: 18, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.65)' }} />
+
+            {/* XP Bliss Rolling Vivid Green Hills */}
             <View
               style={{
                 position: 'absolute',
-                left: -28,
-                right: 50,
-                bottom: -24,
-                height: 66,
-                borderRadius: 90,
+                left: -40,
+                right: 30,
+                bottom: -32,
+                height: 80,
+                borderRadius: 120,
                 backgroundColor: '#4CB635',
+                borderTopWidth: 2,
+                borderTopColor: '#6ED64C',
               }}
             />
             <View
               style={{
                 position: 'absolute',
-                left: 70,
-                right: -34,
-                bottom: -28,
-                height: 62,
-                borderRadius: 90,
-                backgroundColor: '#3B9626',
+                left: 60,
+                right: -50,
+                bottom: -36,
+                height: 76,
+                borderRadius: 110,
+                backgroundColor: '#359B20',
+                borderTopWidth: 2,
+                borderTopColor: '#4CB635',
               }}
             />
           </View>
         )}
 
+        {/* 2) Windows 95: Authentic Retro CRT #008080 Teal Solid Desktop */}
+        {isWin95 && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#008080' }} />
+        )}
+
+        {/* 3) Windows 10: Iconic Dark Desktop with Windows Glowing Window Light Logo */}
+        {isWin10 && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#0C0E14', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ width: 140, height: 90, opacity: 0.18, flexDirection: 'row', flexWrap: 'wrap', gap: 6, transform: [{ skewY: '-12deg' }] }}>
+              <View style={{ width: 62, height: 38, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 62, height: 38, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 62, height: 38, backgroundColor: '#0078D7' }} />
+              <View style={{ width: 62, height: 38, backgroundColor: '#0078D7' }} />
+            </View>
+          </View>
+        )}
+
+        {/* 4) Windows 11: Frosted Mika Bloom Petal Abstract Ambient Glow */}
+        {isWin11 && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#1A1C23', justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ position: 'absolute', width: 150, height: 110, borderRadius: 55, backgroundColor: 'rgba(0, 103, 192, 0.28)' }} />
+            <View style={{ position: 'absolute', width: 100, height: 130, borderRadius: 50, backgroundColor: 'rgba(96, 165, 250, 0.20)', transform: [{ rotate: '35deg' }] }} />
+            <View style={{ position: 'absolute', width: 110, height: 80, borderRadius: 40, backgroundColor: 'rgba(192, 132, 252, 0.16)', transform: [{ rotate: '-25deg' }] }} />
+          </View>
+        )}
+
+        {/* Desktop Icons Grid */}
         {Array.from({ length: rows }, (_, r) => (
           <View key={r} style={styles.deskRow}>
             {Array.from({ length: cols }, (_, c) => {
@@ -354,7 +469,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
               }
               const sel = idx === os.deskIdx;
-              const textColor = sel ? '#FFFFFF' : (activeWall ? '#FFFFFF' : fg);
+              const { iconColor, badgeBg, badgeTxt } = getWinIconStyle(item.id, sel);
               return (
                 <View
                   key={item.id}
@@ -366,50 +481,71 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                     borderWidth: sel ? 1 : 0,
                     borderStyle: sel && !isXp && !isWin8 && !isWin11 ? 'dotted' : 'solid',
                     borderColor: sel ? '#FFFFFF' : 'transparent',
-                    backgroundColor: sel ? `${selHighlight}DD` : 'transparent',
+                    backgroundColor: sel ? (isXp ? '#2B65CEE6' : `${selHighlight}DD`) : 'transparent',
                     paddingVertical: 2,
+                    marginHorizontal: 1,
                   }}
                 >
                   <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+                    {/* Icon container with subtle 3D drop-shadow effect in Windows */}
                     <Ionicons
                       name={item.icon}
-                      size={18}
-                      color={sel ? '#FEF08A' : textColor}
+                      size={20}
+                      color={iconColor}
+                      style={{
+                        textShadowColor: 'rgba(0,0,0,0.65)',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 2,
+                      }}
                     />
-                    {/* Classic tiny Windows desktop shortcut arrow badge */}
+                    {/* Authentic miniature Windows desktop shortcut curved overlay badge */}
                     <View
                       style={{
                         position: 'absolute',
-                        left: -5,
-                        bottom: -1,
-                        width: 6,
-                        height: 6,
-                        backgroundColor: '#FFFFFF',
+                        left: -6,
+                        bottom: -2,
+                        width: 8,
+                        height: 8,
+                        backgroundColor: badgeBg,
+                        borderWidth: 0.5,
+                        borderColor: '#222222',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        borderRadius: isWin11 ? 1 : 0,
+                        borderRadius: isWin11 ? 2 : 0,
                       }}
                     >
-                      <Text style={{ fontSize: 5, fontWeight: '900', color: '#000000', lineHeight: 6 }}>
+                      <Text style={{ fontSize: 6, fontWeight: '900', color: badgeTxt, lineHeight: 7 }}>
                         ↗
                       </Text>
                     </View>
                   </View>
-                  <Text
-                    style={[
-                      styles.deskLbl,
-                      {
-                        color: textColor,
-                        backgroundColor: sel ? selHighlight : 'transparent',
-                        paddingHorizontal: 2,
-                        marginTop: 2,
-                        fontSize: 8,
-                      },
-                    ]}
-                    numberOfLines={1}
+                  {/* Shortcut Label with Windows Drop Shadow */}
+                  <View
+                    style={{
+                      backgroundColor: sel ? selHighlight : isXp ? 'rgba(0, 0, 0, 0.45)' : 'rgba(0, 0, 0, 0.55)',
+                      paddingHorizontal: 3,
+                      paddingVertical: 0.5,
+                      borderRadius: isWin11 ? 2 : isWin8 ? 0 : 1,
+                      marginTop: 2,
+                    }}
                   >
-                    {getDesktopLabel(item.id, item.label, os.lang)}
-                  </Text>
+                    <Text
+                      style={[
+                        styles.deskLbl,
+                        {
+                          color: '#FFFFFF',
+                          fontSize: 7.5,
+                          fontWeight: sel ? '900' : '700',
+                          textShadowColor: sel ? 'transparent' : 'rgba(0,0,0,0.9)',
+                          textShadowOffset: { width: 1, height: 1 },
+                          textShadowRadius: 1,
+                        },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {getDesktopLabel(item.id, item.label, os.lang)}
+                    </Text>
+                  </View>
                 </View>
               );
             })}

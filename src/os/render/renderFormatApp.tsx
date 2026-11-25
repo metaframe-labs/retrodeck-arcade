@@ -1084,8 +1084,8 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           {/* Win 11 4-square logo icon */}
           <View
             style={{
-              paddingHorizontal: 6,
-              paddingVertical: 2,
+              paddingHorizontal: 7,
+              paddingVertical: 2.5,
               borderRadius: 3,
               backgroundColor: '#0067C0',
               flexDirection: 'row',
@@ -1093,7 +1093,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
               gap: 2,
             }}
           >
-            <Text style={{ fontFamily: MONO_FONT, fontSize: 8, fontWeight: '900', color: '#FFFFFF' }}>
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF' }}>
               ⊞
             </Text>
           </View>
@@ -1102,10 +1102,10 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           <View
             style={{
               paddingHorizontal: 8,
-              paddingVertical: 2,
+              paddingVertical: 2.5,
               borderRadius: 3,
               backgroundColor: '#2D2D2D',
-              borderBottomWidth: 1.5,
+              borderBottomWidth: 2,
               borderBottomColor: '#60A5FA',
             }}
           >
@@ -1115,14 +1115,15 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           </View>
         </View>
 
-        {/* Windows 11 Tray */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        {/* Windows 11 Tray with WiFi, Sound & Clock */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingRight: 4 }}>
+          <Text style={{ fontSize: 7, color: '#A1A1AA' }}>📶 🔊</Text>
           {os.unreadSmsCount > 0 && (
             <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '700', color: '#FDE047' }}>
               ✉{os.unreadSmsCount}
             </Text>
           )}
-          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#A1A1AA' }}>
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '600', color: '#E4E4E7' }}>
             {os.formatClock()}
           </Text>
         </View>
@@ -1214,7 +1215,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           paddingRight: 0,
         }}
       >
-        {/* Olive/Emerald Green XP Start Pill */}
+        {/* Olive/Emerald Green XP Start Pill with 4-color XP Flag */}
         <View
           style={{
             height: '100%',
@@ -1226,11 +1227,17 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
             paddingHorizontal: 7,
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 3,
+            gap: 4,
           }}
         >
-          <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF' }}>
-            ⊞ {startLabel.toLowerCase()}
+          <View style={{ width: 8, height: 8, flexDirection: 'row', flexWrap: 'wrap', transform: [{ rotate: '5deg' }] }}>
+            <View style={{ width: 4, height: 4, backgroundColor: '#E81123', borderRadius: 1 }} />
+            <View style={{ width: 4, height: 4, backgroundColor: '#00A4EF', borderRadius: 1 }} />
+            <View style={{ width: 4, height: 4, backgroundColor: '#7FBA00', borderRadius: 1 }} />
+            <View style={{ width: 4, height: 4, backgroundColor: '#FFB900', borderRadius: 1 }} />
+          </View>
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF', fontStyle: 'italic' }}>
+            {startLabel.toLowerCase()}
           </Text>
         </View>
 
@@ -1296,10 +1303,10 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         paddingHorizontal: 2,
       }}
     >
-      {/* 3D Raised [⊞ Start] Button */}
+      {/* 3D Raised [⊞ Start] Button with authentic Windows 4-color tile square */}
       <View
         style={{
-          height: 15,
+          height: 16,
           backgroundColor: '#C0C0C0',
           borderTopWidth: 1.5,
           borderLeftWidth: 1.5,
@@ -1309,12 +1316,20 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           borderBottomWidth: 1.5,
           borderRightColor: '#222222',
           borderBottomColor: '#222222',
-          paddingHorizontal: 5,
-          justifyContent: 'center',
+          paddingHorizontal: 4,
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 3,
         }}
       >
+        <View style={{ width: 8, height: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+          <View style={{ width: 4, height: 4, backgroundColor: '#E81123' }} />
+          <View style={{ width: 4, height: 4, backgroundColor: '#00A4EF' }} />
+          <View style={{ width: 4, height: 4, backgroundColor: '#7FBA00' }} />
+          <View style={{ width: 4, height: 4, backgroundColor: '#FFB900' }} />
+        </View>
         <Text style={{ fontFamily: MONO_FONT, fontSize: 8, fontWeight: '900', color: '#000000' }}>
-          ⊞ {startLabel}
+          {startLabel}
         </Text>
       </View>
 
@@ -1345,10 +1360,10 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         </Text>
       </View>
 
-      {/* Sunken System Tray Clock */}
+      {/* Sunken System Tray Clock with Speaker & Modem icon */}
       <View
         style={{
-          height: 15,
+          height: 16,
           backgroundColor: '#B8B8B8',
           borderTopWidth: 1,
           borderLeftWidth: 1,
@@ -1358,12 +1373,13 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           borderBottomWidth: 1,
           borderRightColor: '#FFFFFF',
           borderBottomColor: '#FFFFFF',
-          paddingHorizontal: 5,
+          paddingHorizontal: 4,
           flexDirection: 'row',
           alignItems: 'center',
           gap: 3,
         }}
       >
+        <Text style={{ fontSize: 6.5, color: '#222222' }}>🔊</Text>
         {os.unreadSmsCount > 0 && (
           <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '900', color: '#000080' }}>
             ✉{os.unreadSmsCount}
