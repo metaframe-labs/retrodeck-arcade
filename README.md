@@ -2,7 +2,7 @@
 
 # RetroDeck OS & Arcade
 
-**100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • 100 Hardware & LCD Themes • Live SomaFM Radio • OS-Controlling BYOK AI • Live Persona SMS & Postcard Studio • Contacts • EN/TR i18n**
+**100-in-1 60 FPS Pocket Console • Authentic Nokia 3310 Firmware OS • Android J2ME JAR Runtime • 100 Hardware & LCD Themes • Live SomaFM Radio • OS-Controlling BYOK AI • Live Persona SMS & Postcard Studio • Contacts • EN/TR i18n**
 
 [![Expo](https://img.shields.io/badge/Expo-SDK_58-000020?style=for-the-badge&logo=expo&logoColor=white)](https://expo.dev/)
 [![React Native](https://img.shields.io/badge/React_Native-0.88-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactnative.dev/)
@@ -29,11 +29,12 @@ Built by **[MetaFrame Labs](https://www.metaframelabs.space/)** — Zero WebView
 
 ## 📱 RetroDeck OS (Nokia 3310 Desktop Environment)
 
-Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular signal bars, live battery telemetry (`expo-battery`), operator logos, keyguard lock screen with floating analog/digital clock & unread SMS indicator, and a **19-app Desktop grid** plus dedicated **`THEMES`** and **`PRO`** in-LCD modules:
+Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular signal bars, live battery telemetry (`expo-battery`), operator logos, keyguard lock screen with floating analog/digital clock & unread SMS indicator, and a **21-app Desktop grid** plus dedicated **`THEMES`** and **`PRO`** in-LCD modules:
 
 | App | Module | Description |
 | :--- | :--- | :--- |
 | **`GAMES`** | Arcade Browser | Browse and hot-boot all **100 built-in 60 FPS retro cartridges** (Top 10 classics free-first, Pro gating, persistent high scores, `★ Favorites`). |
+| **`J2ME JAR`** | Java ME Runtime | On Android, choose and run Java ME game/app `.jar` files in the embedded J2ME Loader runtime. The pre-launch page shows compiler and LCD resolution details; the selected JAR is converted to DEX on-device and rendered in the Arcade LCD. |
 | **`RADIO`** | SomaFM Live | Streams **10 SomaFM channels** (`Space Station`, `DEF CON Radio`, `Groove Salad`, `Vaporwaves`, `Secret Agent`, `Cliqhop IDM`, `Synphaera`, `Drone Zone`, `Lush`, `Suburbs of Goa`) with live *Now Playing* metadata, animated spectrum bars, independent volume control, and background playback. |
 | **`CHAT`** | BYOK OS-Control AI | **9-provider AI assistant** (`Google Gemini`, `OpenAI`, `Anthropic Claude`, `Groq LPU`, `DeepSeek`, `xAI Grok`, `OpenRouter`, `Ollama Local`, `LM Studio`). Can **control RetroDeck OS directly** via `[[ACTION:...]]` tags (launch games, open apps, switch themes, tune radio, fetch weather, add notes, switch `EN/TR` language, lock keyguard, trigger live SMS, reboot), supports chat history clearing (`[◀]x2` or `/clear`), and strips emojis/Markdown for clean LCD rendering. |
 | **`WAP`** | Nokia WAP 1.1 | Connects to live HTTPS pages with a `Nokia3330/1.0 (RetroDeckOS WAP 1.1)` User-Agent, parses HTML into 33-column monochrome WML cards, includes bookmarks, and defaults to `https://www.metaframelabs.space/`. |
@@ -50,8 +51,17 @@ Boot cleanly into a 3.5s BIOS sequence (`[A]`/`[B]` skippable) with cellular sig
 | **`SHELL`** | Unix Shell (`rdsh`) | Interactive terminal supporting `help`, `neofetch`, `ls`, `cat`, `open <game>`, `randgame`, `play <song>`, `stop`, `wap <url>`, `contacts`, `ai <prompt>`, `livesms`, `lang [en\|tr]`, `theme`, `pro`, `lock`, `reboot`, `clear`. |
 | **`STATS`** | Scoreboard | Tracks played cartridges, total points, and top high scores across all 100 games. |
 | **`SETUP`** | System & Pro | Manage **RetroDeck Pro (`PRO`)**, open the 100-palette **`THEMES`** browser, toggle **CRT Scanlines**, **Clock Face**, **Live AI SMS**, **Language (`EN / TR`)**, launch **Cartridge Vault**, or **Reboot OS**. |
+| **`ABOUT DEVICE`** | Hardware & Runtime Info | Scrollable device profile with model, Android version, display resolution, RetroDeck/React Native versions, and J2ME Loader runtime details. |
 | **`WALLS`** | Wallpaper Gallery | Browse **50 pixel-art scenes** in full-screen preview or live **3×2 / 4×3 thumbnail grids**, adjust image dimming, and apply a persistent wallpaper to the desktop and keyguard. |
 | **`FORMAT`** | BIOS Format Simulator | Run a retro **simulation-only** drive format wizard with selectable media presets, animated progress, and a fake completion report. |
+
+---
+
+## ☕ J2ME Java ME Games (Android only)
+
+Open **`J2ME JAR`** from the RetroDeck OS desktop to review the runtime and default **240×320** virtual screen, then choose a `.jar` with Android's file picker. The embedded runtime converts the game to DEX on-device and displays it inside the Arcade LCD, scaled to the viewport. The arcade D-pad, A/B, numeric keys, and soft keys send input to the MIDlet.
+
+J2ME uses custom Android native modules and native emulator libraries, so it requires an Android native build (`npx expo run:android` or Gradle); it is not available in Expo Go or the iOS fallback. Emulator source and dependency notices are in [`android/j2me-core`](android/j2me-core/README.md) and [`android/dexlib`](android/dexlib/README.md).
 
 ---
 
@@ -85,6 +95,10 @@ Switch between three hardware decks in `App.tsx`:
 ```text
 ├── App.tsx                         # Main console shell, 60 FPS loop & 3-mode deck host
 ├── assets/postcards/               # 50 pixel-art postcard illustrations
+├── android/
+│   ├── app/src/main/java/.../j2me/ # React Native bridge and embedded LCD host
+│   ├── dexlib/                     # Java bytecode to DEX conversion support
+│   └── j2me-core/                  # Embedded J2ME Loader runtime and native libraries
 └── src/
     ├── arcade/                     # 100 games, CHIP-8/custom compiler & ArcadeScreen
     ├── audio/RetroAudioEngine.ts   # Procedural 8-bit 22,050 Hz PCM WAV synthesizer
@@ -97,6 +111,7 @@ Switch between three hardware decks in `App.tsx`:
     │   ├── engine/                 # input, keyboard, shell (rdsh), AI/SMS/WAP/weather
     │   └── render/                 # core, comms (Phone/Contacts/SMS/AI/WAP) & media/tools
     ├── services/                   # byokAiService, revenueCatService, somaRadioService
+    ├── j2me/                       # Embedded native J2ME LCD view wrapper
     └── theme/palettes.ts           # 100 hardware & LCD palettes
 ```
 
@@ -106,7 +121,7 @@ Switch between three hardware decks in `App.tsx`:
 
 ```bash
 # Clone the repository
-git clone https://github.com/neurodivergent-dev/retrodeck-arcade.git
+git clone https://github.com/metaframe-labs/retrodeck-arcade.git
 cd retrodeck-arcade
 
 # Install dependencies
