@@ -10,9 +10,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from '../i18n/retroI18n';
+import { isLightBackground } from '../theme/palettes';
 
 interface RetroKeyboardDeckProps {
   accentColor: string;
+  accentTextColor?: string;
+  buttonBg?: string;
+  buttonBorder?: string;
   value: string;
   placeholder?: string;
   targetLabel?: string;
@@ -30,6 +34,9 @@ const ROW_SYM = ['-', '_', '.', '/', ':', '@', '?', '!'];
 
 export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
   accentColor,
+  accentTextColor = accentColor,
+  buttonBg = '#111927',
+  buttonBorder = '#263449',
   value,
   placeholder,
   targetLabel,
@@ -39,6 +46,12 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
   onSwitchToGamepad,
 }) => {
   const { tUi } = useTranslation();
+  const isLightDeck = isLightBackground(buttonBg);
+  const textColor = isLightDeck ? '#1E293B' : '#E2E8F0';
+  const mutedColor = isLightDeck ? '#526176' : '#94A3B8';
+  const accentInk = isLightDeck ? accentTextColor : accentColor;
+  const pressedBg = isLightDeck ? `${accentColor}24` : '#1E293B';
+  const sendInk = isLightDeck ? '#0F172A' : '#F8FAFC';
   const [shift, setShift] = useState(false);
   const [symMode, setSymMode] = useState(false);
   const resolvedPlaceholder = placeholder ?? tUi('kbdPlaceholder');
@@ -78,24 +91,24 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
   return (
     <View style={styles.deckWrap}>
       {/* Top Buffer Bar with Native Paste Support */}
-      <View style={[styles.bufferBar, { borderColor: `${accentColor}66` }]}>
+      <View style={[styles.bufferBar, { backgroundColor: buttonBg, borderColor: buttonBorder }]}>
         <View style={[styles.targetTag, { backgroundColor: `${accentColor}22` }]}>
-          <Text style={[styles.targetTagTxt, { color: accentColor }]}>{resolvedTargetLabel}</Text>
+          <Text style={[styles.targetTagTxt, { color: accentInk }]}>{resolvedTargetLabel}</Text>
         </View>
         <TextInput
           value={value}
           onChangeText={onChangeText}
           placeholder={resolvedPlaceholder}
-          placeholderTextColor="#475569"
+          placeholderTextColor={mutedColor}
           secureTextEntry={secure}
           autoCapitalize="none"
           autoCorrect={false}
-          style={[styles.bufferInput, { color: '#F8FAFC' }]}
+          style={[styles.bufferInput, { color: textColor }]}
           onSubmitEditing={handleEnter}
         />
         {value.length > 0 && (
-          <Pressable onPress={handleClear} style={styles.clrMiniBtn}>
-            <Text style={styles.clrMiniTxt}>{tUi('kbdClr')}</Text>
+          <Pressable onPress={handleClear} style={[styles.clrMiniBtn, { backgroundColor: buttonBg, borderColor: buttonBorder }]}>
+            <Text style={[styles.clrMiniTxt, { color: accentInk }]}>{tUi('kbdClr')}</Text>
           </Pressable>
         )}
       </View>
@@ -109,10 +122,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
             style={({ pressed }) => [
               styles.keyCap,
               styles.numKeyCap,
-              pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
+              pressed && { borderColor: accentColor, backgroundColor: pressedBg },
             ]}
           >
-            <Text style={[styles.keyTxt, { color: accentColor }]}>{k}</Text>
+            <Text style={[styles.keyTxt, { color: accentInk }]}>{k}</Text>
           </Pressable>
         ))}
       </View>
@@ -127,10 +141,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
               onPress={() => handleKey(k)}
               style={({ pressed }) => [
                 styles.keyCap,
-                pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
+                { backgroundColor: buttonBg, borderColor: buttonBorder },
+                pressed && { borderColor: accentColor, backgroundColor: pressedBg },
               ]}
             >
-              <Text style={styles.keyTxt}>{disp}</Text>
+              <Text style={[styles.keyTxt, { color: textColor }]}>{disp}</Text>
             </Pressable>
           );
         })}
@@ -146,10 +161,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
               onPress={() => handleKey(k)}
               style={({ pressed }) => [
                 styles.keyCap,
-                pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
+                { backgroundColor: buttonBg, borderColor: buttonBorder },
+                pressed && { borderColor: accentColor, backgroundColor: pressedBg },
               ]}
             >
-              <Text style={styles.keyTxt}>{disp}</Text>
+              <Text style={[styles.keyTxt, { color: textColor }]}>{disp}</Text>
             </Pressable>
           );
         })}
@@ -165,10 +181,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={[
             styles.keyCap,
             styles.wideKey,
+            { backgroundColor: buttonBg, borderColor: buttonBorder },
             shift && { borderColor: accentColor, backgroundColor: `${accentColor}28` },
           ]}
         >
-          <Text style={[styles.keyTxt, shift && { color: accentColor }]}>{tUi('kbdShift')}</Text>
+          <Text style={[styles.keyTxt, { color: shift ? accentInk : textColor }]}>{tUi('kbdShift')}</Text>
         </Pressable>
 
         {ROW_3.map((k) => {
@@ -179,10 +196,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
               onPress={() => handleKey(k)}
               style={({ pressed }) => [
                 styles.keyCap,
-                pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
+                { backgroundColor: buttonBg, borderColor: buttonBorder },
+                pressed && { borderColor: accentColor, backgroundColor: pressedBg },
               ]}
             >
-              <Text style={styles.keyTxt}>{disp}</Text>
+              <Text style={[styles.keyTxt, { color: textColor }]}>{disp}</Text>
             </Pressable>
           );
         })}
@@ -192,10 +210,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={({ pressed }) => [
             styles.keyCap,
             styles.wideKey,
-            pressed && { borderColor: '#F43F5E', backgroundColor: '#1E293B' },
+            { backgroundColor: buttonBg, borderColor: buttonBorder },
+            pressed && { borderColor: '#F43F5E', backgroundColor: pressedBg },
           ]}
         >
-          <Ionicons name="backspace-outline" size={15} color="#FDA4AF" />
+          <Ionicons name="backspace-outline" size={15} color={isLightDeck ? '#B42318' : '#FDA4AF'} />
         </Pressable>
       </View>
 
@@ -206,10 +225,10 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
             tapHaptic();
             onSwitchToGamepad();
           }}
-          style={[styles.keyCap, styles.fnKey, { borderColor: `${accentColor}66` }]}
+          style={[styles.keyCap, styles.fnKey, { backgroundColor: buttonBg, borderColor: `${accentColor}66` }]}
         >
-          <Ionicons name="game-controller-outline" size={14} color={accentColor} />
-          <Text style={[styles.fnKeyTxt, { color: accentColor }]}>{tUi('kbdPad')}</Text>
+          <Ionicons name="game-controller-outline" size={14} color={accentInk} />
+          <Text style={[styles.fnKeyTxt, { color: accentInk }]}>{tUi('kbdPad')}</Text>
         </Pressable>
 
         <Pressable
@@ -220,10 +239,11 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={[
             styles.keyCap,
             styles.fnKey,
+            { backgroundColor: buttonBg, borderColor: buttonBorder },
             symMode && { borderColor: accentColor, backgroundColor: `${accentColor}22` },
           ]}
         >
-          <Text style={[styles.fnKeyTxt, symMode && { color: accentColor }]}>{tUi('kbdSym')}</Text>
+          <Text style={[styles.fnKeyTxt, { color: symMode ? accentInk : mutedColor }]}>{tUi('kbdSym')}</Text>
         </Pressable>
 
         <Pressable
@@ -231,18 +251,19 @@ export const RetroKeyboardDeck: React.FC<RetroKeyboardDeckProps> = ({
           style={({ pressed }) => [
             styles.keyCap,
             styles.spaceKey,
-            pressed && { borderColor: accentColor, backgroundColor: '#1E293B' },
+            { backgroundColor: buttonBg, borderColor: buttonBorder },
+            pressed && { borderColor: accentColor, backgroundColor: pressedBg },
           ]}
         >
-          <Text style={styles.spaceTxt}>{tUi('kbdSpace')}</Text>
+          <Text style={[styles.spaceTxt, { color: mutedColor }]}>{tUi('kbdSpace')}</Text>
         </Pressable>
 
         <Pressable
           onPress={handleEnter}
-          style={[styles.keyCap, styles.sendKey, { backgroundColor: accentColor }]}
+          style={[styles.keyCap, styles.sendKey, { backgroundColor: accentColor, borderColor: accentColor }]}
         >
-          <Text style={styles.sendKeyTxt}>{tUi('kbdSend')}</Text>
-          <Ionicons name="return-down-back" size={15} color="#04100C" />
+          <Text style={[styles.sendKeyTxt, { color: sendInk }]}>{tUi('kbdSend')}</Text>
+          <Ionicons name="return-down-back" size={15} color={sendInk} />
         </Pressable>
       </View>
     </View>

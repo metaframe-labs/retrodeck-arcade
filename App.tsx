@@ -369,12 +369,20 @@ function RetroDeckConsole() {
       NativeModules.J2meModule?.sendKeyEvent(btn, pressed);
       return;
     }
+    if (
+      !osMode &&
+      btn === 'b' &&
+      activeCart.gamepadLabels.b?.toUpperCase().includes('PAUSE')
+    ) {
+      if (pressed) setIsPaused((current) => !current);
+      return;
+    }
     inputRef.current[btn] = pressed;
-  }, [j2meJarPath]);
+  }, [activeCart.gamepadLabels.b, j2meJarPath, osMode]);
 
   const handleNumericSoftKey = useCallback((dir: 'left' | 'right') => {
     if (j2meJarPath) {
-      sendJ2meTap(dir === 'left' ? 'softleft' : 'softright');
+      setKbdTick((t) => (t + 1) % 100000);
       return;
     }
     if (osMode) {
@@ -384,7 +392,7 @@ function RetroDeckConsole() {
       setTimeout(() => handleButtonChange(dir, false), 65);
     }
     setKbdTick((t) => (t + 1) % 100000);
-  }, [handleButtonChange, j2meJarPath, osMode, sendJ2meTap]);
+  }, [handleButtonChange, j2meJarPath, osMode]);
 
   // Cartridge Swap (preserve user's active OS theme)
   const handleSelectCartridge = useCallback((cart: ArcadeCartridgeDef) => {
@@ -1033,6 +1041,9 @@ function RetroDeckConsole() {
             {deckMode === 'kbd' ? (
               <RetroKeyboardDeck
                 accentColor={palette.bezelAccent}
+                accentTextColor={palette.pixelOn}
+                buttonBg={palette.buttonBg}
+                buttonBorder={palette.buttonBorder}
                 value={j2meJarPath ? j2meKeyboardValueRef.current : kbdBinding.value}
                 placeholder={kbdBinding.placeholder}
                 targetLabel={kbdBinding.targetLabel}
@@ -1068,10 +1079,19 @@ function RetroDeckConsole() {
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
+                onControlChange={(key, pressed) => {
+                  if (!j2meJarPath) return;
+                  const mappedKey = key === 'OK'
+                    ? 'a'
+                    : key === 'BACK'
+                    ? 'b'
+                    : key === 'DEL'
+                    ? 'del'
+                    : key;
+                  NativeModules.J2meModule?.sendKeyEvent(mappedKey, pressed);
+                }}
                 onPressKey={(k) => {
                   if (j2meJarPath) {
-                    const mappedKey = k === 'OK' ? 'a' : k === 'BACK' ? 'b' : k === 'DEL' ? 'del' : k;
-                    sendJ2meTap(mappedKey);
                     setKbdTick((t) => (t + 1) % 100000);
                     return;
                   }
@@ -1080,7 +1100,6 @@ function RetroDeckConsole() {
                 }}
                 onNav={(dir) => {
                   if (j2meJarPath) {
-                    sendJ2meTap(dir);
                     setKbdTick((t) => (t + 1) % 100000);
                     return;
                   }
@@ -1124,6 +1143,7 @@ function RetroDeckConsole() {
             cartridges={ARCADE_CARTRIDGES}
             activeCartridgeId={activeCart.id}
             accentColor={palette.bezelAccent}
+            palette={palette}
             highScores={highScores}
             isPro={isPro}
             onSelectCartridge={(cart) => {
@@ -1140,6 +1160,7 @@ function RetroDeckConsole() {
       <DevCartModal
         visible={devCartVisible}
         accentColor={palette.bezelAccent}
+        palette={palette}
         onClose={() => setDevCartVisible(false)}
         onLoadCustomCartridge={handleBurnCustomCartridge}
       />

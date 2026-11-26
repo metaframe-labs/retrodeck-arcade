@@ -83,6 +83,22 @@ public class Display {
 		return display != null && display.current == displayable;
 	}
 
+	/** Reattach and redraw the active displayable after an embedded host resume. */
+	public static void refreshEmbeddedDisplay() {
+		Display display = instance;
+		if (display == null) {
+			return;
+		}
+		Displayable active = display.current;
+		if (active == null) {
+			return;
+		}
+		display.showCurrent();
+		if (active instanceof Canvas) {
+			((Canvas) active).repaint();
+		}
+	}
+
 	private Display() {
 	}
 

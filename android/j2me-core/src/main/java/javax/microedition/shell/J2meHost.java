@@ -184,7 +184,6 @@ public final class J2meHost {
         if (appContext == null) appContext = context;
         final Context hostContext = appContext;
         ru.playsoftware.j2meloader.EmulatorApplication.init(hostContext);
-        toast(hostContext, "J2ME: Converting...");
         new Thread(() -> {
             synchronized (sBootWorkLock) {
                 if (!isCurrentBoot(generation)) return;
@@ -210,7 +209,6 @@ public final class J2meHost {
                         appDirPath = InstallerHelper.installJar(app, jarPath);
                     }
                     if (!isCurrentBoot(generation)) return;
-                    toast(hostContext, "J2ME: Init " + appDirPath);
 
                     MicroLoader loader = new MicroLoader(hostContext, appDirPath);
                     if (!loader.init()) {
@@ -238,7 +236,6 @@ public final class J2meHost {
                         releaseEmbeddedResources();
                         return;
                     }
-                    toast(hostContext, "J2ME: Starting " + firstMidlet);
                     synchronized (sHostLock) {
                         if (generation != sBootGeneration) {
                             releaseEmbeddedResources();

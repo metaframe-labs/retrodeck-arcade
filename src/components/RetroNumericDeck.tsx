@@ -11,6 +11,7 @@ interface RetroNumericDeckProps {
   buttonBorder?: string;
   targetLabel?: string;
   onPressKey: (key: string) => void;
+  onControlChange?: (key: string, pressed: boolean) => void;
   onNav: (dir: 'up' | 'down' | 'left' | 'right') => void;
   onSoftLeft?: () => void;
   onSoftRight?: () => void;
@@ -51,6 +52,7 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   buttonBg = '#121A26',
   buttonBorder = '#26374D',
   onPressKey,
+  onControlChange,
   onNav,
   onSoftLeft,
   onSoftRight,
@@ -109,6 +111,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Left soft key"
+            onPressIn={() => onControlChange?.('softleft', true)}
+            onPressOut={() => onControlChange?.('softleft', false)}
             onPress={() => { tapHaptic(); onSoftLeft?.(); }}
             style={({ pressed }) => [
               styles.softBtn,
@@ -122,6 +126,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={tUi('btnOk')}
+            onPressIn={() => onControlChange?.('OK', true)}
+            onPressOut={() => onControlChange?.('OK', false)}
             onPress={handleOk}
             style={({ pressed }) => [
               styles.softBtn,
@@ -136,6 +142,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Right soft key"
+            onPressIn={() => onControlChange?.('softright', true)}
+            onPressOut={() => onControlChange?.('softright', false)}
             onPress={() => { tapHaptic(); onSoftRight?.(); }}
             style={({ pressed }) => [
               styles.softBtn,
@@ -153,6 +161,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             return (
               <Pressable
                 key={dir}
+                onPressIn={() => onControlChange?.(dir, true)}
+                onPressOut={() => onControlChange?.(dir, false)}
                 onPress={() => handleNav(dir)}
                 style={({ pressed }) => [
                   styles.navBtn,
@@ -174,6 +184,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
             {row.map((k) => (
               <Pressable
                 key={k.digit}
+                onPressIn={() => onControlChange?.(k.digit, true)}
+                onPressOut={() => onControlChange?.(k.digit, false)}
                 onPress={() => handleDigit(k.digit)}
                 style={({ pressed }) => [
                   styles.numKey,
@@ -196,6 +208,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
       {/* Right: 4-Row Aligned Action & Mode Column */}
       <View style={styles.sideCol}>
         <Pressable
+          onPressIn={() => onControlChange?.('DEL', true)}
+          onPressOut={() => onControlChange?.('DEL', false)}
           onPress={handleBackspace}
           style={({ pressed }) => [
             styles.sideBtn,
@@ -208,6 +222,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
         </Pressable>
 
         <Pressable
+          onPressIn={() => onControlChange?.('BACK', true)}
+          onPressOut={() => onControlChange?.('BACK', false)}
           onPress={handleBack}
           style={({ pressed }) => [
             styles.sideBtn,
@@ -220,6 +236,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
         </Pressable>
 
         <Pressable
+          onPressIn={() => onControlChange?.('OK', true)}
+          onPressOut={() => onControlChange?.('OK', false)}
           onPress={handleOk}
           style={({ pressed }) => [
             styles.sideBtn,

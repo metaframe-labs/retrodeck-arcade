@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeCartridgeDef } from '../arcade/types';
 import { isCartridgeProLocked } from '../arcade/cartridges';
-import { getAccentInk } from '../theme/palettes';
+import { RetroPalette, getAccentInk, isLightBackground } from '../theme/palettes';
 import { tUi, useTranslation } from '../i18n/retroI18n';
 
 const FAV_CARTS_STORAGE_KEY = '@retrodeck8_fav_carts_v1';
@@ -22,6 +22,7 @@ interface CartridgeBayPageProps {
   cartridges: ArcadeCartridgeDef[];
   activeCartridgeId: string;
   accentColor: string;
+  palette: RetroPalette;
   highScores?: Record<string, number>;
   isPro?: boolean;
   onSelectCartridge: (cartridge: ArcadeCartridgeDef) => void;
@@ -37,18 +38,27 @@ interface CartridgeCardProps {
   isFav: boolean;
   isLocked: boolean;
   accentColor: string;
+  accentFill: string;
+  accentText: string;
   accentInk: string;
+  palette: RetroPalette;
+  cardInk: string;
+  cardMutedInk: string;
   bestScore: number;
   onSelect: (cartridge: ArcadeCartridgeDef) => void;
   onToggleFav: (id: string) => void;
 }
 
 const CartridgeCard = React.memo<CartridgeCardProps>(
-  ({ cart, isInserted, isFav, isLocked, accentColor, accentInk, bestScore, onSelect, onToggleFav }) => (
+  ({ cart, isInserted, isFav, isLocked, accentColor, accentFill, accentText, accentInk, palette, cardInk, cardMutedInk, bestScore, onSelect, onToggleFav }) => (
     <Pressable
       onPress={() => onSelect(cart)}
       style={[
         styles.cartCard,
+        {
+          backgroundColor: palette.deckBg,
+          borderColor: palette.surfaceBorder,
+        },
         isInserted && {
           borderColor: accentColor,
           backgroundColor: `${accentColor}12`,
@@ -61,16 +71,16 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
           <View
             style={[
               styles.cartIndicator,
-              { backgroundColor: isInserted ? accentColor : '#334155' },
+              { backgroundColor: isInserted ? accentColor : palette.textMuted },
             ]}
           />
-          <Text style={styles.cartTitle}>{cart.title}</Text>
+          <Text style={[styles.cartTitle, { color: cardInk }]}>{cart.title}</Text>
         </View>
         <View style={styles.headerRight}>
-          <View style={[styles.genreTag, { borderColor: `${accentColor}44` }]}>
-            <Text style={[styles.genreTagText, { color: accentColor }]}>{cart.genre}</Text>
+          <View style={[styles.genreTag, { backgroundColor: palette.buttonBg, borderColor: palette.buttonBorder }]}>
+            <Text style={[styles.genreTagText, { color: accentText }]}>{cart.genre}</Text>
           </View>
-          <Text style={styles.yearText}>{cart.year}</Text>
+          <Text style={[styles.yearText, { color: cardMutedInk }]}>{cart.year}</Text>
           <Pressable
             hitSlop={8}
             onPress={() => onToggleFav(cart.id)}
@@ -79,55 +89,55 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
             <Ionicons
               name={isFav ? 'star' : 'star-outline'}
               size={15}
-              color={isFav ? '#FBBF24' : '#64748B'}
+              color={isFav ? (isLightBackground(palette.deckBg) ? '#B45309' : '#FBBF24') : cardMutedInk}
             />
           </Pressable>
         </View>
       </View>
 
       {/* Subtitle / Description */}
-      <Text style={styles.cardSubtitle}>{cart.subtitle}</Text>
+      <Text style={[styles.cardSubtitle, { color: cardInk }]}>{cart.subtitle}</Text>
 
       {/* Controls Hint */}
-      <View style={styles.hintWrap}>
-        <Ionicons name="game-controller-outline" size={13} color="#94A3B8" />
-        <Text style={styles.hintText}>{cart.controlsHint}</Text>
+      <View style={[styles.hintWrap, { backgroundColor: palette.surfaceBg, borderColor: palette.surfaceBorder }]}>
+        <Ionicons name="game-controller-outline" size={13} color={cardMutedInk} />
+        <Text style={[styles.hintText, { color: cardMutedInk }]}>{cart.controlsHint}</Text>
       </View>
 
       {/* Card Footer Status */}
-      <View style={styles.cardFooter}>
+      <View style={[styles.cardFooter, { borderTopColor: palette.surfaceBorder }]}>
         <View style={styles.footerLeftBadges}>
           <View style={styles.techBadge}>
-            <Ionicons name="flash" size={11} color="#10B981" />
-            <Text style={styles.techText}>60 FPS</Text>
+            <Ionicons name="flash" size={11} color={isLightBackground(palette.deckBg) ? '#047857' : '#10B981'} />
+            <Text style={[styles.techText, isLightBackground(palette.deckBg) && { color: '#047857' }]}>60 FPS</Text>
           </View>
-          <View style={[styles.bestScorePill, { borderColor: `${accentColor}44` }]}>
-            <Ionicons name="trophy-outline" size={10} color="#FFD700" />
-            <Text style={styles.bestScoreText}>
+          <View style={[styles.bestScorePill, { backgroundColor: palette.buttonBg, borderColor: palette.buttonBorder }]}>
+            <Ionicons name="trophy-outline" size={10} color={isLightBackground(palette.deckBg) ? '#9A6700' : '#FFD700'} />
+            <Text style={[styles.bestScoreText, { color: cardInk }]}>
               {tUi('vaultBest', { score: bestScore.toString().padStart(6, '0') })}
             </Text>
           </View>
         </View>
 
         {isInserted ? (
-          <View style={[styles.activePill, { backgroundColor: accentColor }]}>
+          <View style={[styles.activePill, { backgroundColor: accentFill }]}>
             <View style={[styles.activeDot, { backgroundColor: accentInk }]} />
             <Text style={[styles.activePillText, { color: accentInk }]}>
               {tUi('vaultInserted')}
             </Text>
           </View>
         ) : isLocked ? (
-          <View style={[styles.loadAction, { borderColor: '#F59E0B', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: '#F59E0B18' }]}>
-            <Text style={[styles.loadActionText, { color: '#F59E0B' }]}>
+          <View style={[styles.loadAction, { borderColor: '#F59E0B', borderWidth: 1, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, backgroundColor: isLightBackground(palette.deckBg) ? '#FEF3C7' : '#F59E0B18' }]}>
+            <Text style={[styles.loadActionText, { color: isLightBackground(palette.deckBg) ? '#92400E' : '#F59E0B' }]}>
               {tUi('vaultProReq')}
             </Text>
           </View>
         ) : (
           <View style={styles.loadAction}>
-            <Text style={[styles.loadActionText, { color: accentColor }]}>
+            <Text style={[styles.loadActionText, { color: accentText }]}>
               {tUi('vaultTapLoad')}
             </Text>
-            <Ionicons name="arrow-forward" size={12} color={accentColor} />
+            <Ionicons name="arrow-forward" size={12} color={accentText} />
           </View>
         )}
       </View>
@@ -139,6 +149,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   cartridges,
   activeCartridgeId,
   accentColor,
+  palette,
   highScores = {},
   isPro = false,
   onSelectCartridge,
@@ -149,7 +160,19 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   const { lang, tUi: translateUi } = useTranslation();
   const [filter, setFilter] = useState<FilterCategory>('ALL');
   const [favIds, setFavIds] = useState<string[]>([]);
-  const accentInk = useMemo(() => getAccentInk(accentColor), [accentColor]);
+  const cardInk = useMemo(
+    () => (isLightBackground(palette.deckBg) ? '#1F2937' : '#F8FAFC'),
+    [palette.deckBg]
+  );
+  const cardMutedInk = useMemo(
+    () => (isLightBackground(palette.deckBg) ? '#526176' : '#A8B3C3'),
+    [palette.deckBg]
+  );
+  const pageInk = isLightBackground(palette.chassisBg) ? '#1F2937' : '#F8FAFC';
+  const pageMutedInk = isLightBackground(palette.chassisBg) ? '#526176' : '#A8B3C3';
+  const accentText = isLightBackground(palette.surfaceBg) ? palette.pixelOn : accentColor;
+  const accentFill = accentText;
+  const accentInk = useMemo(() => getAccentInk(accentFill), [accentFill]);
 
   useEffect(() => {
     AsyncStorage.getItem(FAV_CARTS_STORAGE_KEY)
@@ -194,13 +217,18 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         isFav={favSet.has(item.id)}
         isLocked={isCartridgeProLocked(item.id, isPro)}
         accentColor={accentColor}
+        accentFill={accentFill}
+        accentText={accentText}
         accentInk={accentInk}
+        palette={palette}
+        cardInk={cardInk}
+        cardMutedInk={cardMutedInk}
         bestScore={highScores[item.id] || 0}
         onSelect={onSelectCartridge}
         onToggleFav={toggleFav}
       />
     ),
-    [activeCartridgeId, favSet, isPro, accentColor, accentInk, highScores, onSelectCartridge, toggleFav]
+    [activeCartridgeId, favSet, isPro, accentColor, accentFill, accentText, accentInk, palette, cardInk, cardMutedInk, highScores, onSelectCartridge, toggleFav]
   );
 
   const keyExtractor = useCallback((item: ArcadeCartridgeDef) => item.id, []);
@@ -210,58 +238,58 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
     return (
       <Pressable
         onPress={onOpenDevCart}
-        style={[styles.studioCard, { borderColor: accentColor }]}
+        style={[styles.studioCard, { backgroundColor: palette.deckBg, borderColor: accentColor }]}
       >
         <View style={styles.studioCardLeft}>
           <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
-            <Ionicons name="game-controller" size={24} color={accentColor} />
+            <Ionicons name="game-controller" size={24} color={accentText} />
           </View>
           <View style={{ flex: 1 }}>
             <View style={styles.studioTagRow}>
-              <Text style={[styles.studioTitle, { color: accentColor }]}>
+              <Text style={[styles.studioTitle, { color: accentText }]}>
                 {translateUi('vaultStudioTitle')}
               </Text>
-              <View style={styles.studioBadge}>
-                <Text style={styles.studioBadgeText}>
+              <View style={[styles.studioBadge, isLightBackground(palette.deckBg) && { backgroundColor: '#D1FAE5', borderColor: '#059669' }]}>
+                <Text style={[styles.studioBadgeText, isLightBackground(palette.deckBg) && { color: '#047857' }]}>
                   {isPro ? translateUi('vaultStudioCreator') : translateUi('vaultStudioPro')}
                 </Text>
               </View>
             </View>
-            <Text style={styles.studioSub}>
+            <Text style={[styles.studioSub, { color: cardMutedInk }]}>
               {translateUi('vaultStudioSub')}
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={accentColor} />
+        <Ionicons name="chevron-forward" size={20} color={accentText} />
       </Pressable>
     );
-  }, [accentColor, isPro, onOpenDevCart, translateUi]);
+  }, [accentColor, accentText, cardMutedInk, isPro, onOpenDevCart, palette.deckBg, translateUi]);
 
   return (
-    <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6 }]}>
+    <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6, backgroundColor: palette.chassisBg }]}>
       {/* Top Navigation Bar */}
-      <View style={styles.navBar}>
-        <Pressable onPress={onBack} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={18} color="#F8FAFC" />
-          <Text style={styles.backBtnText}>{translateUi('vaultBack')}</Text>
+      <View style={[styles.navBar, { borderBottomColor: palette.surfaceBorder, backgroundColor: palette.deckBg }]}>
+        <Pressable onPress={onBack} style={[styles.backBtn, { backgroundColor: palette.buttonBg, borderColor: palette.buttonBorder }]}>
+          <Ionicons name="arrow-back" size={18} color={pageInk} />
+          <Text style={[styles.backBtnText, { color: pageInk }]}>{translateUi('vaultBack')}</Text>
         </Pressable>
 
         <View style={styles.titleCluster}>
-          <Text style={[styles.eyebrow, { color: accentColor }]}>
+          <Text style={[styles.eyebrow, { color: accentText }]}>
             {translateUi('vaultEyebrow')}
           </Text>
-          <Text style={styles.title}>{translateUi('vaultTitle')}</Text>
+          <Text style={[styles.title, { color: pageInk }]}>{translateUi('vaultTitle')}</Text>
         </View>
 
-        <View style={[styles.countBadge, { borderColor: `${accentColor}55` }]}>
-          <Text style={[styles.countText, { color: accentColor }]}>
+        <View style={[styles.countBadge, { borderColor: palette.surfaceBorder, backgroundColor: palette.surfaceBg }]}>
+          <Text style={[styles.countText, { color: accentText }]}>
             {translateUi('vaultCount', { count: cartridges.length })}
           </Text>
         </View>
       </View>
 
       {/* Category Filter Pills */}
-      <View style={styles.filterWrap}>
+      <View style={[styles.filterWrap, { borderBottomColor: palette.surfaceBorder, backgroundColor: palette.surfaceBg }]}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -276,13 +304,14 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
                 onPress={() => setFilter(cat)}
                 style={[
                   styles.filterChip,
+                  { borderColor: palette.buttonBorder, backgroundColor: palette.buttonBg },
                   isSelected && {
                     borderColor: accentColor,
                     backgroundColor: `${accentColor}18`,
                   },
                 ]}
               >
-                <Text style={[styles.filterChipText, isSelected && { color: accentColor }]}>
+                <Text style={[styles.filterChipText, { color: pageMutedInk }, isSelected && { color: accentText }]}>
                   {cat === 'ALL'
                     ? translateUi('vaultCatAll', { count: cartridges.length })
                     : cat === 'FAVS'
@@ -311,9 +340,9 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyWrap}>
-            <Ionicons name="star-outline" size={28} color="#64748B" />
-            <Text style={styles.emptyTitle}>{translateUi('vaultEmptyTitle')}</Text>
-            <Text style={styles.emptySub}>
+            <Ionicons name="star-outline" size={28} color={pageMutedInk} />
+            <Text style={[styles.emptyTitle, { color: pageInk }]}>{translateUi('vaultEmptyTitle')}</Text>
+            <Text style={[styles.emptySub, { color: pageMutedInk }]}>
               {translateUi('vaultEmptySub')}
             </Text>
           </View>

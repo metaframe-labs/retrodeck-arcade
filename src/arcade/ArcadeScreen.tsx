@@ -297,7 +297,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         )}
 
         {/* Scanlines Filter */}
-        {!j2meJarPath && scanlineRows}
+        {scanlineRows}
 
         {/* Pause Overlay */}
         {!j2meJarPath && isPaused && (

@@ -19,11 +19,17 @@ import {
   RetroPaletteId,
   RetroThemeCategory,
   getAccentInk,
+  isLightBackground,
   isPaletteProLocked,
 } from '../theme/palettes';
 import { tUi, useTranslation } from '../i18n/retroI18n';
 
 const FAV_THEMES_STORAGE_KEY = '@retrodeck8_fav_themes_v1';
+
+const readableInk = (surface: string) =>
+  isLightBackground(surface) ? '#1F2937' : '#F8FAFC';
+const mutedInk = (surface: string) =>
+  isLightBackground(surface) ? '#526176' : '#A8B3C3';
 
 interface ThemePickerModalProps {
   visible: boolean;
@@ -78,18 +84,20 @@ const ThemeCard = React.memo<ThemeCardProps>(
               { backgroundColor: theme.ledColor || theme.bezelAccent },
             ]}
           />
-          <Text style={styles.catBadge}>{theme.category}</Text>
+          <Text style={[styles.catBadge, { color: mutedInk(theme.deckBg) }]}>
+            {theme.category}
+          </Text>
         </View>
         <View style={styles.cardTopRight}>
           {isSelected ? (
-            <View style={[styles.activeTag, { backgroundColor: theme.bezelAccent }]}>
-              <Text style={[styles.activeTagTxt, { color: getAccentInk(theme.bezelAccent) }]}>
+            <View style={[styles.activeTag, { backgroundColor: isLightBackground(theme.deckBg) ? theme.pixelOn : theme.bezelAccent }]}>
+              <Text style={[styles.activeTagTxt, { color: getAccentInk(isLightBackground(theme.deckBg) ? theme.pixelOn : theme.bezelAccent) }]}>
                 {tUi('themeActive')}
               </Text>
             </View>
           ) : isLocked ? (
-            <View style={[styles.activeTag, { backgroundColor: '#F59E0B22', borderWidth: 1, borderColor: '#F59E0B' }]}>
-              <Text style={[styles.activeTagTxt, { color: '#F59E0B' }]}>{tUi('themePro')}</Text>
+            <View style={[styles.activeTag, { backgroundColor: '#F59E0B', borderWidth: 1, borderColor: '#F59E0B' }]}>
+              <Text style={[styles.activeTagTxt, { color: getAccentInk('#F59E0B') }]}>{tUi('themePro')}</Text>
             </View>
           ) : null}
           <Pressable
@@ -100,7 +108,7 @@ const ThemeCard = React.memo<ThemeCardProps>(
             <Ionicons
               name={isFav ? 'star' : 'star-outline'}
               size={14}
-              color={isFav ? '#FBBF24' : '#64748B'}
+              color={isFav ? (isLightBackground(theme.deckBg) ? '#B45309' : '#FBBF24') : mutedInk(theme.deckBg)}
             />
           </Pressable>
         </View>
@@ -146,10 +154,10 @@ const ThemeCard = React.memo<ThemeCardProps>(
       </View>
 
       {/* Theme Name & Tagline */}
-      <Text style={styles.cardTitle} numberOfLines={1}>
+      <Text style={[styles.cardTitle, { color: readableInk(theme.deckBg) }]} numberOfLines={1}>
         {theme.name}
       </Text>
-      <Text style={styles.cardSub} numberOfLines={1}>
+      <Text style={[styles.cardSub, { color: mutedInk(theme.deckBg) }]} numberOfLines={1}>
         {theme.tagline}
       </Text>
     </Pressable>
@@ -167,6 +175,14 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
   const { tUi: translateUi } = useTranslation();
+  const shellInk = readableInk(activePalette.chassisBg);
+  const surfaceMutedInk = mutedInk(activePalette.surfaceBg);
+  const accentText = isLightBackground(activePalette.surfaceBg)
+    ? activePalette.pixelOn
+    : activePalette.bezelAccent;
+  const accentFill = isLightBackground(activePalette.surfaceBg)
+    ? activePalette.pixelOn
+    : activePalette.bezelAccent;
   const [category, setCategory] = useState<FilterTab>('ALL');
   const [favIds, setFavIds] = useState<string[]>([]);
 
@@ -230,10 +246,10 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
         {/* Header */}
         <View style={[styles.header, { borderBottomColor: activePalette.surfaceBorder }]}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.eyebrow, { color: activePalette.bezelAccent }]}>
+            <Text style={[styles.eyebrow, { color: accentText }]}>
               {translateUi('themeEyebrow')}
             </Text>
-            <Text style={styles.title}>
+            <Text style={[styles.title, { color: shellInk }]}>
               {translateUi('themeTitle', { count: PALETTE_ORDER.length })}
             </Text>
           </View>
@@ -249,25 +265,25 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                 },
               ]}
             >
-              <Ionicons name="shuffle-outline" size={14} color={activePalette.bezelAccent} />
-              <Text style={[styles.cycleTxt, { color: activePalette.bezelAccent }]}>
+              <Ionicons name="shuffle-outline" size={14} color={accentText} />
+              <Text style={[styles.cycleTxt, { color: accentText }]}>
                 {translateUi('themeNext')}
               </Text>
             </Pressable>
 
             <Pressable
               onPress={onClose}
-              style={[styles.closeBtn, { backgroundColor: activePalette.bezelAccent }]}
+              style={[styles.closeBtn, { backgroundColor: accentFill }]}
             >
               <Ionicons
                 name="checkmark"
                 size={16}
-                color={getAccentInk(activePalette.bezelAccent)}
+                color={getAccentInk(accentFill)}
               />
               <Text
                 style={[
                   styles.closeTxt,
-                  { color: getAccentInk(activePalette.bezelAccent) },
+                  { color: getAccentInk(accentFill) },
                 ]}
               >
                 {translateUi('themeDone')}
@@ -294,7 +310,7 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                     styles.catPill,
                     {
                       backgroundColor: active
-                        ? activePalette.bezelAccent
+                      ? accentFill
                         : activePalette.surfaceBg,
                       borderColor: active
                         ? activePalette.bezelAccent
@@ -307,8 +323,8 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
                       styles.catTxt,
                       {
                         color: active
-                          ? getAccentInk(activePalette.bezelAccent)
-                          : '#CBD5E1',
+                          ? getAccentInk(accentFill)
+                          : surfaceMutedInk,
                       },
                     ]}
                   >
@@ -339,9 +355,9 @@ export const ThemePickerModal: React.FC<ThemePickerModalProps> = ({
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
-              <Ionicons name="star-outline" size={28} color="#64748B" />
-              <Text style={styles.emptyTitle}>NO FAVORITE THEMES YET</Text>
-              <Text style={styles.emptySub}>
+              <Ionicons name="star-outline" size={28} color={surfaceMutedInk} />
+              <Text style={[styles.emptyTitle, { color: shellInk }]}>NO FAVORITE THEMES YET</Text>
+              <Text style={[styles.emptySub, { color: surfaceMutedInk }]}>
                 Tap the ★ icon on any theme card to pin it here.
               </Text>
             </View>

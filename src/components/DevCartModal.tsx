@@ -15,12 +15,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { GAME_TEMPLATES, GameTemplate } from '../arcade/compiler/templates';
 import { compileCustomCartridge } from '../arcade/compiler/CartridgeCompiler';
 import { ArcadeCartridgeDef } from '../arcade/types';
-import { getAccentInk } from '../theme/palettes';
+import { RetroPalette, getAccentInk, isLightBackground } from '../theme/palettes';
 import { useTranslation } from '../i18n/retroI18n';
 
 interface DevCartModalProps {
   visible: boolean;
   accentColor: string;
+  palette: RetroPalette;
   onClose: () => void;
   onLoadCustomCartridge: (cart: ArcadeCartridgeDef) => void;
 }
@@ -28,11 +29,18 @@ interface DevCartModalProps {
 export const DevCartModal: React.FC<DevCartModalProps> = ({
   visible,
   accentColor,
+  palette,
   onClose,
   onLoadCustomCartridge,
 }) => {
   const insets = useSafeAreaInsets();
   const { tUi } = useTranslation();
+  const lightShell = isLightBackground(palette.chassisBg);
+  const shellInk = isLightBackground(palette.deckBg) ? '#1F2937' : '#F8FAFC';
+  const mutedInk = isLightBackground(palette.surfaceBg) ? '#526176' : '#A8B3C3';
+  const accentText = isLightBackground(palette.surfaceBg) ? palette.pixelOn : accentColor;
+  const accentFill = accentText;
+  const editorInk = palette.pixelOn;
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(GAME_TEMPLATES[0].id);
   const [cartTitle, setCartTitle] = useState('CUSTOM GAME');
   const [code, setCode] = useState(GAME_TEMPLATES[0].code);
@@ -99,29 +107,29 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
-        style={styles.container}
+        style={[styles.container, { backgroundColor: palette.chassisBg }]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Top Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 6 }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) + 6, backgroundColor: palette.deckBg, borderBottomColor: palette.surfaceBorder }]}>
           <View>
             <View style={styles.badgeRow}>
               <View style={[styles.led, { backgroundColor: accentColor }]} />
-              <Text style={[styles.eyebrow, { color: accentColor }]}>
+              <Text style={[styles.eyebrow, { color: accentText }]}>
                 {tUi('devEyebrow')}
               </Text>
             </View>
-            <Text style={styles.title}>{tUi('devTitle')}</Text>
+            <Text style={[styles.title, { color: shellInk }]}>{tUi('devTitle')}</Text>
           </View>
 
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={22} color="#CBD5E1" />
+          <Pressable onPress={onClose} style={[styles.closeBtn, { backgroundColor: palette.buttonBg }]}>
+            <Ionicons name="close" size={22} color={mutedInk} />
           </Pressable>
         </View>
 
         {/* Template Selector Bar */}
-        <View style={styles.templateSection}>
-          <Text style={styles.sectionLabel}>{tUi('devTemplates')}</Text>
+        <View style={[styles.templateSection, { backgroundColor: palette.surfaceBg, borderBottomColor: palette.surfaceBorder }]}>
+          <Text style={[styles.sectionLabel, { color: mutedInk }]}>{tUi('devTemplates')}</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -135,6 +143,7 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
                   onPress={() => handleSelectTemplate(tmpl)}
                   style={[
                     styles.templateChip,
+                    { borderColor: palette.buttonBorder, backgroundColor: palette.buttonBg },
                     isSelected && {
                       borderColor: accentColor,
                       backgroundColor: `${accentColor}18`,
@@ -144,9 +153,9 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
                   <Ionicons
                     name="game-controller-outline"
                     size={12}
-                    color={isSelected ? accentColor : '#94A3B8'}
+                    color={isSelected ? accentText : mutedInk}
                   />
-                  <Text style={[styles.templateText, isSelected && { color: accentColor }]}>
+                  <Text style={[styles.templateText, { color: mutedInk }, isSelected && { color: accentText }]}>
                     {tmpl.name}
                   </Text>
                 </Pressable>
@@ -156,31 +165,31 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
         </View>
 
         {/* Cartridge Title Input */}
-        <View style={styles.titleInputWrap}>
-          <Text style={styles.inputPrefix}>{tUi('devGameTitleLbl')}</Text>
+        <View style={[styles.titleInputWrap, { backgroundColor: palette.surfaceBg, borderBottomColor: palette.surfaceBorder }]}>
+          <Text style={[styles.inputPrefix, { color: accentText }]}>{tUi('devGameTitleLbl')}</Text>
           <TextInput
             style={[
               styles.titleInput,
-              { color: accentColor, borderColor: `${accentColor}44` },
+              { color: shellInk, borderColor: palette.surfaceBorder },
             ]}
             value={cartTitle}
             onChangeText={setCartTitle}
             placeholder={tUi('devGameTitlePh')}
-            placeholderTextColor="#64748B"
+            placeholderTextColor={mutedInk}
             autoCapitalize="characters"
           />
         </View>
 
         {/* Code Editor */}
-        <View style={[styles.editorContainer, { borderColor: `${accentColor}44` }]}>
-          <View style={styles.editorTopBar}>
-            <Text style={styles.editorTitle}>{tUi('devEditorTitle')}</Text>
-            <Text style={[styles.editorMeta, { color: accentColor }]}>
+        <View style={[styles.editorContainer, { backgroundColor: palette.screenBg, borderColor: palette.surfaceBorder }]}>
+          <View style={[styles.editorTopBar, { backgroundColor: palette.buttonBg, borderBottomColor: palette.surfaceBorder }]}>
+            <Text style={[styles.editorTitle, { color: mutedInk }]}>{tUi('devEditorTitle')}</Text>
+            <Text style={[styles.editorMeta, { color: accentText }]}>
               {tUi('devEditorChars', { count: code.length })}
             </Text>
           </View>
           <TextInput
-            style={[styles.editorInput, { color: accentColor }]}
+            style={[styles.editorInput, { color: editorInk }]}
             value={code}
             onChangeText={(txt) => {
               setCode(txt);
@@ -191,35 +200,36 @@ export const DevCartModal: React.FC<DevCartModalProps> = ({
             autoCorrect={false}
             spellCheck={false}
             textAlignVertical="top"
+            selectionColor={accentColor}
           />
         </View>
 
         {/* Error Terminal Banner */}
         {errorMsg && (
-          <View style={styles.errorBanner}>
+          <View style={[styles.errorBanner, lightShell && { backgroundColor: '#FEE2E2' }]}>
             <View style={styles.errorHeader}>
               <Ionicons name="warning-outline" size={14} color="#FF0055" />
               <Text style={styles.errorTitle}>{tUi('devErrTitle')}</Text>
             </View>
-            <Text style={styles.errorText} numberOfLines={4}>
+            <Text style={[styles.errorText, lightShell && { color: '#991B1B' }]} numberOfLines={4}>
               {errorMsg}
             </Text>
           </View>
         )}
 
         {/* Bottom Action Footer */}
-        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
+        <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 14) + 8, backgroundColor: palette.deckBg, borderTopColor: palette.surfaceBorder }]}>
           <Pressable
             onPress={handleBurnToCartridge}
             disabled={compiling}
             style={[
               styles.burnBtn,
-              { backgroundColor: accentColor },
+              { backgroundColor: accentFill },
               compiling && { opacity: 0.7 },
             ]}
           >
-            <Ionicons name="play" size={18} color={getAccentInk(accentColor)} />
-            <Text style={[styles.burnBtnText, { color: getAccentInk(accentColor) }]}>
+            <Ionicons name="play" size={18} color={getAccentInk(accentFill)} />
+            <Text style={[styles.burnBtnText, { color: getAccentInk(accentFill) }]}>
               {compiling ? tUi('devPreparing') : tUi('devInsertPlay')}
             </Text>
           </Pressable>

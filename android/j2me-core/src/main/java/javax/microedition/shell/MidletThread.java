@@ -54,7 +54,7 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 	private final String mainClass;
 	private MIDlet midlet;
 	private final Handler handler;
-	private int state;
+	private volatile int state;
 
 	private MidletThread(MicroLoader microLoader, String mainClass) {
 		super("MidletMain");
@@ -99,19 +99,24 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 	}
 
 	public static void notifyPaused() {
-		instance.state = PAUSED;
+		MidletThread current = instance;
+		if (current != null && current.state != DESTROYED) {
+			current.state = PAUSED;
+		}
 	}
 
 	static void pauseApp() {
-		if (instance != null)
-			instance.handler.obtainMessage(PAUSE).sendToTarget();
+		MidletThread current = instance;
+		if (current != null)
+			current.handler.obtainMessage(PAUSE).sendToTarget();
 	}
 
 	public static void resumeApp() {
 		MicroActivity activity = ContextHolder.getActivity();
 		boolean hostVisible = (activity != null && activity.isVisible()) || J2meHost.getContainer() != null;
-		if (instance != null && hostVisible)
-			instance.handler.obtainMessage(START).sendToTarget();
+		MidletThread current = instance;
+		if (current != null && hostVisible)
+			current.handler.obtainMessage(START).sendToTarget();
 	}
 
 	static void destroyApp() {
@@ -141,8 +146,9 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 	}
 
 	static void stopEmbedded() {
-		if (instance != null) {
-			instance.handler.obtainMessage(DESTROY).sendToTarget();
+		MidletThread current = instance;
+		if (current != null) {
+			current.handler.obtainMessage(DESTROY).sendToTarget();
 		}
 	}
 
@@ -181,15 +187,19 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 					state = PAUSED;
 					Log.w(TAG, "Midlet doesn't want to start!", e);
 				} catch (Throwable t) {
-					state = DESTROYED;
 					if (embeddedHost) {
-						Log.e(TAG, "Embedded MIDlet startApp failed", t);
-						try {
-							midlet.destroyApp(true);
-						} catch (Throwable ignored) {}
-						notifyDestroyed();
+						// Keep a failed embedded resume recoverable. Calling destroyApp here
+						// permanently drops the game's Canvas and class loader, leaving the
+						// host screen stuck if the MIDlet can start successfully on retry.
+						state = PAUSED;
+						Log.e(TAG, "Embedded MIDlet startApp failed; keeping it alive for retry", t);
 					} else {
+						state = DESTROYED;
 						throw new RuntimeException("Failed startApp", t);
+					}
+				} finally {
+					if (embeddedHost) {
+						javax.microedition.lcdui.Display.refreshEmbeddedDisplay();
 					}
 				}
 				break;
@@ -201,14 +211,16 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 					midlet.pauseApp();
 					state = PAUSED;
 				} catch (Throwable t) {
-					state = DESTROYED;
-					try {
-						midlet.destroyApp(true);
-					} catch (MIDletStateChangeException ignored) {}
 					if (embeddedHost) {
-						Log.e(TAG, "Embedded MIDlet pauseApp failed", t);
-						notifyDestroyed();
+						// A broken pause callback must not tear down the embedded game. Mark it
+						// paused so a later resume can invoke startApp() again.
+						state = PAUSED;
+						Log.e(TAG, "Embedded MIDlet pauseApp failed; keeping MIDlet alive", t);
 					} else {
+						state = DESTROYED;
+						try {
+							midlet.destroyApp(true);
+						} catch (MIDletStateChangeException ignored) {}
 						throw new RuntimeException("Filed pauseApp", t);
 					}
 				}
