@@ -115,14 +115,6 @@ class SomaRadioService {
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const mod = require('expo-audio');
       this.safeExpoAudio = mod?.createAudioPlayer ? mod : mod?.default ? mod.default : mod;
-      if (this.safeExpoAudio?.setAudioModeAsync) {
-        this.safeExpoAudio.setAudioModeAsync({
-          playsInSilentMode: true,
-          interruptionMode: 'mixWithOthers',
-          shouldPlayInBackground: true,
-          staysActiveInBackground: true,
-        }).catch(() => {});
-      }
     } catch {
       this.safeExpoAudio = null;
     }
@@ -250,9 +242,8 @@ class SomaRadioService {
           try {
             await this.safeExpoAudio.setAudioModeAsync({
               playsInSilentMode: true,
-              interruptionMode: 'mixWithOthers',
+              interruptionMode: 'doNotMix',
               shouldPlayInBackground: true,
-              staysActiveInBackground: true,
             });
           } catch {}
         }
@@ -264,11 +255,11 @@ class SomaRadioService {
         this.player = this.safeExpoAudio.createAudioPlayer(channel.streamUrl, {
           updateInterval: 1000,
           downloadFirst: false,
-          staysActiveInBackground: true,
         });
         if (this.player) {
           this.player.volume = this.volume;
           this.player.play();
+          this.activateLockScreenControls(channel);
           this.isPlaying = true;
           this.isLoading = false;
           this.notify();
@@ -296,6 +287,7 @@ class SomaRadioService {
     }
     if (this.player) {
       try {
+        this.player.setActiveForLockScreen?.(false);
         if (Platform.OS === 'web') {
           this.player.pause();
         } else if (typeof this.player.pause === 'function') {
@@ -321,12 +313,25 @@ class SomaRadioService {
             artist: first.artist || 'SomaFM',
             album: first.album || '',
           };
+          if (this.isPlaying) {
+            this.activateLockScreenControls(channel);
+          }
           this.notify();
         }
       }
     } catch {
       // offline / network silence
     }
+  }
+
+  private activateLockScreenControls(channel: SomaChannel) {
+    try {
+      this.player?.setActiveForLockScreen?.(true, {
+        title: this.currentSong?.title || channel.name,
+        artist: this.currentSong?.artist || 'SomaFM',
+        albumTitle: this.currentSong?.album || channel.genre,
+      });
+    } catch {}
   }
 }
 

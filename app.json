@@ -28,6 +28,15 @@
     },
     "plugins": [
       [
+        "expo-audio",
+        {
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      [
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
