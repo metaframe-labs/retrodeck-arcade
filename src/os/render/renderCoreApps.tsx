@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Platform, Image, Pressable } from 'react-native';
+import { View, Text, Platform, Dimensions, PixelRatio, Image, Pressable, ScrollView } from 'react-native';
+import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
 import { isCartridgeProLocked } from '../../arcade/cartridges';
 import { PALETTE_ORDER, RETRO_PALETTES, isPaletteProLocked } from '../../theme/palettes';
@@ -3921,5 +3922,241 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
         </Text>
       </View>
     </View>
+  );
+}
+
+export function renderJ2meInfo(os: RetroDeckOS, fg: string, bg: string) {
+  const tr = os.lang === 'tr';
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+  const cards = [
+    {
+      icon: 'code-slash-outline' as const,
+      label: tr ? 'DERLEYİCİ' : 'COMPILER',
+      value: tr ? 'JAR → DEX' : 'JAR → DEX',
+      detail: tr ? 'Cihazda, başlatmadan önce' : 'On-device before launch',
+    },
+    {
+      icon: 'resize-outline' as const,
+      label: tr ? 'LCD ÇIKIŞI' : 'LCD OUTPUT',
+      value: tr ? 'TAM EKRAN' : 'FULL LCD',
+      detail: tr ? '4:3 LCD’ye esnetilir' : 'Stretched to fill 4:3 LCD',
+    },
+  ];
+
+  return (
+    <View style={{ flex: 1, padding: 6, gap: 5, backgroundColor: bg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+        <View style={{ width: 27, height: 27, borderWidth: 1.5, borderColor: fg, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name="phone-portrait-outline" size={15} color={fg} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }}>
+            {tr ? 'J2ME OYUN ALANI' : 'J2ME GAME DECK'}
+          </Text>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7.5, opacity: 0.75 }}>
+            {tr ? 'Gömülü Java ME çalışma zamanı' : 'Embedded Java ME runtime'}
+          </Text>
+        </View>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900', borderWidth: 1, borderColor: fg, paddingHorizontal: 4, paddingVertical: 2 }}>
+          ANDROID
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', gap: 5 }}>
+        {cards.map((card) => (
+          <View key={card.label} style={{ flex: 1, minHeight: 48, borderWidth: 1, borderColor: hexWithAlpha(fg, 0.55), borderRadius: 5, paddingHorizontal: 5, paddingVertical: 4, justifyContent: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+              <Ionicons name={card.icon} size={9} color={fg} />
+              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', letterSpacing: 0.5 }}>{card.label}</Text>
+            </View>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 9, fontWeight: '900', marginTop: 2 }}>{card.value}</Text>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.75 }} numberOfLines={1}>{card.detail}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View style={{ borderLeftWidth: 2, borderLeftColor: fg, paddingLeft: 6, gap: 2 }}>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900' }}>
+          {tr ? 'OYUN ÇÖZÜNÜRLÜĞÜ' : 'GAME RESOLUTION'}
+        </Text>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, opacity: 0.82 }} numberOfLines={2}>
+          {tr
+            ? 'Varsayılan sanal ekran 240×320; LCD’yi doldurmak için esnetilir.'
+            : 'Default virtual screen is 240×320; stretched to fill the LCD viewport.'}
+        </Text>
+      </View>
+
+      <Pressable
+        onPress={() => os.cb.onLaunchJ2me?.()}
+        style={{ minHeight: 29, borderWidth: 1.5, borderColor: fg, borderRadius: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: hexWithAlpha(fg, 0.12) }}
+      >
+        <Ionicons name="folder-open-outline" size={12} color={fg} />
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 8, fontWeight: '900', letterSpacing: 0.7 }}>
+          {tr ? 'JAR DOSYASI SEÇ' : 'CHOOSE JAR FILE'}
+        </Text>
+      </Pressable>
+      <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.65, textAlign: 'center' }}>
+        {tr ? '[A] BAŞLAT  •  [B] GERİ' : '[A] SELECT  •  [B] BACK'}
+      </Text>
+    </View>
+  );
+}
+
+export function renderDeviceInfo(os: RetroDeckOS, fg: string, bg: string) {
+  const tr = os.lang === 'tr';
+  const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+  const screen = Dimensions.get('screen');
+  const density = PixelRatio.get();
+  const androidInfo = Platform.OS === 'android' ? Platform.constants : null;
+  const brand = androidInfo?.Brand?.trim() || Platform.OS.toUpperCase();
+  const manufacturer = androidInfo?.Manufacturer?.trim() || brand;
+  const model = androidInfo?.Model?.trim() || (tr ? 'Bilinmeyen cihaz' : 'Unknown device');
+  const androidRelease = androidInfo?.Release || String(Platform.Version);
+  const androidApi = androidInfo?.Version;
+  const pixelWidth = Math.round(screen.width * density);
+  const pixelHeight = Math.round(screen.height * density);
+  const rnVersion = androidInfo?.reactNativeVersion;
+  const runtimeVersion = rnVersion ? `${rnVersion.major}.${rnVersion.minor}.${rnVersion.patch}` : '—';
+  const retroDeckVersion = Constants.nativeAppVersion || Constants.expoConfig?.version || '—';
+  // Mirrors VERSION_NAME in android/j2me-core/build.gradle.
+  const j2meLoaderVersion = '1.8.2';
+  const cards = [
+    {
+      icon: 'hardware-chip-outline' as const,
+      label: tr ? 'CIHAZ' : 'DEVICE',
+      value: model,
+      detail: `${manufacturer} · ${brand}`,
+    },
+    {
+      icon: 'hardware-chip-outline' as const,
+      label: tr ? 'ANDROID' : 'ANDROID',
+      value: `Android ${androidRelease}`,
+      detail: androidApi ? `API ${androidApi}` : (tr ? 'SİSTEM SÜRÜMÜ' : 'SYSTEM VERSION'),
+    },
+    {
+      icon: 'scan-outline' as const,
+      label: tr ? 'EKRAN' : 'DISPLAY',
+      value: `${pixelWidth} × ${pixelHeight} PX`,
+      detail: `${Math.round(screen.width)} × ${Math.round(screen.height)} DP · ${density}×`,
+    },
+    {
+      icon: 'apps-outline' as const,
+      label: tr ? 'UYGULAMA' : 'APPLICATION',
+      value: `RETRODECK OS ${retroDeckVersion}`,
+      detail: `ANDROID · RN ${runtimeVersion}`,
+    },
+  ];
+
+  return (
+    <ScrollView
+      style={{ flex: 1, backgroundColor: bg }}
+      contentContainerStyle={{ flexGrow: 1, padding: 6, gap: 5 }}
+      showsVerticalScrollIndicator={false}
+      nestedScrollEnabled
+    >
+      <View
+        style={{
+          minHeight: 40,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 7,
+          borderWidth: 1.5,
+          borderColor: fg,
+          borderRadius: 6,
+          backgroundColor: hexWithAlpha(fg, 0.1),
+        }}
+      >
+        <View
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: 6,
+            borderWidth: 1,
+            borderColor: fg,
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginRight: 7,
+          }}
+        >
+          <Ionicons name="hardware-chip-outline" size={15} color={fg} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 9, fontWeight: '900', letterSpacing: 0.7 }} numberOfLines={1}>
+            {tr ? 'CIHAZ HAKKINDA' : 'ABOUT THIS DEVICE'}
+          </Text>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, opacity: 0.72 }} numberOfLines={1}>
+            {manufacturer} · {brand}
+          </Text>
+        </View>
+        <Ionicons name="shield-checkmark-outline" size={13} color={fg} />
+      </View>
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 5 }}>
+        {cards.map((card) => (
+          <View
+            key={card.label}
+            style={{
+              width: '48.5%',
+              minHeight: 48,
+              paddingHorizontal: 5,
+              paddingVertical: 4,
+              borderWidth: 1,
+              borderColor: hexWithAlpha(fg, 0.42),
+              borderRadius: 5,
+              backgroundColor: hexWithAlpha(fg, 0.045),
+              justifyContent: 'center',
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 2 }}>
+              <Ionicons name={card.icon} size={9} color={fg} />
+              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', letterSpacing: 0.6 }}>
+                {card.label}
+              </Text>
+            </View>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 8, fontWeight: '900' }} numberOfLines={1}>
+              {card.value}
+            </Text>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.2, opacity: 0.72 }} numberOfLines={1}>
+              {card.detail}
+            </Text>
+          </View>
+        ))}
+      </View>
+
+      <View
+        style={{
+          minHeight: 38,
+          flexDirection: 'row',
+          alignItems: 'center',
+          paddingHorizontal: 6,
+          borderWidth: 1,
+          borderColor: hexWithAlpha(fg, 0.42),
+          borderRadius: 5,
+          backgroundColor: hexWithAlpha(fg, 0.045),
+        }}
+      >
+        <Ionicons name="code-slash-outline" size={12} color={fg} />
+        <View style={{ flex: 1, marginLeft: 5 }}>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', letterSpacing: 0.6 }}>
+            {tr ? 'JAVA ME ÇALIŞMA ZAMANI' : 'JAVA ME RUNTIME'}
+          </Text>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 8, fontWeight: '900' }}>
+            J2ME Loader {j2meLoaderVersion}
+          </Text>
+        </View>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.2, fontWeight: '900', textAlign: 'right' }}>
+          JAR → DEX{`\n`}MIDP · CLDC
+        </Text>
+      </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 2 }}>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.65 }}>
+          {tr ? 'SİSTEM BİLGİLERİ · SALT OKUNUR' : 'SYSTEM PROFILE · READ ONLY'}
+        </Text>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900' }}>
+          [B] {tr ? 'GERİ' : 'BACK'}
+        </Text>
+      </View>
+    </ScrollView>
   );
 }

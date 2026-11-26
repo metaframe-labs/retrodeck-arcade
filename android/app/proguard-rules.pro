@@ -11,4 +11,27 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
-# Add any project specific keep options here:
+# MIDlets are converted to DEX and loaded at runtime. Their bytecode links to
+# these standard/vendor J2ME API names, so R8 must not rename, merge, or remove
+# the classes and members that a selected JAR may reference.
+-keep class javax.microedition.** { *; }
+-keep class javax.bluetooth.** { *; }
+-keep class javax.obex.** { *; }
+-keep class javax.wireless.messaging.** { *; }
+-keep class com.j_phone.** { *; }
+-keep class com.jblend.** { *; }
+-keep class com.kddi.** { *; }
+-keep class com.mascotcapsule.** { *; }
+-keep class com.mexa.** { *; }
+-keep class com.mot.iden.** { *; }
+-keep class com.motorola.** { *; }
+-keep class com.nokia.** { *; }
+-keep class com.samsung.** { *; }
+-keep class com.siemens.** { *; }
+-keep class com.sonyericsson.** { *; }
+-keep class com.sprintpcs.** { *; }
+-keep class com.vodafone.** { *; }
+-keep class mmpp.** { *; }
+-keep class org.microemu.** { *; }
+-keep class ru.playsoftware.j2meloader.** { *; }
+-keep class ru.woesss.** { *; }

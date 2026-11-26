@@ -17,6 +17,7 @@ android/.gradle/
 android/.kotlin/
 android/build/
 android/app/build/
+android/**/build/
 android/local.properties
 *.apk
 *.aab
@@ -26,3 +27,6 @@ android/app/src/main/assets/
 android/app/src/main/res/raw/
 scripts/verifySokoban.ts
 
+
+# Local game used during J2ME integration testing
+bounce.jar

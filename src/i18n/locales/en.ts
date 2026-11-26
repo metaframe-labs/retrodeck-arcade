@@ -23,6 +23,7 @@ export const enLocale = {
     setup: 'SETUP',
     wallpapers: 'WALLS',
     format: 'FORMAT',
+    device: 'ABOUT DEVICE',
   },
   os: {
     // Boot & Titles

@@ -25,6 +25,7 @@ export const trLocale: LocaleBundle = {
     setup: 'AYAR',
     wallpapers: 'DUVAR',
     format: 'FORMAT',
+    device: 'CIHAZ BILGISI',
   },
   os: {
     // Boot & Titles

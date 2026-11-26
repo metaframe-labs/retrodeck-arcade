@@ -12,6 +12,8 @@ interface RetroNumericDeckProps {
   targetLabel?: string;
   onPressKey: (key: string) => void;
   onNav: (dir: 'up' | 'down' | 'left' | 'right') => void;
+  onSoftLeft?: () => void;
+  onSoftRight?: () => void;
   onSwitchMode: () => void;
   onKeySound?: () => void;
 }
@@ -50,6 +52,8 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
   buttonBorder = '#26374D',
   onPressKey,
   onNav,
+  onSoftLeft,
+  onSoftRight,
   onSwitchMode,
   onKeySound,
 }) => {
@@ -101,6 +105,48 @@ export const RetroNumericDeck: React.FC<RetroNumericDeckProps> = ({
     <View style={styles.wrap}>
       {/* Left: Top Nokia Navi-Row + 3x4 Numeric Matrix */}
       <View style={styles.grid}>
+        <View style={styles.softRow}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Left soft key"
+            onPress={() => { tapHaptic(); onSoftLeft?.(); }}
+            style={({ pressed }) => [
+              styles.softBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
+              pressed && { borderColor: accentColor, backgroundColor: `${accentColor}28` },
+            ]}
+          >
+            <Text style={[styles.softMainTxt, { color: defTxtColor }]}>L</Text>
+            <Text style={[styles.softSubTxt, { color: defSubColor }]}>SOFT</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={tUi('btnOk')}
+            onPress={handleOk}
+            style={({ pressed }) => [
+              styles.softBtn,
+              styles.softConfirmBtn,
+              { backgroundColor: `${accentColor}22`, borderColor: accentColor },
+              pressed && { backgroundColor: `${accentColor}44` },
+            ]}
+          >
+            <Ionicons name="checkmark" size={13} color={accentColor} />
+            <Text style={[styles.softMainTxt, { color: accentColor }]}>OK</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Right soft key"
+            onPress={() => { tapHaptic(); onSoftRight?.(); }}
+            style={({ pressed }) => [
+              styles.softBtn,
+              { backgroundColor: buttonBg, borderColor: buttonBorder },
+              pressed && { borderColor: accentColor, backgroundColor: `${accentColor}28` },
+            ]}
+          >
+            <Text style={[styles.softMainTxt, { color: defTxtColor }]}>R</Text>
+            <Text style={[styles.softSubTxt, { color: defSubColor }]}>SOFT</Text>
+          </Pressable>
+        </View>
         <View style={styles.navRow}>
           {(['left', 'up', 'down', 'right'] as const).map((dir) => {
             const label = dir === 'left' ? '◀' : dir === 'up' ? '▲' : dir === 'down' ? '▼' : '▶';
@@ -220,6 +266,33 @@ const styles = StyleSheet.create({
     height: 30,
     flexDirection: 'row',
     gap: 5,
+  },
+  softRow: {
+    height: 27,
+    flexDirection: 'row',
+    gap: 5,
+  },
+  softBtn: {
+    flex: 1,
+    borderRadius: 7,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+  },
+  softConfirmBtn: {
+    borderWidth: 1.5,
+  },
+  softMainTxt: {
+    fontSize: 10,
+    fontWeight: '900',
+    fontFamily: 'monospace',
+  },
+  softSubTxt: {
+    fontSize: 6,
+    fontWeight: '800',
+    fontFamily: 'monospace',
   },
   navBtn: {
     flex: 1,

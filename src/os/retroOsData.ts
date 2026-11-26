@@ -139,6 +139,8 @@ export type OsAppId =
   | 'setup'
   | 'wallpapers'
   | 'format'
+  | 'j2me'
+  | 'device'
   | 'themes'
   | 'pro';
 
@@ -216,6 +218,7 @@ export const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'format', label: 'MY PC [C:]', icon: 'disc' },
   { id: 'wap', label: 'INTERNET', icon: 'globe' },
   { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
+  { id: 'j2me', label: 'J2ME JAR', icon: 'cube' },
   { id: 'notes', label: 'NOTEPAD', icon: 'document-text' },
   { id: 'paint', label: 'PAINT', icon: 'brush' },
   { id: 'calc', label: 'CALC', icon: 'calculator' },
@@ -231,6 +234,7 @@ export const DESKTOP_ICONS: DesktopIcon[] = [
   { id: 'weather', label: 'WEATHER', icon: 'partly-sunny' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
   { id: 'stats', label: 'TASK MGR', icon: 'bar-chart' },
+  { id: 'device', label: 'ABOUT DEVICE', icon: 'hardware-chip-outline' },
   { id: 'profiles', label: 'PROFILES', icon: 'notifications' },
 ];
 

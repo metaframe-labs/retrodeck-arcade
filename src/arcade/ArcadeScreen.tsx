@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ArcadeGameInstance, ArcadeStats } from './types';
 import { RetroPalette, isLightBackground } from '../theme/palettes';
 import { useTranslation } from '../i18n/retroI18n';
+import { J2meScreen } from '../j2me/J2meScreen';
 
 interface ArcadeScreenProps {
   game: ArcadeGameInstance;
@@ -20,6 +21,7 @@ interface ArcadeScreenProps {
   gameOverMenuSelection?: number; // 0: RESTART, 1: OS DESKTOP
   cartridgeReady?: boolean;
   onStartCartridge?: () => void;
+  j2meJarPath?: string;
 }
 
 export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
@@ -37,6 +39,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
   gameOverMenuSelection = 0,
   cartridgeReady = false,
   onStartCartridge,
+  j2meJarPath,
 }) => {
   const { tUi } = useTranslation();
   const [size, setSize] = useState({ w: 320, h: 240 });
@@ -103,7 +106,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         </View>
 
         <View style={styles.hudStats}>
-          {isBeeping && (
+          {!j2meJarPath && isBeeping && (
             <View style={[styles.beepPill, { borderColor: palette.bezelAccent }]}>
               <Text style={[styles.beepText, { color: palette.bezelAccent }]}>FX</Text>
             </View>
@@ -115,7 +118,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 {cartCount} ROMS
               </Text>
             </View>
-          ) : (
+          ) : !j2meJarPath ? (
             <>
               <View style={styles.statBadgePill}>
                 <Text style={[styles.statLevelText, { color: palette.bezelAccent }]}>
@@ -178,7 +181,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
                 </Text>
               </View>
             </>
-          )}
+          ) : null}
         </View>
       </View>
 
@@ -194,11 +197,15 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
           },
         ]}
       >
-        {/* Render Live Game Entities */}
-        {game.renderEntities(palette)}
+        {/* Keep the J2ME surface inside the LCD viewport, above the regular arcade scene. */}
+        {j2meJarPath ? (
+          <J2meScreen jarPath={j2meJarPath} style={StyleSheet.absoluteFill} />
+        ) : (
+          game.renderEntities(palette)
+        )}
 
         {/* Main Menu / Title Screen Overlay (Unified across all 100 carts) */}
-        {!isOsMode && !isPaused && !stats.gameOver && (stats.isMenu || cartridgeReady) && (
+        {!j2meJarPath && !isOsMode && !isPaused && !stats.gameOver && (stats.isMenu || cartridgeReady) && (
           <View
             style={[
               styles.titleOverlay,
@@ -290,10 +297,10 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         )}
 
         {/* Scanlines Filter */}
-        {scanlineRows}
+        {!j2meJarPath && scanlineRows}
 
         {/* Pause Overlay */}
-        {isPaused && (
+        {!j2meJarPath && isPaused && (
           <View
             style={[
               styles.overlay,
@@ -317,7 +324,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         )}
 
         {/* Game Over / Victory Overlay */}
-        {(stats.gameOver || stats.message?.includes('VICTORY')) && stats.message && !isPaused && (
+        {!j2meJarPath && (stats.gameOver || stats.message?.includes('VICTORY')) && stats.message && !isPaused && (
           <View
             style={[
               styles.overlay,
@@ -474,7 +481,7 @@ export const ArcadeScreen: React.FC<ArcadeScreenProps> = ({
         )}
 
         {/* Bottom In-Game Hint if available */}
-        {stats.subMessage && !stats.message && !stats.isMenu && !isPaused && (
+        {!j2meJarPath && stats.subMessage && !stats.message && !stats.isMenu && !isPaused && (
           <View style={styles.bottomHintBar}>
             <Text style={[styles.bottomHintText, { color: palette.bezelAccent }]}>
               {stats.subMessage}

@@ -340,6 +340,11 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
         os.cb.onPlaySound?.('explode');
         return;
       }
+      if (nextApp === 'j2me') {
+        os.app = 'j2me';
+        os.cb.onPlaySound?.('score');
+        return;
+      }
       os.app = nextApp;
       if (os.app === 'radio') somaRadioService.fetchNowPlaying();
       os.cb.onPlaySound?.('score');
@@ -722,6 +727,15 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     return 'hit';
   }
 
+  // J2ME info page: A opens the file picker; B returns to the desktop above.
+  if (os.app === 'j2me') {
+    if (pressA) {
+      os.cb.onLaunchJ2me?.();
+      return 'score';
+    }
+    return null;
+  }
+
   // Directional helper with single-press edge trigger & initial repeat delay
   const pressUp = input.up && !os.prevUp;
   const pressDown = input.down && !os.prevDown;
@@ -924,6 +938,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       if (targetApp === 'format') {
         openFormatSimulator(os, 0, false);
         return 'explode';
+      }
+      if (targetApp === 'j2me') {
+        os.app = 'j2me';
+        return 'score';
       }
       os.app = targetApp;
       if (os.app === 'ai') {

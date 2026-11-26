@@ -44,6 +44,7 @@ export interface RetroDeckOSCallbacks {
   getCartridges: () => ArcadeCartridgeDef[];
   getHighScores: () => Record<string, number>;
   onLaunchGame: (cart: ArcadeCartridgeDef) => void;
+  onLaunchJ2me?: () => void;
   onOpenCartVault: () => void;
   onCyclePalette: () => void;
   onSelectPalette?: (id: RetroPaletteId) => void;
@@ -77,6 +78,8 @@ import {
   renderWallpapers,
   renderThemes,
   renderPro,
+  renderJ2meInfo,
+  renderDeviceInfo,
 } from './render/renderCoreApps';
 import {
   renderWap,
@@ -1109,6 +1112,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'wap') return tOs('titleWap', this.lang);
     if (this.app === 'wallpapers') return tOs('titleWallpapers', this.lang);
     if (this.app === 'format') return tOs('titleFormat', this.lang);
+    if (this.app === 'j2me') return 'J2ME // RUNTIME INFO';
+    if (this.app === 'device') return this.lang === 'tr' ? 'CIHAZ HAKKINDA' : 'ABOUT THIS DEVICE';
     if (this.app === 'ai') {
       const meta = getProviderMeta(this.byokConfig.activeProvider);
       return `RD-AI // ${meta.shortName}`;
@@ -1510,6 +1515,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'format' && renderFormatApp(this, fg, bg)}
           {this.app === 'themes' && renderThemes(this, fg, bg)}
           {this.app === 'pro' && renderPro(this, fg, bg)}
+          {this.app === 'j2me' && renderJ2meInfo(this, fg, bg)}
+          {this.app === 'device' && renderDeviceInfo(this, fg, bg)}
 
           {/* Global Nokia 3310 SMS Notification Overlay Banner */}
           {this.smsBannerTimer > 0 && (

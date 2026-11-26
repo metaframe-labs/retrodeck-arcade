@@ -35,5 +35,5 @@ rootProject.name = 'RetroDeck-8'
 
 expoAutolinking.useExpoVersionCatalog()
 
-include ':app'
+include ':app', ':dexlib', ':j2me-core'
 includeBuild(expoAutolinking.reactNativeGradlePlugin)

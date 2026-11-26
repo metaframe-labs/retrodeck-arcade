@@ -104,6 +104,8 @@ function RetroDeckConsole() {
   const gameOverMenuSelectionRef = useRef<number>(0);
   gameOverMenuSelectionRef.current = gameOverMenuSelection;
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
+  const [j2meJarPath, setJ2meJarPath] = useState<string | undefined>(undefined);
+  const j2meKeyboardValueRef = useRef('');
   const cartridgeReadyRef = useRef<boolean>(true);
   cartridgeReadyRef.current = cartridgeReady;
   const beepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -354,10 +356,35 @@ function RetroDeckConsole() {
     return () => cancelAnimationFrame(rafId);
   }, [isPaused, osMode, handleSoundEvent, activeCart.id]);
 
+  // Route all controls to the embedded MIDlet while a JAR is open.
+  const sendJ2meTap = useCallback((key: string) => {
+    NativeModules.J2meModule?.sendKeyEvent(key, true);
+    setTimeout(() => NativeModules.J2meModule?.sendKeyEvent(key, false), 55);
+  }, []);
+
   // Handle Keypad input
   const handleButtonChange = useCallback((btn: ArcadeButton, pressed: boolean) => {
+    if (j2meJarPath) {
+      const { NativeModules } = require('react-native');
+      NativeModules.J2meModule?.sendKeyEvent(btn, pressed);
+      return;
+    }
     inputRef.current[btn] = pressed;
-  }, []);
+  }, [j2meJarPath]);
+
+  const handleNumericSoftKey = useCallback((dir: 'left' | 'right') => {
+    if (j2meJarPath) {
+      sendJ2meTap(dir === 'left' ? 'softleft' : 'softright');
+      return;
+    }
+    if (osMode) {
+      osRef.current.pressNavDir?.(dir);
+    } else {
+      handleButtonChange(dir, true);
+      setTimeout(() => handleButtonChange(dir, false), 65);
+    }
+    setKbdTick((t) => (t + 1) % 100000);
+  }, [handleButtonChange, j2meJarPath, osMode, sendJ2meTap]);
 
   // Cartridge Swap (preserve user's active OS theme)
   const handleSelectCartridge = useCallback((cart: ArcadeCartridgeDef) => {
@@ -489,6 +516,25 @@ function RetroDeckConsole() {
       getCartridges: () => ARCADE_CARTRIDGES,
       getHighScores: () => highScoresRef.current,
       onLaunchGame: (cart) => handleSelectCartridge(cart),
+      onLaunchJ2me: async () => {
+        try {
+          const { NativeModules, Alert } = require('react-native');
+          if (!NativeModules.J2meModule) {
+            Alert.alert('J2ME', 'J2meModule bulunamadi (APK eski olabilir)');
+            return;
+          }
+          const pickedPath: string | null = await NativeModules.J2meModule.pickJarFile();
+          if (pickedPath) {
+            j2meKeyboardValueRef.current = '';
+            setJ2meJarPath(pickedPath);
+            setOsMode(false);
+            setIsPaused(false);
+            setDeckMode('pad');
+          }
+        } catch (e: any) {
+          console.warn('J2ME pickJarFile error:', e);
+        }
+      },
       onOpenCartVault: () => setBayVisible(true),
       onCyclePalette: () => handleCyclePalette(),
       onSelectPalette: (id) => handleSelectPalette(id),
@@ -540,6 +586,10 @@ function RetroDeckConsole() {
   const kbdBinding = osRef.current.getKeyboardBinding();
 
   const handleGoHomeOS = () => {
+    if (j2meJarPath) {
+      NativeModules.J2meModule?.stopGame();
+      setJ2meJarPath(undefined);
+    }
     osRef.current.goDesktop();
     gameOverMenuSelectionRef.current = 0;
     setGameOverMenuSelection(0);
@@ -572,6 +622,11 @@ function RetroDeckConsole() {
   }, []);
 
   const handleSelectPress = useCallback(() => {
+    if (j2meJarPath) {
+      sendJ2meTap('softleft');
+      handleSoundEvent('hit');
+      return;
+    }
     if (osRef.current.postFormatWinActivationScreen) {
       osRef.current.dismissWinActivation();
       return;
@@ -583,9 +638,13 @@ function RetroDeckConsole() {
       setBayVisible(true);
       handleSoundEvent('hit');
     }
-  }, [osMode, handleSoundEvent]);
+  }, [j2meJarPath, sendJ2meTap, osMode, handleSoundEvent]);
 
   const handleStartPress = useCallback(() => {
+    if (j2meJarPath) {
+      sendJ2meTap('softright');
+      return;
+    }
     if (osRef.current.postFormatWinActivationScreen) {
       osRef.current.dismissWinActivation();
       return;
@@ -622,9 +681,18 @@ function RetroDeckConsole() {
     }
     setIsPaused((p) => !p);
     handleSoundEvent('hit');
-  }, [osMode, handleButtonChange, handleSoundEvent]);
+  }, [j2meJarPath, sendJ2meTap, osMode, handleButtonChange, handleSoundEvent]);
 
   const handleHomePress = useCallback(() => {
+    if (j2meJarPath) {
+      NativeModules.J2meModule?.stopGame();
+      setJ2meJarPath(undefined);
+      osRef.current.goDesktop();
+      setOsMode(true);
+      setIsPaused(false);
+      handleSoundEvent('hit');
+      return;
+    }
     if (osRef.current.postFormatWinActivationScreen) {
       osRef.current.dismissWinActivation();
       return;
@@ -639,7 +707,7 @@ function RetroDeckConsole() {
       setIsPaused(false);
       handleSoundEvent('hit');
     }
-  }, [osMode, handleSoundEvent]);
+  }, [j2meJarPath, osMode, handleSoundEvent]);
 
   const isLightChassis = isLightBackground(palette.chassisBg);
   const isLightDeck = isLightBackground(palette.deckBg);
@@ -734,13 +802,14 @@ function RetroDeckConsole() {
           scanlines={scanlines}
           isPaused={osMode ? false : isPaused}
           isBeeping={isBeeping}
-          cartridgeTitle={osMode ? osRef.current.getCurrentTitle() : activeCart.title}
+          cartridgeTitle={j2meJarPath ? 'J2ME GAME' : osMode ? osRef.current.getCurrentTitle() : activeCart.title}
           isOsMode={osMode}
           cartCount={ARCADE_CARTRIDGES.length}
           onRestartGame={handleReset}
           onReturnToOS={handleGoHomeOS}
           gameOverMenuSelection={gameOverMenuSelection}
           cartridgeReady={cartridgeReady}
+          j2meJarPath={j2meJarPath}
           onStartCartridge={() => {
             cartridgeReadyRef.current = false;
             setCartridgeReady(false);
@@ -757,7 +826,11 @@ function RetroDeckConsole() {
         {/* Controls Hint Strip */}
         <View style={styles.hintBar}>
           <Text style={[styles.hintText, { color: chassisMutedColor }]} numberOfLines={1}>
-            {osMode ? osRef.current.getControlsHint() : activeCart.controlsHint}
+            {j2meJarPath
+              ? 'D-PAD: MOVE • A: ACTION • B: BACK • NUM: KEYPAD'
+              : osMode
+              ? osRef.current.getControlsHint()
+              : activeCart.controlsHint}
           </Text>
         </View>
 
@@ -784,7 +857,7 @@ function RetroDeckConsole() {
             </Text>
           </Pressable>
 
-          {osMode ? (
+          {osMode || j2meJarPath ? (
             <Pressable
               onPress={() => {
                 setDeckMode((m) => (m === 'pad' ? 'num' : m === 'num' ? 'kbd' : 'pad'));
@@ -841,7 +914,16 @@ function RetroDeckConsole() {
           )}
 
           <Pressable
-            onPress={handleReset}
+            onPress={() => {
+              if (j2meJarPath) {
+                const nextPaused = !isPaused;
+                setIsPaused(nextPaused);
+                NativeModules.J2meModule?.setPaused(nextPaused);
+                handleSoundEvent('hit');
+              } else {
+                handleReset();
+              }
+            }}
             style={[
               styles.toolBtn,
               {
@@ -850,8 +932,14 @@ function RetroDeckConsole() {
               },
             ]}
           >
-            <Ionicons name="refresh" size={14} color={toolTextColor} />
-            <Text style={[styles.toolText, { color: toolTextColor }]}>{osMode ? tUi('reboot') : tUi('reset')}</Text>
+            <Ionicons
+              name={j2meJarPath ? (isPaused ? 'play' : 'pause') : 'refresh'}
+              size={14}
+              color={j2meJarPath && isPaused ? '#FF9F0A' : toolTextColor}
+            />
+            <Text style={[styles.toolText, { color: j2meJarPath && isPaused ? '#FF9F0A' : toolTextColor }]}>
+              {j2meJarPath ? (isPaused ? tUi('resume') : tUi('pause')) : osMode ? tUi('reboot') : tUi('reset')}
+            </Text>
           </Pressable>
 
           <Pressable
@@ -945,15 +1033,31 @@ function RetroDeckConsole() {
             {deckMode === 'kbd' ? (
               <RetroKeyboardDeck
                 accentColor={palette.bezelAccent}
-                value={kbdBinding.value}
+                value={j2meJarPath ? j2meKeyboardValueRef.current : kbdBinding.value}
                 placeholder={kbdBinding.placeholder}
                 targetLabel={kbdBinding.targetLabel}
                 secure={kbdBinding.secure}
                 onChangeText={(next) => {
+                  if (j2meJarPath) {
+                    const previousChars = Array.from(j2meKeyboardValueRef.current);
+                    const nextChars = Array.from(next);
+                    if (nextChars.length > previousChars.length) {
+                      nextChars.slice(previousChars.length).forEach((ch) => NativeModules.J2meModule?.sendCharacter(ch));
+                    } else if (nextChars.length < previousChars.length) {
+                      for (let i = nextChars.length; i < previousChars.length; i++) sendJ2meTap('del');
+                    }
+                    j2meKeyboardValueRef.current = next;
+                    setKbdTick((t) => (t + 1) % 100000);
+                    return;
+                  }
                   osRef.current.setKeyboardText(next);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
                 onSubmit={() => {
+                  if (j2meJarPath) {
+                    sendJ2meTap('a');
+                    return;
+                  }
                   osRef.current.submitKeyboard();
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
@@ -965,24 +1069,37 @@ function RetroDeckConsole() {
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 onPressKey={(k) => {
+                  if (j2meJarPath) {
+                    const mappedKey = k === 'OK' ? 'a' : k === 'BACK' ? 'b' : k === 'DEL' ? 'del' : k;
+                    sendJ2meTap(mappedKey);
+                    setKbdTick((t) => (t + 1) % 100000);
+                    return;
+                  }
                   osRef.current.pressNumericKey?.(k);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
                 onNav={(dir) => {
+                  if (j2meJarPath) {
+                    sendJ2meTap(dir);
+                    setKbdTick((t) => (t + 1) % 100000);
+                    return;
+                  }
                   osRef.current.pressNavDir?.(dir);
                   setKbdTick((t) => (t + 1) % 100000);
                 }}
+                onSoftLeft={() => handleNumericSoftKey('left')}
+                onSoftRight={() => handleNumericSoftKey('right')}
                 onSwitchMode={() => setDeckMode('kbd')}
               />
             ) : (
               <RetroKeypad
-                labels={osMode ? osGamepadLabels : activeCart.gamepadLabels}
+                labels={j2meJarPath ? osGamepadLabels : osMode ? osGamepadLabels : activeCart.gamepadLabels}
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
                 centerBg={palette.bezelBg}
                 osMode={osMode}
-                isPaused={isPaused}
+                isPaused={j2meJarPath ? false : isPaused}
                 isMuted={isMuted || RetroAudioEngine.getMuted()}
                 onButtonChange={handleButtonChange}
                 onSelectPress={handleSelectPress}
