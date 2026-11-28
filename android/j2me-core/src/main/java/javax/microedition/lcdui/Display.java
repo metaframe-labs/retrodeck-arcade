@@ -172,11 +172,23 @@ public class Display {
 	}
 
 	private void showAlert(Alert alert) {
+		if (alert == null) {
+			return;
+		}
 		ViewHandler.postEvent(() -> {
-			AlertDialog alertDialog = alert.prepareDialog();
-			alertDialog.show();
-			if (alert.finiteTimeout()) {
-				ViewHandler.postDelayed(alert::dismiss, alert.getTimeout());
+			try {
+				AlertDialog alertDialog = alert.prepareDialog();
+				if (alertDialog != null) {
+					alertDialog.show();
+				}
+				if (alert.finiteTimeout()) {
+					ViewHandler.postDelayed(alert::dismiss, alert.getTimeout());
+				}
+			} catch (Throwable t) {
+				android.util.Log.w("Display", "Failed to show MIDP Alert dialog in embedded mode", t);
+				if (alert.finiteTimeout()) {
+					ViewHandler.postDelayed(alert::dismiss, Math.max(500, alert.getTimeout()));
+				}
 			}
 		});
 	}
@@ -193,29 +205,39 @@ public class Display {
 		android.widget.FrameLayout container = javax.microedition.shell.J2meHost.getContainer();
 		if (container != null && next != null) {
 			container.post(() -> {
-				if (generation != viewGeneration.get() || current != next) {
-					return;
-				}
-				container.removeAllViews();
-				android.view.View view = next.getDisplayableView();
-				if (view != null) {
-					container.addView(view, new android.widget.FrameLayout.LayoutParams(
-							android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-							android.view.ViewGroup.LayoutParams.MATCH_PARENT));
-				}
-				javax.microedition.lcdui.overlay.OverlayView overlay = javax.microedition.shell.J2meHost.getOverlayView();
-				if (overlay != null) {
-					container.addView(overlay, new android.widget.FrameLayout.LayoutParams(
-							android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-							android.view.ViewGroup.LayoutParams.MATCH_PARENT));
-				}
-				int w = container.getWidth();
-				int h = container.getHeight();
-				if (w > 0 && h > 0) {
-					container.measure(
-							android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
-							android.view.View.MeasureSpec.makeMeasureSpec(h, android.view.View.MeasureSpec.EXACTLY));
-					container.layout(container.getLeft(), container.getTop(), container.getRight(), container.getBottom());
+				try {
+					if (generation != viewGeneration.get() || current != next) {
+						return;
+					}
+					container.removeAllViews();
+					android.view.View view = next.getDisplayableView();
+					if (view != null) {
+						if (view.getParent() instanceof android.view.ViewGroup && view.getParent() != container) {
+							((android.view.ViewGroup) view.getParent()).removeView(view);
+						}
+						container.addView(view, new android.widget.FrameLayout.LayoutParams(
+								android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+								android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+					}
+					javax.microedition.lcdui.overlay.OverlayView overlay = javax.microedition.shell.J2meHost.getOverlayView();
+					if (overlay != null) {
+						if (overlay.getParent() instanceof android.view.ViewGroup) {
+							((android.view.ViewGroup) overlay.getParent()).removeView(overlay);
+						}
+						container.addView(overlay, new android.widget.FrameLayout.LayoutParams(
+								android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+								android.view.ViewGroup.LayoutParams.MATCH_PARENT));
+					}
+					int w = container.getWidth();
+					int h = container.getHeight();
+					if (w > 0 && h > 0) {
+						container.measure(
+								android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
+								android.view.View.MeasureSpec.makeMeasureSpec(h, android.view.View.MeasureSpec.EXACTLY));
+						container.layout(container.getLeft(), container.getTop(), container.getRight(), container.getBottom());
+					}
+				} catch (Throwable t) {
+					android.util.Log.e("Display", "Error attaching MIDlet displayable view", t);
 				}
 			});
 		}

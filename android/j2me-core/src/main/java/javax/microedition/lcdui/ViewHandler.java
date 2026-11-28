@@ -18,19 +18,35 @@ package javax.microedition.lcdui;
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 /**
  * Class for centrally creating and modifying View.
  * Needed, because Android does not allow to change the View from different threads.
  */
 public class ViewHandler {
+	private static final String TAG = "ViewHandler";
 	private static final Handler handler = new Handler(Looper.getMainLooper());
 
 	public static void postEvent(Runnable event) {
-		handler.post(event);
+		if (event == null) return;
+		handler.post(() -> {
+			try {
+				event.run();
+			} catch (Throwable t) {
+				Log.e(TAG, "Uncaught exception in J2ME UI task", t);
+			}
+		});
 	}
 
 	public static void postDelayed(Runnable event, long delayMillis) {
-		handler.postDelayed(event, delayMillis);
+		if (event == null) return;
+		handler.postDelayed(() -> {
+			try {
+				event.run();
+			} catch (Throwable t) {
+				Log.e(TAG, "Uncaught exception in delayed J2ME UI task", t);
+			}
+		}, delayMillis);
 	}
 }

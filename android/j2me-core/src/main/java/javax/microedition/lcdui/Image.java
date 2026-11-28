@@ -53,7 +53,9 @@ public class Image {
 	}
 
 	public static Image createImage(int width, int height, int argb) {
-		Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+		int safeW = Math.max(1, width);
+		int safeH = Math.max(1, height);
+		Bitmap bitmap = Bitmap.createBitmap(safeW, safeH, Bitmap.Config.ARGB_8888);
 		if (argb != 0) bitmap.eraseColor(argb);
 		return new Image(bitmap);
 	}

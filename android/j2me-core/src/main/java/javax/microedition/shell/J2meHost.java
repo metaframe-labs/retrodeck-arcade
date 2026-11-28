@@ -21,14 +21,24 @@ import javax.microedition.util.ContextHolder;
 import ru.woesss.j2me.installer.InstallerHelper;
 
 public final class J2meHost {
+    public interface ExitListener {
+        void onMidletExit();
+    }
+
     private static final Object sHostLock = new Object();
     private static final Object sBootWorkLock = new Object();
     private static final Handler sMainHandler = new Handler(Looper.getMainLooper());
     private static int sBootGeneration;
+    private static volatile boolean sHostTriggeredStop;
+    private static volatile ExitListener sExitListener;
     private static WeakReference<FrameLayout> sContainer = new WeakReference<>(null);
     private static WeakReference<OverlayView> sOverlayView = new WeakReference<>(null);
     private static WeakReference<Canvas> sCurrentCanvas = new WeakReference<>(null);
     private static WeakReference<Displayable> sCurrentDisplayable = new WeakReference<>(null);
+
+    public static void setExitListener(ExitListener listener) {
+        sExitListener = listener;
+    }
 
     public static void setHostViews(FrameLayout container, OverlayView overlayView) {
         synchronized (sHostLock) {
@@ -81,14 +91,24 @@ public final class J2meHost {
 
     public static void sendCharacter(int codePoint) {
         Canvas canvas = sCurrentCanvas.get();
-        if (canvas == null) return;
-        canvas.postKeyPressed(codePoint);
-        canvas.postKeyReleased(codePoint);
+        if (canvas != null) {
+            canvas.postKeyPressed(codePoint);
+            canvas.postKeyReleased(codePoint);
+            return;
+        }
+        Displayable displayable = sCurrentDisplayable.get();
+        if (displayable == null) return;
+        sMainHandler.post(() -> {
+            if (sCurrentDisplayable.get() == displayable) {
+                displayable.handleHostCharacter(codePoint);
+            }
+        });
     }
 
     public static void stop() {
         synchronized (sHostLock) {
             sBootGeneration++;
+            sHostTriggeredStop = true;
             setCurrentDisplayable(null);
             MidletThread.stopEmbedded();
         }
@@ -106,6 +126,7 @@ public final class J2meHost {
         synchronized (sHostLock) {
             if (sContainer.get() != container) return;
             sBootGeneration++;
+            sHostTriggeredStop = true;
             setCurrentDisplayable(null);
             MidletThread.stopEmbedded();
             sContainer = new WeakReference<>(null);
@@ -114,6 +135,13 @@ public final class J2meHost {
     }
 
     static void releaseEmbeddedResources() {
+        final boolean hostInitiated;
+        synchronized (sHostLock) {
+            hostInitiated = sHostTriggeredStop;
+            sHostTriggeredStop = false;
+        }
+        final ExitListener exitListener = !hostInitiated ? sExitListener : null;
+
         setCurrentDisplayable(null);
         javax.microedition.lcdui.Display.shutdown();
         AppClassLoader.release();
@@ -121,17 +149,26 @@ public final class J2meHost {
 
         final FrameLayout container = getContainer();
         final OverlayView overlay = getOverlayView();
-        if (container == null) return;
+        if (container == null) {
+            if (exitListener != null) {
+                sMainHandler.post(exitListener::onMidletExit);
+            }
+            return;
+        }
         sMainHandler.post(() -> {
-            if (getContainer() != container) return;
-            container.removeAllViews();
-            if (overlay != null) {
-                if (overlay.getParent() instanceof ViewGroup && overlay.getParent() != container) {
-                    ((ViewGroup) overlay.getParent()).removeView(overlay);
+            if (getContainer() == container) {
+                container.removeAllViews();
+                if (overlay != null) {
+                    if (overlay.getParent() instanceof ViewGroup && overlay.getParent() != container) {
+                        ((ViewGroup) overlay.getParent()).removeView(overlay);
+                    }
+                    container.addView(overlay, new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT));
                 }
-                container.addView(overlay, new FrameLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT));
+            }
+            if (exitListener != null) {
+                exitListener.onMidletExit();
             }
         });
     }
@@ -190,15 +227,18 @@ public final class J2meHost {
                 MidletThread.setEmbeddedHost(true);
                 try {
                     if (MidletThread.isRunning()) {
+                        sHostTriggeredStop = true;
                         MidletThread.stopEmbedded();
-                        long deadline = System.currentTimeMillis() + 3000;
+                        long deadline = System.currentTimeMillis() + 1500;
                         while (MidletThread.isRunning() && isCurrentBoot(generation)
                                 && System.currentTimeMillis() < deadline) {
                             Thread.sleep(50);
                         }
                         if (!isCurrentBoot(generation)) return;
                         if (MidletThread.isRunning()) {
-                            throw new IllegalStateException("Previous MIDlet is still stopping");
+                            android.util.Log.w("J2meHost", "Previous MIDlet did not stop in time; force-clearing");
+                            sHostTriggeredStop = true;
+                            MidletThread.forceClearEmbedded();
                         }
                     }
 
@@ -207,6 +247,10 @@ public final class J2meHost {
                     if (input.isFile() && jarPath.toLowerCase().endsWith(".jar")) {
                         Application app = (Application) hostContext.getApplicationContext();
                         appDirPath = InstallerHelper.installJar(app, jarPath);
+                    }
+                    try {
+                        new File(appDirPath).setLastModified(System.currentTimeMillis());
+                    } catch (Throwable ignored) {
                     }
                     if (!isCurrentBoot(generation)) return;
 
@@ -220,9 +264,9 @@ public final class J2meHost {
                     }
                     String firstMidlet = midlets.keySet().iterator().next();
                     loader.applyConfiguration();
-                    // Nokia Bounce Classic targets a 128x128 Nokia display. The fork's
-                    // generic 240x320 profile leaves its fixed-size game frames undersized.
-                    if ("com.nokia.mid.appl.boun.Bounce".equals(firstMidlet)) {
+                    // Legacy 128x128 Nokia Series 40 MIDlets (Bounce, Nature Park, etc.)
+                    if ("com.nokia.mid.appl.boun.Bounce".equals(firstMidlet)
+                            || "com.nokia.mid.appl.np.np".equals(firstMidlet)) {
                         Displayable.setVirtualSize(128, 128);
                     }
                     // Fill the complete RetroDeck LCD viewport, including its side bars.
@@ -241,6 +285,7 @@ public final class J2meHost {
                             releaseEmbeddedResources();
                             return;
                         }
+                        sHostTriggeredStop = false;
                         MidletThread.create(loader, firstMidlet);
                         MidletThread.resumeApp();
                     }

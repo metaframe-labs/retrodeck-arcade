@@ -21,10 +21,13 @@
 package javax.microedition.lcdui;
 
 import android.content.Context;
+import android.text.Editable;
 import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -130,6 +133,9 @@ public abstract class Displayable {
 			layout.setOrientation(LinearLayout.VERTICAL);
 			layout.setLayoutParams(new FrameLayout.LayoutParams(
 					LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+			if (!(this instanceof Canvas)) {
+				layout.setBackgroundColor(0xFF0F172A);
+			}
 
 			marquee = new TextView(context);
 			marquee.setTextAppearance(context, android.R.style.TextAppearance_Medium);
@@ -220,14 +226,87 @@ public abstract class Displayable {
 		if (view == null) {
 			return false;
 		}
-		view.setFocusable(true);
-		view.setFocusableInTouchMode(true);
-		if (!view.hasFocus()) {
-			view.requestFocus();
+		EditText editText = findTargetEditText(view);
+		if (editText != null && keyCode == KeyEvent.KEYCODE_DEL) {
+			if (!pressed) {
+				return true;
+			}
+			editText.requestFocus();
+			Editable editable = editText.getText();
+			if (editable != null) {
+				int start = Math.max(0, editText.getSelectionStart());
+				int end = Math.max(0, editText.getSelectionEnd());
+				if (start > end) {
+					int tmp = start;
+					start = end;
+					end = tmp;
+				}
+				if (end > start) {
+					editable.delete(start, end);
+				} else if (start > 0) {
+					editable.delete(start - 1, start);
+				}
+			}
+			return true;
 		}
-		return view.dispatchKeyEvent(new KeyEvent(
+		View dispatchTarget = editText != null ? editText : view;
+		dispatchTarget.setFocusable(true);
+		dispatchTarget.setFocusableInTouchMode(true);
+		if (!dispatchTarget.hasFocus()) {
+			dispatchTarget.requestFocus();
+		}
+		return dispatchTarget.dispatchKeyEvent(new KeyEvent(
 				pressed ? KeyEvent.ACTION_DOWN : KeyEvent.ACTION_UP,
 				keyCode));
+	}
+
+	/** Inserts a typed character from the RetroDeck keyboard into the active EditText, if any. */
+	public boolean handleHostCharacter(int codePoint) {
+		View view = getDisplayableView();
+		if (view == null) {
+			return false;
+		}
+		EditText editText = findTargetEditText(view);
+		if (editText == null) {
+			return false;
+		}
+		editText.requestFocus();
+		String str = new String(Character.toChars(codePoint));
+		Editable editable = editText.getText();
+		if (editable != null) {
+			int start = Math.max(0, editText.getSelectionStart());
+			int end = Math.max(0, editText.getSelectionEnd());
+			if (start > end) {
+				int tmp = start;
+				start = end;
+				end = tmp;
+			}
+			editable.replace(start, end, str);
+		} else {
+			editText.append(str);
+		}
+		return true;
+	}
+
+	private static EditText findTargetEditText(View root) {
+		if (root == null) return null;
+		View focused = root.findFocus();
+		if (focused instanceof EditText && focused.isEnabled()) {
+			return (EditText) focused;
+		}
+		if (root instanceof EditText && root.isEnabled()) {
+			return (EditText) root;
+		}
+		if (root instanceof ViewGroup) {
+			ViewGroup group = (ViewGroup) root;
+			for (int i = 0; i < group.getChildCount(); i++) {
+				EditText found = findTargetEditText(group.getChildAt(i));
+				if (found != null) {
+					return found;
+				}
+			}
+		}
+		return null;
 	}
 
 	private Command findHostCommand(int... commandTypes) {

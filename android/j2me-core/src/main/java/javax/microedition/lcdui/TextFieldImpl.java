@@ -182,6 +182,12 @@ class TextFieldImpl {
 	EditText getView(Context context, Item item) {
 		if (textview == null) {
 			textview = new AppCompatEditText(context);
+			textview.setTextColor(0xFFF8FAFC);
+			textview.setHintTextColor(0xFF94A3B8);
+			textview.setBackgroundColor(0xFF1E293B);
+			textview.setFocusable(true);
+			textview.setFocusableInTouchMode(true);
+			textview.setPadding(16, 14, 16, 14);
 
 			setMaxSize(maxSize);
 			setConstraints(constraints);

@@ -116,9 +116,13 @@ public class ContextHolder {
 
 	public static void notifyOnActivityResult(int requestCode, int resultCode, Intent data) {
 		MicroActivity context = currentActivity.get();
-		context.setPauseSuppressed(false);
+		if (context != null) {
+			context.setPauseSuppressed(false);
+		}
 		for (ActivityResultListener listener : resultListeners) {
-			listener.onActivityResult(requestCode, resultCode, data);
+			if (listener != null) {
+				listener.onActivityResult(requestCode, resultCode, data);
+			}
 		}
 	}
 
@@ -184,6 +188,9 @@ public class ContextHolder {
 
 	public static void startActivityForResult(Intent intent, int requestCode) {
 		MicroActivity context = currentActivity.get();
+		if (context == null) {
+			return;
+		}
 		context.setPauseSuppressed(true);
 		context.startActivityForResult(intent, requestCode);
 	}

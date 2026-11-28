@@ -300,17 +300,18 @@ public class AppInstaller {
 		}
 		File resJar = new File(tmpDir, Config.MIDLET_RES_FILE);
 		FileUtils.copyFileUsingChannel(srcJar, resJar);
-		String icon = newDesc.getIcon();
+		String icon = null;
+		try {
+			icon = newDesc.getIcon();
+		} catch (Exception ignored) {
+		}
 		File iconFile = new File(tmpDir, Config.MIDLET_ICON_FILE);
-		if (icon != null) {
-			try {
-				ZipUtils.unzipEntry(resJar, icon, iconFile);
-			} catch (IOException e) {
-				Log.w(TAG, "Can't unzip icon: " + icon, e);
-				icon = null;
-				//noinspection ResultOfMethodCallIgnored
-				iconFile.delete();
-			}
+		if (!ZipUtils.extractBestIcon(resJar, icon, iconFile)) {
+			icon = null;
+			//noinspection ResultOfMethodCallIgnored
+			iconFile.delete();
+		} else if (icon == null) {
+			icon = "icon.png";
 		}
 		newDesc.writeTo(new File(tmpDir, Config.MIDLET_MANIFEST_FILE));
 		FileUtils.deleteDirectory(targetDir);
@@ -382,11 +383,32 @@ public class AppInstaller {
 	}
 
 	private int checkDescriptor() {
-		// Remove invalid characters from app path
+		// Reuse existing installed directory matching MIDlet-Name + Vendor so RMS saves persist across re-picks.
 		String name = newDesc.getName();
 		String vendor = newDesc.getVendor();
 		currentApp = appRepository.get(name, vendor);
 		if (currentApp == null) {
+			File appsRoot = new File(Config.getAppDir());
+			File[] existingDirs = appsRoot.listFiles();
+			if (existingDirs != null) {
+				for (File dir : existingDirs) {
+					if (!dir.isDirectory() || dir.getName().startsWith(".")) continue;
+					File manifestFile = new File(dir, Config.MIDLET_MANIFEST_FILE);
+					if (!manifestFile.isFile()) continue;
+					try {
+						Descriptor existing = new Descriptor(manifestFile, false);
+						boolean sameVendor = vendor == null
+								? existing.getVendor() == null
+								: vendor.equals(existing.getVendor());
+						if (name.equals(existing.getName()) && sameVendor) {
+							appDirName = dir.getName();
+							targetDir = dir;
+							return newDesc.compareVersion(existing.getVersion());
+						}
+					} catch (Exception ignored) {
+					}
+				}
+			}
 			generatePathName(name.replaceAll(FileUtils.ILLEGAL_FILENAME_CHARS, "").trim());
 			return STATUS_NEW;
 		}

@@ -7,7 +7,6 @@ import { somaRadioService, SOMA_CHANNELS } from '../../services/somaRadioService
 import {
   CALC_KEYS,
   COMPOSER_KEYS,
-  DESKTOP_ICONS,
   DESKTOP_MENU_STYLES,
   DIAL_KEYS,
   LIVE_SMS_PERSONAS,
@@ -34,6 +33,14 @@ import {
   syncPostFormatWinTimer,
   updateFormatSimFrame,
 } from './formatSimEngine';
+import {
+  cancelStoreDownload,
+  getStoreVisibleItems,
+  startStoreDownload,
+  tickStoreDownload,
+  uninstallStoreApp,
+} from './storeSimEngine';
+import { getWinVariant, isWinUiActive } from '../render/winChromeHelper';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function executePhoneKeyImpl(os: RetroDeckOS, k: string): ArcadeSound | null {
@@ -110,22 +117,40 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
     return;
   }
 
-  // Keyguard unlock support
+  // Keyguard unlock support (press OK/CALL twice, or OK then *)
   if (os.keyLocked) {
-    if (key === 'OK') {
-      os.unlockStage = true;
-      os.unlockHintTimer = 2.5;
-      os.cb.onPlaySound?.('hit');
+    if (key === 'OK' || key === 'CALL') {
+      if (os.unlockStage) {
+        os.keyLocked = false;
+        os.unlockStage = false;
+        os.idleTimer = 0;
+        os.cb.onPlaySound?.('powerup');
+      } else {
+        os.unlockStage = true;
+        os.unlockHintTimer = 2.5;
+        os.cb.onPlaySound?.('hit');
+      }
     } else if (key === '*' && os.unlockStage) {
       os.keyLocked = false;
       os.unlockStage = false;
+      os.idleTimer = 0;
       os.cb.onPlaySound?.('powerup');
     }
     return;
   }
 
-  // Global BACK action
-  if (key === 'BACK') {
+  // Green CALL key outside Phone/Contacts jumps straight to Contacts
+  if (key === 'CALL' && os.app !== 'phone' && os.app !== 'contacts') {
+    os.winStartOpen = false;
+    os.wallpaperCleanPreview = false;
+    os.app = 'contacts';
+    os.contactDeleteConfirm = false;
+    os.cb.onPlaySound?.('score');
+    return;
+  }
+
+  // Global BACK / END (red hangup) action
+  if (key === 'BACK' || key === 'END') {
     if (os.app === 'format') {
       const s = updateFormatSimFrame(os, 0, null, false, true);
       if (s) os.cb.onPlaySound?.(s);
@@ -139,6 +164,11 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
     }
     if (os.app === 'wallpapers' && os.wallpaperCleanPreview) {
       os.wallpaperCleanPreview = false;
+      os.cb.onPlaySound?.('hit');
+      return;
+    }
+    if (os.app === 'desktop' && os.winStartOpen) {
+      os.winStartOpen = false;
       os.cb.onPlaySound?.('hit');
       return;
     }
@@ -303,25 +333,49 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
     return;
   }
 
-  // Arcade Browser: 2/8 browse, OK launches
+  // Arcade Browser: 2/8 browse, OK launches (supports saved JAR games + cartridges)
   if (os.app === 'arcade') {
-    const carts = os.cb.getCartridges();
+    const entries = os.getArcadeCatalogEntries();
     if (key === '2') {
-      os.gameIdx = (os.gameIdx + carts.length - 1) % carts.length;
+      os.gameIdx = (os.gameIdx + entries.length - 1) % entries.length;
       os.cb.onPlaySound?.('hit');
     } else if (key === '8') {
-      os.gameIdx = (os.gameIdx + 1) % carts.length;
+      os.gameIdx = (os.gameIdx + 1) % entries.length;
       os.cb.onPlaySound?.('hit');
-    } else if (key === 'OK' && carts[os.gameIdx]) {
-      const isPro = os.cb.getIsPro?.() ?? false;
-      const selected = carts[os.gameIdx];
-      if (isCartridgeProLocked(selected.id, isPro)) {
-        os.openProScreen('PRO REQUIRED FOR THIS GAME!');
-        os.cb.onPlaySound?.('die');
-        return;
+    } else if ((key === 'OK' || key === 'CALL') && entries[os.gameIdx]) {
+      const s = os.launchArcadeEntry(entries[os.gameIdx]);
+      os.cb.onPlaySound?.(s);
+    }
+    return;
+  }
+
+  // J2ME Library numeric keypad: 2/8 navigate, OK launches, DEL removes
+  if (os.app === 'j2me') {
+    const totalSlots = os.j2meGames.length + 1;
+    if (key === '2') {
+      os.j2meIdx = (os.j2meIdx + totalSlots - 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === '8') {
+      os.j2meIdx = (os.j2meIdx + 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      os.cb.onPlaySound?.('hit');
+    } else if (key === 'DEL' || key === 'CLR') {
+      const sel = os.j2meGames[os.j2meIdx];
+      if (sel) {
+        if (!os.j2meDeleteConfirm) {
+          os.j2meDeleteConfirm = true;
+          os.cb.onPlaySound?.('hit');
+        } else {
+          os.removeSelectedJ2meGame();
+          os.cb.onPlaySound?.('die');
+        }
       }
-      os.cb.onLaunchGame(selected);
-      os.cb.onPlaySound?.('powerup');
+    } else if (key === 'OK' || key === 'CALL') {
+      const sel = os.j2meGames[os.j2meIdx];
+      os.j2meDeleteConfirm = false;
+      os.cb.onLaunchJ2me?.(sel?.appPath);
+      os.cb.onPlaySound?.('score');
     }
     return;
   }
@@ -329,31 +383,122 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
   // Desktop: OK opens highlighted app; digits jump straight to Phone dialer like Nokia 3310!
   if (os.app === 'desktop') {
     if (key === 'OK') {
-      const nextApp = DESKTOP_ICONS[os.deskIdx].id;
-      if (nextApp === 'wallpapers') {
-        os.openWallpaperGallery();
-        os.cb.onPlaySound?.('score');
+      if (os.winStartOpen) {
+        const leftItems = os.getWinStartLeftItems();
+        const rightItems = os.getWinStartRightItems();
+        const picked =
+          os.winStartPane === 'left'
+            ? leftItems[os.winStartLeftIdx] || leftItems[0]
+            : rightItems[os.winStartRightIdx] || rightItems[0];
+        if (picked) {
+          const s = os.launchDesktopApp(picked.id);
+          os.cb.onPlaySound?.(s);
+        }
         return;
       }
-      if (nextApp === 'format') {
-        openFormatSimulator(os, 0, false);
-        os.cb.onPlaySound?.('explode');
-        return;
+      const visibleIcons = os.getVisibleDesktopIcons();
+      const target = visibleIcons[os.deskIdx] || visibleIcons[0];
+      if (target) {
+        const s = os.launchDesktopApp(target.id);
+        os.cb.onPlaySound?.(s);
       }
-      if (nextApp === 'j2me') {
-        os.app = 'j2me';
-        os.cb.onPlaySound?.('score');
-        return;
-      }
-      os.app = nextApp;
-      if (os.app === 'radio') somaRadioService.fetchNowPlaying();
-      os.cb.onPlaySound?.('score');
       return;
     }
     if (key === 'DEL' || key === 'CLR') return;
     os.app = 'phone';
     os.callState = 'idle';
     os.dialBuffer = '';
+  }
+
+  // RD Store numeric keypad support (2/8 navigate, 4/6 switch tab, OK install/open/remove, DEL cancel/remove)
+  if (os.app === 'store') {
+    const items = getStoreVisibleItems(os);
+    if (key === '4' || key === '6') {
+      os.storeTab = os.storeTab === 'browse' ? 'installed' : 'browse';
+      os.storeIdx = 0;
+      os.storeRemoveConfirm = false;
+      os.cb.onPlaySound?.('hit');
+      return;
+    }
+    if (key === '2' && items.length > 0) {
+      os.storeIdx = (os.storeIdx + items.length - 1) % items.length;
+      os.storeRemoveConfirm = false;
+      os.cb.onPlaySound?.('hit');
+      return;
+    }
+    if (key === '8' && items.length > 0) {
+      os.storeIdx = (os.storeIdx + 1) % items.length;
+      os.storeRemoveConfirm = false;
+      os.cb.onPlaySound?.('hit');
+      return;
+    }
+    if (key === 'DEL' || key === 'CLR') {
+      if (os.storeDownload) {
+        cancelStoreDownload(os);
+        os.cb.onPlaySound?.('die');
+        return;
+      }
+      const sel = items[os.storeIdx];
+      if (sel && os.installedStoreApps.includes(sel.id)) {
+        if (!os.storeRemoveConfirm) {
+          os.storeRemoveConfirm = true;
+          os.cb.onPlaySound?.('hit');
+        } else {
+          uninstallStoreApp(os, sel.id);
+          os.cb.onPlaySound?.('explode');
+        }
+      }
+      return;
+    }
+    if (key === 'OK') {
+      const sel = items[os.storeIdx];
+      if (!sel) return;
+      if (os.storeDownload?.appId === sel.id) {
+        cancelStoreDownload(os);
+        os.cb.onPlaySound?.('die');
+        return;
+      }
+      if (os.storeTab === 'browse') {
+        if (os.installedStoreApps.includes(sel.id)) {
+          const s = os.launchDesktopApp(sel.id);
+          os.cb.onPlaySound?.(s);
+        } else {
+          const s = startStoreDownload(os, sel.id);
+          if (s) os.cb.onPlaySound?.(s);
+        }
+      } else {
+        if (!os.storeRemoveConfirm) {
+          os.storeRemoveConfirm = true;
+          os.cb.onPlaySound?.('hit');
+        } else {
+          uninstallStoreApp(os, sel.id);
+          os.cb.onPlaySound?.('explode');
+        }
+      }
+    }
+    return;
+  }
+
+  // Programs Explorer Folder numeric keypad support (2/8/4/6 navigate, OK opens)
+  if (os.app === 'programs') {
+    const items = os.getProgramsFolderItems();
+    const total = items.length;
+    if (total === 0) return;
+    const cols = 4;
+    if (key === '4') os.programsIdx = (os.programsIdx + total - 1) % total;
+    else if (key === '6') os.programsIdx = (os.programsIdx + 1) % total;
+    else if (key === '2') os.programsIdx = os.programsIdx >= cols ? os.programsIdx - cols : os.programsIdx;
+    else if (key === '8') os.programsIdx = os.programsIdx + cols < total ? os.programsIdx + cols : os.programsIdx;
+    else if (key === 'OK') {
+      const sel = items[os.programsIdx] || items[0];
+      if (sel) {
+        const s = os.launchDesktopApp(sel.id);
+        os.cb.onPlaySound?.(s);
+      }
+      return;
+    }
+    os.cb.onPlaySound?.('hit');
+    return;
   }
 
   // Phone Dialer: full interactive 3310 keypad + DTMF tones + USSD codes
@@ -400,7 +545,7 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
       os.cb.onPlaySound?.('hit');
       return;
     }
-    if (key === 'OK') {
+    if (key === 'OK' || key === 'CALL') {
       os.dialR = 0;
       os.dialC = 3; // CALL
       const s = os.executePhoneKey('CALL');
@@ -480,7 +625,7 @@ export function pressNumericKeyImpl(os: RetroDeckOS, key: string) {
         os.smsBannerTimer = 2.0;
         os.cb.onPlaySound?.('die');
       }
-    } else if (key === 'OK') {
+    } else if (key === 'OK' || key === 'CALL') {
       const sel = contacts[os.contactIdx];
       if (!sel) {
         os.smsContactTarget = null;
@@ -588,6 +733,9 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   // Wall-clock check for the 45-second post-format Windows 98 / XP trial across all OS screens & Keyguard
   syncPostFormatWinTimer(os, Date.now(), true);
 
+  // Advance any active Store download/install simulation (even in background!)
+  tickStoreDownload(os, dt);
+
   // Autonomous SMS Simulation scheduler: starts AFTER first user interaction, random 30–90s interval
   if (
     os.liveAiSmsEnabled &&
@@ -642,7 +790,9 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     // Play authentic startup chime once boot sequence starts
     if (!os.bootChimePlayed && os.bootTimer >= 0.15) {
       os.bootChimePlayed = true;
-      const targetStyle = os.postFormatWinStyle || os.menuStyle || os.cb.getPaletteId?.() || 'default';
+      const targetStyle = [os.postFormatWinStyle, os.cb.getPaletteId?.(), os.menuStyle]
+        .filter(Boolean)
+        .join(' ');
       RetroAudioEngine.playStartupChime(os.startupSoundId || 'auto', targetStyle);
     }
 
@@ -657,9 +807,15 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     return null;
   }
 
-  // Keyguard / Pixel Clock Screensaver Handling (Unlock with Menu [A] + Star [▲])
+  // Keyguard / Dynamic Lock Screen Handling (Unlock with [A]+[A], [A]+[▲], or [A]+[B])
   if (os.keyLocked) {
     if (pressA) {
+      if (os.unlockStage) {
+        os.keyLocked = false;
+        os.unlockStage = false;
+        os.idleTimer = 0;
+        return 'powerup';
+      }
       os.unlockStage = true;
       os.unlockHintTimer = 2.5;
       return 'hit';
@@ -691,6 +847,10 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   // Global B = return to desktop from any sub-app (except synth list / sms compose / format wizard / clean wallpaper preview)
+  if (os.app === 'desktop' && os.winStartOpen && pressB) {
+    os.winStartOpen = false;
+    return 'hit';
+  }
   if (os.app !== 'desktop' && os.app !== 'format' && pressB) {
     if (os.app === 'setup' && (os.setupSubPage === 'menu_style' || os.setupSubPage === 'startup_sound')) {
       os.setupSubPage = 'main';
@@ -727,15 +887,6 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     return 'hit';
   }
 
-  // J2ME info page: A opens the file picker; B returns to the desktop above.
-  if (os.app === 'j2me') {
-    if (pressA) {
-      os.cb.onLaunchJ2me?.();
-      return 'score';
-    }
-    return null;
-  }
-
   // Directional helper with single-press edge trigger & initial repeat delay
   const pressUp = input.up && !os.prevUp;
   const pressDown = input.down && !os.prevDown;
@@ -746,6 +897,45 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   os.prevDown = input.down;
   os.prevLeft = input.left;
   os.prevRight = input.right;
+
+  // J2ME Saved Games 4x2 Icon Grid & File Picker
+  if (os.app === 'j2me') {
+    const totalSlots = os.j2meGames.length + 1;
+    const cols = 4;
+    if (pressLeft) {
+      os.j2meIdx = (os.j2meIdx + totalSlots - 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      return 'hit';
+    }
+    if (pressRight) {
+      os.j2meIdx = (os.j2meIdx + 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      return 'hit';
+    }
+    if (pressUp) {
+      os.j2meIdx =
+        os.j2meIdx >= cols
+          ? os.j2meIdx - cols
+          : (os.j2meIdx + totalSlots - 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      return 'hit';
+    }
+    if (pressDown) {
+      os.j2meIdx =
+        os.j2meIdx + cols < totalSlots
+          ? os.j2meIdx + cols
+          : (os.j2meIdx + 1) % totalSlots;
+      os.j2meDeleteConfirm = false;
+      return 'hit';
+    }
+    if (pressA) {
+      const sel = os.j2meGames[os.j2meIdx];
+      os.j2meDeleteConfirm = false;
+      os.cb.onLaunchJ2me?.(sel?.appPath);
+      return 'score';
+    }
+    return null;
+  }
 
   let dir: 'up' | 'down' | 'left' | 'right' | null = null;
   if (pressUp) { dir = 'up'; os.moveCd = 0.28; }
@@ -760,7 +950,9 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'desktop') {
-    const total = DESKTOP_ICONS.length;
+    const visibleIcons = os.getVisibleDesktopIcons();
+    const total = visibleIcons.length;
+    if (os.deskIdx >= total) os.deskIdx = Math.max(0, total - 1);
     if (!os.postFormatWinStyle && (os.menuStyle === 'nokia' || os.menuStyle === 'list' || os.menuStyle === 'macos' || os.menuStyle === 'ipod_classic')) {
       if (dir === 'left' || dir === 'up') os.deskIdx = (os.deskIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
@@ -773,15 +965,17 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     } else if (!os.postFormatWinStyle && os.menuStyle === 'psp_xmb') {
       // PSP XMB Navigation: Left/Right switches Category; Up/Down navigates items in category
       const XMB_CATEGORIES: string[][] = [
-        ['setup', 'stats', 'term', 'format'], // settings
-        ['arcade'], // games
-        ['radio', 'synth', 'wallpapers'], // media
-        ['wap', 'ai', 'sms', 'contacts', 'phone'], // network
-        ['notes', 'paint', 'calc', 'weather', 'clock', 'profiles'], // tools
-      ];
-      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+        ['setup', 'stats', 'term', 'format', 'device'], // settings
+        ['arcade', 'j2me'], // games
+        ['radio', 'synth', 'wallpapers', 'paint'], // media
+        ['ai', 'sms', 'contacts', 'phone', 'wap'], // network
+        ['store', 'calc', 'clock', 'profiles', 'notes', 'weather'], // extras
+      ]
+        .map((cat) => cat.filter((id) => visibleIcons.some((icon) => icon.id === id)))
+        .filter((cat) => cat.length > 0);
+      const curApp = visibleIcons[os.deskIdx] || visibleIcons[0];
       let catIdx = XMB_CATEGORIES.findIndex((cat) => cat.includes(curApp.id));
-      if (catIdx === -1) catIdx = 1;
+      if (catIdx === -1) catIdx = Math.min(1, XMB_CATEGORIES.length - 1);
       const catApps = XMB_CATEGORIES[catIdx];
       let itemIdx = catApps.indexOf(curApp.id);
       if (itemIdx === -1) itemIdx = 0;
@@ -789,36 +983,38 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       if (dir === 'left') {
         const nextCatIdx = (catIdx + XMB_CATEGORIES.length - 1) % XMB_CATEGORIES.length;
         const targetAppId = XMB_CATEGORIES[nextCatIdx][0];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'right') {
         const nextCatIdx = (catIdx + 1) % XMB_CATEGORIES.length;
         const targetAppId = XMB_CATEGORIES[nextCatIdx][0];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'up') {
         const nextItemIdx = (itemIdx + catApps.length - 1) % catApps.length;
         const targetAppId = catApps[nextItemIdx];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'down') {
         const nextItemIdx = (itemIdx + 1) % catApps.length;
         const targetAppId = catApps[nextItemIdx];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       }
     } else if (!os.postFormatWinStyle && os.menuStyle === 'xbox_blades') {
       // Xbox 360 Blades Navigation: Left/Right slides active Blade; Up/Down selects item
       const XBOX_BLADES: string[][] = [
-        ['arcade', 'synth'], // games
+        ['arcade', 'store', 'j2me', 'synth'], // games
         ['radio', 'wallpapers', 'paint'], // media
-        ['setup', 'stats', 'term', 'format', 'clock'], // system
-        ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'], // live
-      ];
+        ['setup', 'clock', 'stats', 'term', 'format', 'device'], // system
+        ['ai', 'sms', 'contacts', 'phone', 'calc', 'profiles', 'wap', 'weather', 'notes'], // live
+      ]
+        .map((blade) => blade.filter((id) => visibleIcons.some((icon) => icon.id === id)))
+        .filter((blade) => blade.length > 0);
       
       let bladeIdx = os.xboxBladeIdx >= 0 && os.xboxBladeIdx < XBOX_BLADES.length ? os.xboxBladeIdx : 0;
       const bladeApps = XBOX_BLADES[bladeIdx];
-      const curApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+      const curApp = visibleIcons[os.deskIdx] || visibleIcons[0];
       let itemIdx = bladeApps.indexOf(curApp.id);
       if (itemIdx === -1) itemIdx = 0;
 
@@ -826,23 +1022,23 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         bladeIdx = (bladeIdx + XBOX_BLADES.length - 1) % XBOX_BLADES.length;
         os.xboxBladeIdx = bladeIdx;
         const targetAppId = XBOX_BLADES[bladeIdx][0];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'right') {
         bladeIdx = (bladeIdx + 1) % XBOX_BLADES.length;
         os.xboxBladeIdx = bladeIdx;
         const targetAppId = XBOX_BLADES[bladeIdx][0];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'up') {
         const nextItemIdx = (itemIdx + bladeApps.length - 1) % bladeApps.length;
         const targetAppId = bladeApps[nextItemIdx];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       } else if (dir === 'down') {
         const nextItemIdx = (itemIdx + 1) % bladeApps.length;
         const targetAppId = bladeApps[nextItemIdx];
-        const targetIdx = DESKTOP_ICONS.findIndex((icon) => icon.id === targetAppId);
+        const targetIdx = visibleIcons.findIndex((icon) => icon.id === targetAppId);
         if (targetIdx !== -1) os.deskIdx = targetIdx;
       }
     } else if (!os.postFormatWinStyle && os.menuStyle === 'cyberpunk') {
@@ -851,62 +1047,92 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       if (dir === 'down') os.deskIdx = (os.deskIdx + 1) % total;
       if (dir === 'left') os.deskIdx = (os.deskIdx + total - 5) % total;
       if (dir === 'right') os.deskIdx = (os.deskIdx + 5) % total;
-    } else if (Boolean(os.postFormatWinStyle) || os.menuStyle === 'windows') {
-      // Windows Desktop: Column-Major Layout (4 cols x 3 rows per page = 12 items)
-      // Icons flow Down (top to bottom within column), then Right (next column)
-      const rows = 3;
-      const cols = 4;
-      const pageSize = rows * cols;
-      const curPage = Math.floor(os.deskIdx / pageSize);
-      const pageStart = curPage * pageSize;
-      const pageCount = Math.min(pageSize, total - pageStart);
-      const localIdx = os.deskIdx - pageStart;
-      const c = Math.floor(localIdx / rows);
-      const r = localIdx % rows;
+    } else if (!os.postFormatWinStyle && os.menuStyle === 'nexus_os') {
+      // NEXUS HOLO-OS: Left/Right steps through cover-flow carousel; Up/Down skips 3 apps
+      if (dir === 'left') os.deskIdx = (os.deskIdx + total - 1) % total;
+      if (dir === 'right') os.deskIdx = (os.deskIdx + 1) % total;
+      if (dir === 'up') os.deskIdx = (os.deskIdx + total - 3) % total;
+      if (dir === 'down') os.deskIdx = (os.deskIdx + 3) % total;
+    } else if (Boolean(os.postFormatWinStyle) || os.menuStyle === 'windows' || os.menuStyle === 'windows_7' || os.menuStyle === 'windows_8') {
+      // Windows 8 Metro Start Screen: 3-column wide Live Tile mosaic
+      if (getWinVariant(os) === 'win8') {
+        const cols = 3;
+        if (dir === 'left') os.deskIdx = (os.deskIdx + total - 1) % total;
+        if (dir === 'right') os.deskIdx = (os.deskIdx + 1) % total;
+        if (dir === 'up') {
+          if (os.deskIdx >= cols) {
+            os.deskIdx -= cols;
+          } else {
+            const col = os.deskIdx % cols;
+            const lastRowBase = Math.floor((total - 1) / cols) * cols;
+            os.deskIdx =
+              lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
+          }
+        }
+        if (dir === 'down') {
+          os.deskIdx = os.deskIdx + cols < total ? os.deskIdx + cols : os.deskIdx % cols;
+        }
+        if (dir) return 'hit';
+      } else {
+        // Real PC Windows Desktop: vertical left-side shortcut column + Start Menu popup ([▶] opens Start)
+      if (os.winStartOpen) {
+        const leftItems = os.getWinStartLeftItems();
+        const rightItems = os.getWinStartRightItems();
+        if (dir === 'up') {
+          if (os.winStartPane === 'left' && leftItems.length > 0) {
+            os.winStartLeftIdx = (os.winStartLeftIdx + leftItems.length - 1) % leftItems.length;
+          } else if (os.winStartPane === 'right' && rightItems.length > 0) {
+            os.winStartRightIdx = (os.winStartRightIdx + rightItems.length - 1) % rightItems.length;
+          }
+          return 'hit';
+        }
+        if (dir === 'down') {
+          if (os.winStartPane === 'left' && leftItems.length > 0) {
+            os.winStartLeftIdx = (os.winStartLeftIdx + 1) % leftItems.length;
+          } else if (os.winStartPane === 'right' && rightItems.length > 0) {
+            os.winStartRightIdx = (os.winStartRightIdx + 1) % rightItems.length;
+          }
+          return 'hit';
+        }
+        if (dir === 'right') {
+          os.winStartPane = 'right';
+          return 'hit';
+        }
+        if (dir === 'left') {
+          if (os.winStartPane === 'right') {
+            os.winStartPane = 'left';
+          } else {
+            os.winStartOpen = false;
+          }
+          return 'hit';
+        }
+        if (pressA) {
+          const picked =
+            os.winStartPane === 'left'
+              ? leftItems[os.winStartLeftIdx] || leftItems[0]
+              : rightItems[os.winStartRightIdx] || rightItems[0];
+          if (!picked) return null;
+          return os.launchDesktopApp(picked.id);
+        }
+        return null;
+      }
 
       if (dir === 'up') {
-        const nextR = r > 0 ? r - 1 : rows - 1;
-        const targetLocal = c * rows + nextR;
-        if (targetLocal < pageCount) {
-          os.deskIdx = pageStart + targetLocal;
-        } else {
-          os.deskIdx = pageStart + (c * rows + (r - 1 + rows) % rows);
-          if (os.deskIdx >= total) os.deskIdx = total - 1;
-        }
-      } else if (dir === 'down') {
-        const nextR = r < rows - 1 ? r + 1 : 0;
-        const targetLocal = c * rows + nextR;
-        if (targetLocal < pageCount) {
-          os.deskIdx = pageStart + targetLocal;
-        } else {
-          os.deskIdx = pageStart + c * rows; // wrap back to top of column
-        }
-      } else if (dir === 'left') {
-        if (c > 0) {
-          const targetLocal = (c - 1) * rows + r;
-          os.deskIdx = pageStart + Math.min(targetLocal, pageCount - 1);
-        } else {
-          // Wrap to previous page or last column
-          const totalPages = Math.ceil(total / pageSize);
-          const prevPage = (curPage + totalPages - 1) % totalPages;
-          const prevPageStart = prevPage * pageSize;
-          const prevPageCount = Math.min(pageSize, total - prevPageStart);
-          const lastC = Math.floor((prevPageCount - 1) / rows);
-          const targetLocal = lastC * rows + r;
-          os.deskIdx = prevPageStart + Math.min(targetLocal, prevPageCount - 1);
-        }
-      } else if (dir === 'right') {
-        const targetLocal = (c + 1) * rows + r;
-        if (targetLocal < pageCount) {
-          os.deskIdx = pageStart + targetLocal;
-        } else {
-          // Advance to next page or wrap to first column
-          const totalPages = Math.ceil(total / pageSize);
-          const nextPage = (curPage + 1) % totalPages;
-          const nextPageStart = nextPage * pageSize;
-          const targetLocal = 0 * rows + r;
-          os.deskIdx = nextPageStart + Math.min(targetLocal, Math.min(pageSize, total - nextPageStart) - 1);
-        }
+        os.deskIdx = (os.deskIdx + total - 1) % total;
+        return 'hit';
+      }
+      if (dir === 'down') {
+        os.deskIdx = (os.deskIdx + 1) % total;
+        return 'hit';
+      }
+      if (dir === 'right') {
+        os.winStartOpen = true;
+        os.winStartPane = 'left';
+        return 'score';
+      }
+      if (dir === 'left') {
+        return 'hit';
+      }
       }
     } else {
       const cols = !os.postFormatWinStyle && os.menuStyle === 'cards' ? 3 : 4;
@@ -930,42 +1156,82 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     if (dir) return 'hit';
 
     if (pressA) {
-      const targetApp = DESKTOP_ICONS[os.deskIdx].id;
-      if (targetApp === 'wallpapers') {
-        os.openWallpaperGallery();
-        return 'score';
+      const targetItem = visibleIcons[os.deskIdx] || visibleIcons[0];
+      if (!targetItem) return null;
+      return os.launchDesktopApp(targetItem.id);
+    }
+    return null;
+  }
+
+  if (os.app === 'store') {
+    const items = getStoreVisibleItems(os);
+    if (dir === 'left' || dir === 'right') {
+      os.storeTab = os.storeTab === 'browse' ? 'installed' : 'browse';
+      os.storeIdx = 0;
+      os.storeRemoveConfirm = false;
+      return 'hit';
+    }
+    if (dir === 'up' && items.length > 0) {
+      os.storeIdx = (os.storeIdx + items.length - 1) % items.length;
+      os.storeRemoveConfirm = false;
+      return 'hit';
+    }
+    if (dir === 'down' && items.length > 0) {
+      os.storeIdx = (os.storeIdx + 1) % items.length;
+      os.storeRemoveConfirm = false;
+      return 'hit';
+    }
+    if (pressA) {
+      const sel = items[os.storeIdx];
+      if (!sel) return null;
+      if (os.storeDownload?.appId === sel.id) {
+        cancelStoreDownload(os);
+        return 'die';
       }
-      if (targetApp === 'format') {
-        openFormatSimulator(os, 0, false);
-        return 'explode';
+      if (os.storeTab === 'browse') {
+        if (os.installedStoreApps.includes(sel.id)) {
+          return os.launchDesktopApp(sel.id);
+        }
+        return startStoreDownload(os, sel.id);
       }
-      if (targetApp === 'j2me') {
-        os.app = 'j2me';
-        return 'score';
+      // Installed tab: confirm uninstall
+      if (!os.storeRemoveConfirm) {
+        os.storeRemoveConfirm = true;
+        return 'hit';
       }
-      os.app = targetApp;
-      if (os.app === 'ai') {
-        os.kbdTarget = 'chat';
+      uninstallStoreApp(os, sel.id);
+      return 'explode';
+    }
+    return null;
+  }
+
+  if (os.app === 'programs') {
+    const items = os.getProgramsFolderItems();
+    const total = items.length;
+    if (total === 0) return null;
+    if (os.programsIdx >= total) os.programsIdx = total - 1;
+    const cols = 4;
+    if (dir === 'left') os.programsIdx = (os.programsIdx + total - 1) % total;
+    if (dir === 'right') os.programsIdx = (os.programsIdx + 1) % total;
+    if (dir === 'up') {
+      if (os.programsIdx >= cols) {
+        os.programsIdx -= cols;
+      } else {
+        const col = os.programsIdx % cols;
+        const lastRowBase = Math.floor((total - 1) / cols) * cols;
+        os.programsIdx =
+          lastRowBase + col < total ? lastRowBase + col : Math.max(0, lastRowBase - cols + col);
       }
-      if (os.app === 'wap' && !os.wapFetchedOnce) {
-        os.wapFetchedOnce = true;
-        os.fetchWapPage(os.wapUrl);
-      }
-      if (os.app === 'radio') {
-        somaRadioService.fetchNowPlaying();
-      }
-      if (os.app === 'weather' && !os.weatherFetchedOnce) {
-        os.weatherFetchedOnce = true;
-        os.fetchWeather(os.weatherQuery);
-      }
-      if (os.app === 'notes') {
-        os.noteDeleteConfirm = false;
-      }
-      if (os.app === 'sms') {
-        os.smsDeleteConfirm = false;
-        os.unreadSmsCount = 0;
-      }
-      return 'score';
+    }
+    if (dir === 'down') {
+      os.programsIdx =
+        os.programsIdx + cols < total ? os.programsIdx + cols : os.programsIdx % cols;
+    }
+    if (dir) return 'hit';
+    if (pressA) {
+      const sel = items[os.programsIdx] || items[0];
+      if (!sel) return null;
+      return os.launchDesktopApp(sel.id);
     }
     return null;
   }
@@ -1397,12 +1663,12 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
   }
 
   if (os.app === 'arcade') {
-    const carts = os.cb.getCartridges();
-    const total = carts.length;
+    const entries = os.getArcadeCatalogEntries();
+    const total = entries.length;
     if (os.menuStyle === 'nokia') {
       if (dir === 'left' || dir === 'up') os.gameIdx = (os.gameIdx + total - 1) % total;
       if (dir === 'right' || dir === 'down') os.gameIdx = (os.gameIdx + 1) % total;
-    } else if (os.menuStyle === 'grid' || os.menuStyle === 'cards') {
+    } else if (os.menuStyle === 'grid' || os.menuStyle === 'cards' || isWinUiActive(os)) {
       const cols = os.menuStyle === 'cards' ? 3 : 4;
       if (dir === 'left') os.gameIdx = (os.gameIdx + total - 1) % total;
       if (dir === 'right') os.gameIdx = (os.gameIdx + 1) % total;
@@ -1428,15 +1694,8 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
     }
     if (dir) return 'hit';
 
-    if (pressA && carts[os.gameIdx]) {
-      const isPro = os.cb.getIsPro?.() ?? false;
-      const selected = carts[os.gameIdx];
-      if (isCartridgeProLocked(selected.id, isPro)) {
-        os.openProScreen('PRO REQUIRED FOR THIS GAME!');
-        return 'die';
-      }
-      os.cb.onLaunchGame(selected);
-      return 'powerup';
+    if (pressA && entries[os.gameIdx]) {
+      return os.launchArcadeEntry(entries[os.gameIdx]);
     }
     return null;
   }
@@ -1942,11 +2201,13 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
         const chosen = STARTUP_SOUND_OPTIONS[os.startupSoundPickerIdx];
         if (chosen) {
           os.setStartupSound(chosen.id);
-          const targetStyle = os.postFormatWinStyle || os.menuStyle || os.cb.getPaletteId?.() || 'default';
+          const targetStyle = [os.postFormatWinStyle, os.cb.getPaletteId?.(), os.menuStyle]
+            .filter(Boolean)
+            .join(' ');
           RetroAudioEngine.playStartupChime(chosen.id, targetStyle);
           os.smsBanner = `[SOUND] ${chosen.name}`;
           os.smsBannerTimer = 2.5;
-          return 'powerup';
+          return null;
         }
       }
       return null;
@@ -2029,6 +2290,8 @@ export function updateOsFrameImpl(os: RetroDeckOS, input: ArcadeInput, dt: numbe
       else if (os.setupIdx === 10) {
         os.app = 'boot';
         os.bootTimer = 0;
+        os.bootChimePlayed = false;
+        return null;
       } else if (os.setupIdx === 11) {
         openFormatSimulator(os, 0, false);
         return 'explode';

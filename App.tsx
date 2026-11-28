@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Modal, NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { AppState, DeviceEventEmitter, Modal, NativeModules, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -105,6 +105,8 @@ function RetroDeckConsole() {
   gameOverMenuSelectionRef.current = gameOverMenuSelection;
   const [cartridgeReady, setCartridgeReady] = useState<boolean>(true);
   const [j2meJarPath, setJ2meJarPath] = useState<string | undefined>(undefined);
+  const j2meJarPathRef = useRef<string | undefined>(j2meJarPath);
+  j2meJarPathRef.current = j2meJarPath;
   const j2meKeyboardValueRef = useRef('');
   const cartridgeReadyRef = useRef<boolean>(true);
   cartridgeReadyRef.current = cartridgeReady;
@@ -247,6 +249,31 @@ function RetroDeckConsole() {
     }
   }, []);
 
+  const exitJ2meToDesktop = useCallback((stopNative: boolean) => {
+    if (stopNative) {
+      NativeModules.J2meModule?.stopGame();
+    }
+    j2meKeyboardValueRef.current = '';
+    setJ2meJarPath(undefined);
+    osRef.current.goDesktop();
+    osRef.current.refreshJ2meGames();
+    gameOverMenuSelectionRef.current = 0;
+    setGameOverMenuSelection(0);
+    setOsMode(true);
+    setIsPaused(false);
+    setDeckMode((m) => (m === 'num' ? 'num' : 'pad'));
+    handleSoundEvent('hit');
+  }, [handleSoundEvent]);
+
+  useEffect(() => {
+    osRef.current.refreshJ2meGames();
+    const sub = DeviceEventEmitter.addListener('onJ2meExit', () => {
+      if (!j2meJarPathRef.current) return;
+      exitJ2meToDesktop(false);
+    });
+    return () => sub.remove();
+  }, [exitJ2meToDesktop]);
+
   // 60 FPS Fixed-Timestep Engine Loop
   useEffect(() => {
     let rafId = 0;
@@ -267,7 +294,7 @@ function RetroDeckConsole() {
         osRef.current.syncWinTrialTimer(Date.now(), appActiveRef.current);
       }
 
-      if (modalOpenRef.current) {
+      if (modalOpenRef.current || j2meJarPathRef.current) {
         accumulator = 0;
       } else if (osMode) {
         let playedSound: ArcadeSound | null = null;
@@ -524,11 +551,19 @@ function RetroDeckConsole() {
       getCartridges: () => ARCADE_CARTRIDGES,
       getHighScores: () => highScoresRef.current,
       onLaunchGame: (cart) => handleSelectCartridge(cart),
-      onLaunchJ2me: async () => {
+      onLaunchJ2me: async (savedAppPath?: string) => {
         try {
           const { NativeModules, Alert } = require('react-native');
           if (!NativeModules.J2meModule) {
             Alert.alert('J2ME', 'J2meModule bulunamadi (APK eski olabilir)');
+            return;
+          }
+          if (savedAppPath) {
+            j2meKeyboardValueRef.current = '';
+            setJ2meJarPath(savedAppPath);
+            setOsMode(false);
+            setIsPaused(false);
+            setDeckMode((m) => (m === 'num' ? 'num' : 'pad'));
             return;
           }
           const pickedPath: string | null = await NativeModules.J2meModule.pickJarFile();
@@ -537,10 +572,25 @@ function RetroDeckConsole() {
             setJ2meJarPath(pickedPath);
             setOsMode(false);
             setIsPaused(false);
-            setDeckMode('pad');
+            setDeckMode((m) => (m === 'num' ? 'num' : 'pad'));
           }
         } catch (e: any) {
           console.warn('J2ME pickJarFile error:', e);
+        }
+      },
+      getInstalledJ2meGames: async () => {
+        try {
+          const list = await NativeModules.J2meModule?.listInstalledJars?.();
+          return Array.isArray(list) ? list : [];
+        } catch {
+          return [];
+        }
+      },
+      deleteInstalledJ2meGame: async (appPath: string) => {
+        try {
+          return Boolean(await NativeModules.J2meModule?.deleteInstalledJar?.(appPath));
+        } catch {
+          return false;
         }
       },
       onOpenCartVault: () => setBayVisible(true),
@@ -595,8 +645,8 @@ function RetroDeckConsole() {
 
   const handleGoHomeOS = () => {
     if (j2meJarPath) {
-      NativeModules.J2meModule?.stopGame();
-      setJ2meJarPath(undefined);
+      exitJ2meToDesktop(true);
+      return;
     }
     osRef.current.goDesktop();
     gameOverMenuSelectionRef.current = 0;
@@ -693,12 +743,7 @@ function RetroDeckConsole() {
 
   const handleHomePress = useCallback(() => {
     if (j2meJarPath) {
-      NativeModules.J2meModule?.stopGame();
-      setJ2meJarPath(undefined);
-      osRef.current.goDesktop();
-      setOsMode(true);
-      setIsPaused(false);
-      handleSoundEvent('hit');
+      exitJ2meToDesktop(true);
       return;
     }
     if (osRef.current.postFormatWinActivationScreen) {
@@ -1079,6 +1124,8 @@ function RetroDeckConsole() {
                 accentColor={palette.keypadAccent || palette.bezelAccent}
                 buttonBg={palette.buttonBg}
                 buttonBorder={palette.buttonBorder}
+                paletteId={palette.id}
+                menuStyle={osRef.current.menuStyle}
                 onControlChange={(key, pressed) => {
                   if (!j2meJarPath) return;
                   const mappedKey = key === 'OK'
@@ -1092,6 +1139,10 @@ function RetroDeckConsole() {
                 }}
                 onPressKey={(k) => {
                   if (j2meJarPath) {
+                    if (k === 'END') {
+                      exitJ2meToDesktop(true);
+                      return;
+                    }
                     setKbdTick((t) => (t + 1) % 100000);
                     return;
                   }
@@ -1141,6 +1192,7 @@ function RetroDeckConsole() {
         <View style={[styles.root, { backgroundColor: palette.chassisBg }]}>
           <CartridgeBayPage
             cartridges={ARCADE_CARTRIDGES}
+            jarGames={osRef.current.j2meGames}
             activeCartridgeId={activeCart.id}
             accentColor={palette.bezelAccent}
             palette={palette}
@@ -1149,6 +1201,10 @@ function RetroDeckConsole() {
             onSelectCartridge={(cart) => {
               handleSelectCartridge(cart);
               setBayVisible(false);
+            }}
+            onSelectJarGame={(appPath) => {
+              setBayVisible(false);
+              osRef.current.cb.onLaunchJ2me?.(appPath);
             }}
             onOpenDevCart={handleOpenDevCart}
             onBack={() => setBayVisible(false)}

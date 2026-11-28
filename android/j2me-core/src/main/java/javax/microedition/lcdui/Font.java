@@ -109,12 +109,15 @@ public class Font {
 	}
 
 	public static Font getFont(int face, int style, int size) {
-		int index = ((face >> 5) * 3 + (size >> 3) << 3) + style;
+		int faceIdx = (face == FACE_MONOSPACE) ? 1 : (face == FACE_PROPORTIONAL ? 2 : 0);
+		int sizeIdx = (size == SIZE_SMALL) ? 1 : (size == SIZE_LARGE ? 2 : 0);
+		int styleIdx = style & 0x7;
+		int index = ((faceIdx * 3 + sizeIdx) << 3) + styleIdx;
 		Font font = fonts[index];
 
 		if (font == null) {
-			float height = sizes[size / 8];
-			font = new Font(face, style, size, height);
+			float height = sizes[sizeIdx];
+			font = new Font(face, styleIdx, size, height);
 			fonts[index] = font;
 		}
 
@@ -154,14 +157,29 @@ public class Font {
 	}
 
 	public int charsWidth(char[] ch, int offset, int length) {
+		if (ch == null || length <= 0 || offset < 0 || offset >= ch.length) {
+			return 0;
+		}
+		if (offset + length > ch.length) {
+			length = ch.length - offset;
+		}
 		return (int) Math.ceil(paint.measureText(ch, offset, length));
 	}
 
 	public int stringWidth(String text) {
+		if (text == null || text.isEmpty()) {
+			return 0;
+		}
 		return (int) Math.ceil(paint.measureText(text));
 	}
 
 	public int substringWidth(String str, int offset, int len) {
+		if (str == null || len <= 0 || offset < 0 || offset >= str.length()) {
+			return 0;
+		}
+		if (offset + len > str.length()) {
+			len = str.length() - offset;
+		}
 		return (int) paint.measureText(str, offset, offset + len);
 	}
 

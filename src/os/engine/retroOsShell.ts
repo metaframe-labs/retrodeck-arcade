@@ -399,8 +399,9 @@ export function execTermCmdImpl(os: RetroDeckOS, rawCmd: string): ArcadeSound {
   if (bin === 'reboot') {
     os.app = 'boot';
     os.bootTimer = 0;
+    os.bootChimePlayed = false;
     os.cb.onRequestKeyboard?.(false);
-    return 'powerup';
+    return 'hit';
   }
 
   if (bin === 'contacts' || bin === 'phonebook') {

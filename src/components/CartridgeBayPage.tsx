@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FlatList,
+  Image,
   ListRenderItem,
   Pressable,
   ScrollView,
@@ -13,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ArcadeCartridgeDef } from '../arcade/types';
 import { isCartridgeProLocked } from '../arcade/cartridges';
+import type { SavedJ2meGame } from '../os/retroOsData';
 import { RetroPalette, getAccentInk, isLightBackground } from '../theme/palettes';
 import { tUi, useTranslation } from '../i18n/retroI18n';
 
@@ -20,17 +22,19 @@ const FAV_CARTS_STORAGE_KEY = '@retrodeck8_fav_carts_v1';
 
 interface CartridgeBayPageProps {
   cartridges: ArcadeCartridgeDef[];
+  jarGames?: SavedJ2meGame[];
   activeCartridgeId: string;
   accentColor: string;
   palette: RetroPalette;
   highScores?: Record<string, number>;
   isPro?: boolean;
   onSelectCartridge: (cartridge: ArcadeCartridgeDef) => void;
+  onSelectJarGame?: (appPath: string) => void;
   onOpenDevCart?: () => void;
   onBack: () => void;
 }
 
-type FilterCategory = 'ALL' | 'FAVS' | 'NOKIA' | 'ARCADE';
+type FilterCategory = 'ALL' | 'JARS' | 'FAVS' | 'NOKIA' | 'ARCADE';
 
 interface CartridgeCardProps {
   cart: ArcadeCartridgeDef;
@@ -147,12 +151,14 @@ const CartridgeCard = React.memo<CartridgeCardProps>(
 
 export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   cartridges,
+  jarGames = [],
   activeCartridgeId,
   accentColor,
   palette,
   highScores = {},
   isPro = false,
   onSelectCartridge,
+  onSelectJarGame,
   onOpenDevCart,
   onBack,
 }) => {
@@ -203,6 +209,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   const arcadeCount = cartridges.length - nokiaCount;
 
   const filteredCartridges = useMemo(() => {
+    if (filter === 'JARS') return [];
     if (filter === 'FAVS') return cartridges.filter((cart) => favSet.has(cart.id));
     if (filter === 'NOKIA') return cartridges.filter((cart) => cart.genre.includes('NOKIA'));
     if (filter === 'ARCADE') return cartridges.filter((cart) => !cart.genre.includes('NOKIA'));
@@ -234,36 +241,89 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
   const keyExtractor = useCallback((item: ArcadeCartridgeDef) => item.id, []);
 
   const listHeader = useMemo(() => {
-    if (!onOpenDevCart) return null;
+    const showJars = jarGames.length > 0 && (filter === 'ALL' || filter === 'JARS') && onSelectJarGame;
+    if (!onOpenDevCart && !showJars) return null;
     return (
-      <Pressable
-        onPress={onOpenDevCart}
-        style={[styles.studioCard, { backgroundColor: palette.deckBg, borderColor: accentColor }]}
-      >
-        <View style={styles.studioCardLeft}>
-          <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
-            <Ionicons name="game-controller" size={24} color={accentText} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.studioTagRow}>
-              <Text style={[styles.studioTitle, { color: accentText }]}>
-                {translateUi('vaultStudioTitle')}
-              </Text>
-              <View style={[styles.studioBadge, isLightBackground(palette.deckBg) && { backgroundColor: '#D1FAE5', borderColor: '#059669' }]}>
-                <Text style={[styles.studioBadgeText, isLightBackground(palette.deckBg) && { color: '#047857' }]}>
-                  {isPro ? translateUi('vaultStudioCreator') : translateUi('vaultStudioPro')}
+      <View style={{ gap: 10 }}>
+        {onOpenDevCart && (
+          <Pressable
+            onPress={onOpenDevCart}
+            style={[styles.studioCard, { backgroundColor: palette.deckBg, borderColor: accentColor }]}
+          >
+            <View style={styles.studioCardLeft}>
+              <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
+                <Ionicons name="game-controller" size={24} color={accentText} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={styles.studioTagRow}>
+                  <Text style={[styles.studioTitle, { color: accentText }]}>
+                    {translateUi('vaultStudioTitle')}
+                  </Text>
+                  <View style={[styles.studioBadge, isLightBackground(palette.deckBg) && { backgroundColor: '#D1FAE5', borderColor: '#059669' }]}>
+                    <Text style={[styles.studioBadgeText, isLightBackground(palette.deckBg) && { color: '#047857' }]}>
+                      {isPro ? translateUi('vaultStudioCreator') : translateUi('vaultStudioPro')}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={[styles.studioSub, { color: cardMutedInk }]}>
+                  {translateUi('vaultStudioSub')}
                 </Text>
               </View>
             </View>
-            <Text style={[styles.studioSub, { color: cardMutedInk }]}>
-              {translateUi('vaultStudioSub')}
+            <Ionicons name="chevron-forward" size={20} color={accentText} />
+          </Pressable>
+        )}
+
+        {showJars && (
+          <View style={{ gap: 8 }}>
+            <Text style={{ fontFamily: 'monospace', fontSize: 10, fontWeight: '900', color: accentText, letterSpacing: 1 }}>
+              J2ME JAR ({jarGames.length})
             </Text>
+            {jarGames.map((jar) => (
+              <Pressable
+                key={jar.appPath}
+                onPress={() => onSelectJarGame(jar.appPath)}
+                style={[
+                  styles.cartCard,
+                  {
+                    backgroundColor: palette.deckBg,
+                    borderColor: accentColor,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 12,
+                  },
+                ]}
+              >
+                {jar.iconUri ? (
+                  <Image source={{ uri: jar.iconUri }} style={{ width: 42, height: 42, borderRadius: 8 }} resizeMode="contain" />
+                ) : (
+                  <View style={[styles.studioIconWrap, { backgroundColor: `${accentColor}22` }]}>
+                    <Ionicons name="phone-portrait-outline" size={22} color={accentText} />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.cartTitle, { color: cardInk }]} numberOfLines={1}>
+                      {jar.name}
+                    </Text>
+                    {jar.hasSave && (
+                      <View style={[styles.genreTag, { backgroundColor: `${accentColor}22`, borderColor: accentColor }]}>
+                        <Text style={[styles.genreTagText, { color: accentText }]}>SAVE</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.cardSubtitle, { color: cardMutedInk, marginBottom: 0 }]} numberOfLines={1}>
+                    {(jar.vendor || 'J2ME')} • v{jar.version}
+                  </Text>
+                </View>
+                <Ionicons name="play-circle" size={24} color={accentText} />
+              </Pressable>
+            ))}
           </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={accentText} />
-      </Pressable>
+        )}
+      </View>
     );
-  }, [accentColor, accentText, cardMutedInk, isPro, onOpenDevCart, palette.deckBg, translateUi]);
+  }, [accentColor, accentText, cardInk, cardMutedInk, filter, isPro, jarGames, onOpenDevCart, onSelectJarGame, palette.deckBg, translateUi]);
 
   return (
     <View style={[styles.page, { paddingTop: Math.max(insets.top, 14) + 6, backgroundColor: palette.chassisBg }]}>
@@ -296,7 +356,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
           contentContainerStyle={styles.filterRow}
           style={styles.filterScroll}
         >
-          {(['ALL', 'FAVS', 'NOKIA', 'ARCADE'] as FilterCategory[]).map((cat) => {
+          {(['ALL', ...(jarGames.length > 0 ? (['JARS'] as FilterCategory[]) : []), 'FAVS', 'NOKIA', 'ARCADE'] as FilterCategory[]).map((cat) => {
             const isSelected = filter === cat;
             return (
               <Pressable
@@ -313,7 +373,9 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
               >
                 <Text style={[styles.filterChipText, { color: pageMutedInk }, isSelected && { color: accentText }]}>
                   {cat === 'ALL'
-                    ? translateUi('vaultCatAll', { count: cartridges.length })
+                    ? translateUi('vaultCatAll', { count: cartridges.length + jarGames.length })
+                    : cat === 'JARS'
+                    ? `J2ME JAR (${jarGames.length})`
                     : cat === 'FAVS'
                     ? translateUi('vaultCatFavs', { count: favIds.length })
                     : cat === 'NOKIA'
@@ -339,6 +401,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
         removeClippedSubviews
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
+          filter === 'JARS' ? undefined : (
           <View style={styles.emptyWrap}>
             <Ionicons name="star-outline" size={28} color={pageMutedInk} />
             <Text style={[styles.emptyTitle, { color: pageInk }]}>{translateUi('vaultEmptyTitle')}</Text>
@@ -346,6 +409,7 @@ export const CartridgeBayPage: React.FC<CartridgeBayPageProps> = ({
               {translateUi('vaultEmptySub')}
             </Text>
           </View>
+          )
         }
         contentContainerStyle={[
           styles.list,

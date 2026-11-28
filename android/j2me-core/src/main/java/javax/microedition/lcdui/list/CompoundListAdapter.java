@@ -20,14 +20,12 @@ package javax.microedition.lcdui.list;
 
 import android.content.Context;
 import android.graphics.Color;
-import android.os.Build;
-import android.util.TypedValue;
+import android.graphics.Typeface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckedTextView;
 import android.widget.ListAdapter;
-
-import androidx.core.content.ContextCompat;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 
@@ -37,7 +35,9 @@ import javax.microedition.util.ContextHolder;
 import ru.playsoftware.j2meloader.R;
 
 public class CompoundListAdapter extends CompoundAdapter implements ListAdapter {
-	private static int highlightColor;
+	private static final int SELECTED_ROW_BG = 0xFF1D4ED8;
+	private static final int SELECTED_TEXT_COLOR = 0xFFFFFFFF;
+	private static final int DEFAULT_TEXT_COLOR = 0xFFE2E8F0;
 
 	private final int listType;
 	private final int viewResourceID;
@@ -47,12 +47,6 @@ public class CompoundListAdapter extends CompoundAdapter implements ListAdapter 
 		switch (type) {
 			case Choice.IMPLICIT:
 				viewResourceID = android.R.layout.simple_list_item_1;
-				if (highlightColor == 0) {
-					TypedValue typedValue = new TypedValue();
-					Context context = ContextHolder.getContext();
-					context.getTheme().resolveAttribute(androidx.appcompat.R.attr.colorControlHighlight, typedValue, true);
-					highlightColor = ContextCompat.getColor(context, typedValue.resourceId);
-				}
 				break;
 			case Choice.EXCLUSIVE:
 				viewResourceID = android.R.layout.simple_list_item_single_choice;
@@ -69,15 +63,30 @@ public class CompoundListAdapter extends CompoundAdapter implements ListAdapter 
 	@Override
 	public View getView(int position, View convertView, ViewGroup parent) {
 		convertView = getView(position, convertView, parent, viewResourceID);
-
-		boolean selected = getItem(position).isSelected();
-		if (listType == Choice.IMPLICIT) {
-			convertView.setBackgroundColor(selected ? highlightColor : Color.TRANSPARENT);
-		} else {
-			((CheckedTextView) convertView).setChecked(selected);
-		}
-
+		applySelectionStyle(convertView, position);
 		return convertView;
+	}
+
+	/** Updates a row view's selection highlight in-place without waiting for a React Native layout pass. */
+	public void applySelectionStyle(View rowView, int position) {
+		if (rowView == null || position < 0 || position >= getCount()) {
+			return;
+		}
+		boolean selected = getItem(position).isSelected();
+		if (rowView instanceof TextView) {
+			TextView tv = (TextView) rowView;
+			tv.setTextColor(selected ? SELECTED_TEXT_COLOR : DEFAULT_TEXT_COLOR);
+			tv.setTypeface(null, selected ? Typeface.BOLD : Typeface.NORMAL);
+		}
+		if (listType == Choice.IMPLICIT) {
+			rowView.setBackgroundColor(selected ? SELECTED_ROW_BG : Color.TRANSPARENT);
+		} else {
+			if (rowView instanceof CheckedTextView) {
+				((CheckedTextView) rowView).setChecked(selected);
+			}
+			rowView.setBackgroundColor(selected ? 0x331D4ED8 : Color.TRANSPARENT);
+		}
+		rowView.invalidate();
 	}
 
 	@Override

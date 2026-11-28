@@ -7,6 +7,8 @@ import type { LocaleBundle } from './en';
 export const trLocale: LocaleBundle = {
   desktop: {
     arcade: 'OYUN',
+    store: 'MAGAZA',
+    programs: 'PROGRAMLAR',
     radio: 'RADYO',
     ai: 'SOHBET',
     wap: 'WAP',
@@ -41,6 +43,8 @@ export const trLocale: LocaleBundle = {
     titleWap: 'RETRO WAP 1.1',
     titleWallpapers: 'DUVAR KAGITLARI',
     titleFormat: 'FORMAT SIM [C:]',
+    titleStore: 'RD MAGAZA [PKG]',
+    titlePrograms: 'C:\\PROGRAMLAR',
 
     // Setup
     setupTitle: 'SISTEM AYARLARI',
@@ -54,7 +58,10 @@ export const trLocale: LocaleBundle = {
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'LISTE',
     menuStyleCards: 'BUYUK KART',
+    menuStyleNexus: 'NEXUS HOLO-OS',
     menuStyleWindows: 'WINDOWS MASAUSTU',
+    menuStyleWindows7: 'WINDOWS 7 AERO',
+    menuStyleWindows8: 'WINDOWS 8 METRO',
     menuStyleMacos: 'MACOS MASAUSTU',
     menuStylePsp: 'SONY PSP (XMB)',
     menuStyleXbox: 'XBOX 360 BLADES',
@@ -76,8 +83,8 @@ export const trLocale: LocaleBundle = {
     active: 'AKTIF',
 
     // Keyguard & Common
-    unlockPrompt: 'ACMAK ICIN: [A] SONRA [▲] (*)',
-    unlockNow: 'SIMDI KILIT ACMAK ICIN [▲] (*) BAS!',
+    unlockPrompt: 'ACMAK ICIN: 2x [A] BASIN ([A]+[A])',
+    unlockNow: 'ACMAK ICIN TEKRAR [A] BAS!',
     keyguardLocked: 'TUS KILIDI AKTIF',
     newMsgSingle: 'YENI MESAJ',
     newMsgPlural: 'YENI MESAJ',
@@ -105,8 +112,10 @@ export const trLocale: LocaleBundle = {
     footerNotes: '[A] YENI NOT   [▲/▼] SEC   [▶]x2 SIL   [B] ANA EKRAN',
     footerPaint: '[A] CIZ / SEC   [YON] TUVAL & ARAC   [B] CIKIS',
     footerContacts: '[A] ARA   [▶] SMS AT   [◀]x2 SIL   [KBD] +YENI   [B] CIKIS',
-    footerWallpapers: '[◀/▶] 50 SAHNE   [▲/▼] UYUM   [A] SEC/TAM EKRAN   [B] CIKIS',
+    footerWallpapers: '[◀/▶] 51 SAHNE   [▲/▼] UYUM   [A] SEC/TAM EKRAN   [B] CIKIS',
     footerFormat: '[▲/▼] MOD   [◀/▶] D: YEDEK   [A] ILERI/TOKAT   [B] GERI',
+    footerStore: '[▲/▼] SEC   [◀/▶] SEKME   [A] YUKLE/AC   [B] ANA EKRAN',
+    footerPrograms: '[YON] SEC   [A] AC   [B] MASAUSTU',
     footerDefault: '[A] ISLEM   [B] ANA EKRAN',
 
     // AI Chat
@@ -307,8 +316,10 @@ export const trLocale: LocaleBundle = {
     hintStats: 'Arcade Rekorlari & Istatistik • [B]: Ana Ekran',
     hintTerm: '[A]: Calistir / KBD • [◀]/[▶]: Gecmis • [▲]/[▼]: Kaydir • [B]: Cikis',
     hintSetup: '[▲]/[▼]: Ayar • [A]: Ac/Degistir • [B]: Ana Ekran',
-    hintWallpapers: '[◀]/[▶]: 50 Piksel Sahne Gez • [▲]/[▼]: Karartma • [A]: Uygula • [B]: Geri',
+    hintWallpapers: '[◀]/[▶]: 51 Piksel Sahne Gez • [▲]/[▼]: Karartma • [A]: Uygula • [B]: Geri',
     hintFormat: '[▲]/[▼]: Mod • [◀]/[▶]: D: Yedek • [A]: Baslat / Kasaya Vur • [B]: Geri',
+    hintStore: '[▲]/[▼]: Uygulamalar • [◀]/[▶]: Katalog/Yuklu • [A]: Yukle/Ac/Kaldir • [B]: Geri',
+    hintPrograms: 'YON: Program Sec • [A]: Ac • [B]: Masaustu',
     hintThemes: '[▲]/[▼]: Temalar • [◀]/[▶]: ±5 • [A]: Uygula • [B]: Geri',
     hintPro: '[▲]/[▼]: Plan Sec • [A]: Satin Al / Geri Yukle • [B]: Geri',
     hintDefault: 'YON: Gezin • [A]: Sec • [B]: Geri',

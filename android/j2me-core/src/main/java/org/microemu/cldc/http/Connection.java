@@ -59,6 +59,8 @@ public class Connection implements HttpConnection, ConnectionImplementation {
 			throw new IOException(ex.toString());
 		}
 		cn = url.openConnection();
+		cn.setConnectTimeout(3500);
+		cn.setReadTimeout(5000);
 		// Add encoding info to the header
 		cn.setRequestProperty("Accept-Encoding", "identity");
 		// J2ME do not follow redirects. Test this url
@@ -379,6 +381,8 @@ public class Connection implements HttpConnection, ConnectionImplementation {
 				((HttpURLConnection) cn).getRequestMethod().equals(HttpConnection.GET)) {
 			if (cnOut == null) {
 				cnOut = cn.getURL().openConnection();
+				cnOut.setConnectTimeout(3500);
+				cnOut.setReadTimeout(5000);
 				cnOut.setDoOutput(true);
 				((HttpURLConnection) cnOut).setRequestMethod(HttpConnection.POST);
 			}

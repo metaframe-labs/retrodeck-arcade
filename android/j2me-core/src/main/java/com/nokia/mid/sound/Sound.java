@@ -143,6 +143,7 @@ public class Sound {
 
 	public void play(int loop) {
 		try {
+			if (player == null) return;
 			player.stop();
 			player.setLoopCount(loop == 0 ? -1 : loop);
 			player.prefetch();
@@ -155,7 +156,9 @@ public class Sound {
 
 	public void release() {
 		try {
-			player.close();
+			if (player != null) {
+				player.close();
+			}
 		} catch (Exception e) {
 			Log.e(TAG, "release: ", e);
 		}
@@ -163,7 +166,9 @@ public class Sound {
 
 	public void resume() {
 		try {
-			player.start();
+			if (player != null) {
+				player.start();
+			}
 		} catch (Exception e) {
 			Log.e(TAG, "resume: ", e);
 		}
@@ -187,7 +192,9 @@ public class Sound {
 
 	public void stop() {
 		try {
-			player.stop();
+			if (player != null) {
+				player.stop();
+			}
 		} catch (Exception e) {
 			Log.e(TAG, "stop: ", e);
 		}

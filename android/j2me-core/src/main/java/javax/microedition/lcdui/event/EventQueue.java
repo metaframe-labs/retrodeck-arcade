@@ -17,12 +17,15 @@
 
 package javax.microedition.lcdui.event;
 
+import android.util.Log;
+
 import javax.microedition.util.LinkedList;
 
 /**
  * The event queue. A really complicated thing.
  */
 public class EventQueue implements Runnable {
+	private static final String TAG = "EventQueue";
 	private static boolean immediate;
 
 	private final LinkedList<Event> queue = new LinkedList<>();
@@ -67,11 +70,18 @@ public class EventQueue implements Runnable {
 	 * @param event the added event
 	 */
 	public void postEvent(Event event) {
+		if (event == null) {
+			return;
+		}
 
 		if (immediate) { // the immediate processing mode is enabled
 			event.enterQueue();
 			synchronized (callbackLock) {
-				event.run(); // process event on the spot
+				try {
+					event.run(); // process event on the spot
+				} catch (Throwable t) {
+					Log.e(TAG, "Uncaught exception in immediate MIDlet event", t);
+				}
 			}
 			return;      // and nothing to do here
 		}
@@ -181,7 +191,11 @@ public class EventQueue implements Runnable {
 
 				if (event != null) {
 					synchronized (callbackLock) {
-						event.run();
+						try {
+							event.run();
+						} catch (Throwable t) {
+							Log.e(TAG, "Uncaught exception in MIDlet event loop", t);
+						}
 					}
 				} else {
 					synchronized (waiter) {
@@ -205,12 +219,16 @@ public class EventQueue implements Runnable {
 	}
 
 	public void serviceRepaints(Event paintEvent) {
-		if (immediate) {
+		if (immediate || paintEvent == null) {
 			return;
 		}
 
 		synchronized (callbackLock) {
-			paintEvent.process();
+			try {
+				paintEvent.process();
+			} catch (Throwable t) {
+				Log.e(TAG, "Uncaught exception in serviceRepaints", t);
+			}
 		}
 	}
 }

@@ -8,6 +8,8 @@ const APP_HINT_KEYS: Record<string, KeyboardStringKey> = {
   boot: 'hintBoot',
   desktop: 'hintDesktop',
   arcade: 'hintArcade',
+  store: 'hintStore',
+  programs: 'hintPrograms',
   radio: 'hintRadio',
   wap: 'hintWap',
   calc: 'hintCalc',

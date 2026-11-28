@@ -188,6 +188,7 @@ public abstract class Item implements View.OnCreateContextMenuListener {
 
 			labelview = new AppCompatTextView(context);
 			labelview.setTextAppearance(context, android.R.style.TextAppearance_Medium);
+			labelview.setTextColor(0xFF94A3B8);
 			labelview.setText(label);
 
 			if (label != null) {

@@ -807,13 +807,16 @@ export function renderWinPostFormatBoot(os: RetroDeckOS): React.ReactNode {
 export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
   const pal = os.cb.getPaletteId?.() ?? '';
   const isXp = os.postFormatWinStyle === 'winxp' || (!os.postFormatWinStyle && pal === 'windows_xp');
-  const isWin8 = !os.postFormatWinStyle && pal === 'windows_8';
-  const isWin10 = !os.postFormatWinStyle && pal === 'windows_10';
-  const isWin11 = !os.postFormatWinStyle && pal === 'windows_11';
+  const isWin7 = !os.postFormatWinStyle && (os.menuStyle === 'windows_7' || (os.menuStyle !== 'windows_8' && pal === 'windows_7'));
+  const isWin8 = !os.postFormatWinStyle && (os.menuStyle === 'windows_8' || (!isWin7 && pal === 'windows_8'));
+  const isWin10 = !os.postFormatWinStyle && !isWin7 && !isWin8 && pal === 'windows_10';
+  const isWin11 = !os.postFormatWinStyle && !isWin7 && !isWin8 && pal === 'windows_11';
   const isFormatSim = Boolean(os.postFormatWinStyle);
   const secsLeft = Math.max(1, Math.ceil(os.postFormatWinTimer));
   const defaultTitle = isXp
     ? '⊞ My RetroDeck XP'
+    : isWin7
+    ? '⊞ Windows 7 Aero'
     : isWin8
     ? '⊞ Windows 8'
     : isWin10
@@ -825,6 +828,77 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
     os.app === 'desktop'
       ? defaultTitle
       : `▣ ${os.app.toUpperCase()}.EXE`;
+
+  if (isWin7) {
+    return (
+      <View
+        style={{
+          height: 20,
+          backgroundColor: 'rgba(20, 68, 120, 0.90)',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(224, 242, 254, 0.7)',
+          borderBottomWidth: 1,
+          borderBottomColor: '#0A2544',
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingHorizontal: 6,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: MONO_FONT,
+            fontSize: 8.5,
+            fontWeight: '800',
+            color: '#F0F9FF',
+            textShadowColor: 'rgba(0, 0, 0, 0.75)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+          }}
+          numberOfLines={1}
+        >
+          {winTitle}
+        </Text>
+        <View style={{ flexDirection: 'row', gap: 2.5, alignItems: 'center' }}>
+          {['_', '□'].map((sym) => (
+            <View
+              key={sym}
+              style={{
+                width: 14,
+                height: 12,
+                borderRadius: 2,
+                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                borderWidth: 0.8,
+                borderColor: 'rgba(224, 242, 254, 0.55)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 6.8, fontWeight: '900', color: '#FFFFFF' }}>
+                {sym}
+              </Text>
+            </View>
+          ))}
+          <View
+            style={{
+              width: 18,
+              height: 12,
+              borderRadius: 2,
+              backgroundColor: '#D63327',
+              borderWidth: 0.8,
+              borderColor: '#FCA5A5',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 6.8, fontWeight: '900', color: '#FFFFFF' }}>
+              ✕
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
 
   if (isWin11) {
     return (
@@ -1057,14 +1131,145 @@ export function renderWinPostFormatTopBar(os: RetroDeckOS): React.ReactNode {
 export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
   const pal = os.cb.getPaletteId?.() ?? '';
   const isXp = os.postFormatWinStyle === 'winxp' || (!os.postFormatWinStyle && pal === 'windows_xp');
-  const isWin8 = !os.postFormatWinStyle && pal === 'windows_8';
-  const isWin10 = !os.postFormatWinStyle && pal === 'windows_10';
-  const isWin11 = !os.postFormatWinStyle && pal === 'windows_11';
+  const isWin7 = !os.postFormatWinStyle && (os.menuStyle === 'windows_7' || (os.menuStyle !== 'windows_8' && pal === 'windows_7'));
+  const isWin8 = !os.postFormatWinStyle && (os.menuStyle === 'windows_8' || (!isWin7 && pal === 'windows_8'));
+  const isWin10 = !os.postFormatWinStyle && !isWin7 && !isWin8 && pal === 'windows_10';
+  const isWin11 = !os.postFormatWinStyle && !isWin7 && !isWin8 && pal === 'windows_11';
   const startLabel = pickLang(os.lang, 'Start', 'Baslat');
   const activeTab =
     os.app === 'desktop'
       ? pickLang(os.lang, 'Desktop', 'Masaustu')
       : os.app.toUpperCase();
+
+  // Windows 7: Translucent Aero Glass Superbar with Glowing Start Orb & Aero Peek Strip
+  if (isWin7) {
+    return (
+      <View
+        style={{
+          height: 22,
+          backgroundColor: 'rgba(11, 37, 68, 0.92)',
+          borderTopWidth: 1.5,
+          borderTopColor: 'rgba(186, 230, 253, 0.65)',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingLeft: 4,
+          paddingRight: 0,
+        }}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+          {/* Iconic Windows 7 Glowing Circular Start Orb */}
+          <Pressable
+            onPress={() => {
+              if (os.app === 'desktop') {
+                os.winStartOpen = !os.winStartOpen;
+                os.winStartPane = 'left';
+                os.cb.onPlaySound?.('score');
+              } else {
+                os.goDesktop();
+                os.winStartOpen = true;
+                os.winStartPane = 'left';
+                os.cb.onPlaySound?.('score');
+              }
+            }}
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: 9,
+              backgroundColor: '#1E7AD9',
+              borderWidth: 1.2,
+              borderColor: '#BAE6FD',
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#38BDF8',
+              shadowOffset: { width: 0, height: 0 },
+              shadowOpacity: 0.7,
+              shadowRadius: 3,
+            }}
+          >
+            <View style={{ width: 8, height: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 0.5, transform: [{ rotate: '-6deg' }] }}>
+              <View style={{ width: 3.5, height: 3.5, backgroundColor: '#F43F5E', borderRadius: 0.5 }} />
+              <View style={{ width: 3.5, height: 3.5, backgroundColor: '#22C55E', borderRadius: 0.5 }} />
+              <View style={{ width: 3.5, height: 3.5, backgroundColor: '#38BDF8', borderRadius: 0.5 }} />
+              <View style={{ width: 3.5, height: 3.5, backgroundColor: '#FACC15', borderRadius: 0.5 }} />
+            </View>
+          </Pressable>
+
+          {/* Frosted Aero Superbar Pinned Programs Folder */}
+          <Pressable
+            onPress={() => {
+              const s = os.launchDesktopApp('programs');
+              os.cb.onPlaySound?.(s);
+            }}
+            style={{
+              width: 16,
+              height: 15,
+              borderRadius: 3,
+              backgroundColor: os.app === 'programs' ? 'rgba(186, 230, 253, 0.35)' : 'rgba(255, 255, 255, 0.14)',
+              borderWidth: 0.8,
+              borderColor: 'rgba(224, 242, 254, 0.45)',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Ionicons name="folder-open" size={9} color="#FDE047" />
+          </Pressable>
+
+          {/* Active Glass Task Tile */}
+          <View
+            style={{
+              height: 16,
+              maxWidth: 120,
+              borderRadius: 3,
+              backgroundColor: 'rgba(186, 230, 253, 0.25)',
+              borderWidth: 1,
+              borderColor: 'rgba(224, 242, 254, 0.72)',
+              paddingHorizontal: 6,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 3,
+            }}
+          >
+            <Ionicons name="desktop-outline" size={9} color="#E0F2FE" />
+            <Text style={{ fontFamily: MONO_FONT, fontSize: 7.2, fontWeight: '800', color: '#FFFFFF' }} numberOfLines={1}>
+              {activeTab}
+            </Text>
+          </View>
+        </View>
+
+        {/* System Tray + Aero Peek Glass Button */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', height: '100%', gap: 4 }}>
+          <Ionicons name="wifi" size={8.5} color="#E0F2FE" />
+          <Ionicons name="volume-medium" size={8.5} color="#E0F2FE" />
+          {os.unreadSmsCount > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 1.5 }}>
+              <Ionicons name="mail" size={8} color="#7DD3FC" />
+              <Text style={{ fontFamily: MONO_FONT, fontSize: 7, fontWeight: '900', color: '#7DD3FC' }}>
+                {os.unreadSmsCount}
+              </Text>
+            </View>
+          )}
+          <Text style={{ fontFamily: MONO_FONT, fontSize: 7.5, fontWeight: '700', color: '#F0F9FF', marginRight: 3 }}>
+            {os.formatClock()}
+          </Text>
+          {/* Iconic Win7 Aero Peek "Show Desktop" Glass Strip */}
+          <Pressable
+            onPress={() => {
+              os.goDesktop();
+              os.cb.onPlaySound?.('hit');
+            }}
+            style={{
+              width: 8,
+              height: '100%',
+              backgroundColor: 'rgba(255, 255, 255, 0.16)',
+              borderLeftWidth: 1,
+              borderLeftColor: 'rgba(224, 242, 254, 0.55)',
+            }}
+          />
+        </View>
+      </View>
+    );
+  }
 
   // Windows 11: Frosted Mica Taskbar with Centered Group (Centered Win11 4-Square Logo + Search + Centered Task Tabs)
   if (isWin11) {
@@ -1096,7 +1301,18 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         {/* Center Cluster: Authentic Win11 Centered Start Logo & Active App Icon */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           {/* Windows 11 Official 4 Blue Squares Logo */}
-          <View
+          <Pressable
+            onPress={() => {
+              if (os.app === 'desktop') {
+                os.winStartOpen = !os.winStartOpen;
+                os.winStartPane = 'left';
+              } else {
+                os.goDesktop();
+                os.winStartOpen = true;
+                os.winStartPane = 'left';
+              }
+              os.cb.onPlaySound?.('score');
+            }}
             style={{
               width: 14,
               height: 14,
@@ -1114,7 +1330,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
             <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
             <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
             <View style={{ width: 4.5, height: 4.5, backgroundColor: '#0067C0', borderRadius: 0.5 }} />
-          </View>
+          </Pressable>
 
           {/* Windows 11 Search Pill */}
           <View
@@ -1190,7 +1406,18 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {/* Windows 10 Perspective 4-Pane Flag Start Button */}
-          <View
+          <Pressable
+            onPress={() => {
+              if (os.app === 'desktop') {
+                os.winStartOpen = !os.winStartOpen;
+                os.winStartPane = 'left';
+              } else {
+                os.goDesktop();
+                os.winStartOpen = true;
+                os.winStartPane = 'left';
+              }
+              os.cb.onPlaySound?.('score');
+            }}
             style={{
               height: 20,
               paddingHorizontal: 8,
@@ -1214,7 +1441,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
               <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
               <View style={{ width: 4.5, height: 4, backgroundColor: '#0078D7' }} />
             </View>
-          </View>
+          </Pressable>
 
           {/* Cortana Circle Icon */}
           <View style={{ width: 9, height: 9, borderRadius: 4.5, borderWidth: 1.2, borderColor: '#FFFFFF', opacity: 0.7 }} />
@@ -1281,7 +1508,20 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
           {/* Windows 8 Metro Solid Cyan Start Tile */}
-          <View
+          <Pressable
+            onPress={() => {
+              if (os.app === 'desktop') {
+                const total = os.getVisibleDesktopIcons().length;
+                if (total > 9) {
+                  const curPage = Math.floor(os.deskIdx / 9);
+                  const totalPages = Math.ceil(total / 9);
+                  os.deskIdx = ((curPage + 1) % totalPages) * 9;
+                }
+              } else {
+                os.goDesktop();
+              }
+              os.cb.onPlaySound?.('score');
+            }}
             style={{
               height: 20,
               backgroundColor: '#0078D7',
@@ -1305,7 +1545,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
               <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
               <View style={{ width: 4.2, height: 4.2, backgroundColor: '#FFFFFF' }} />
             </View>
-          </View>
+          </Pressable>
 
           {/* Active Window */}
           <View
@@ -1367,7 +1607,18 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         }}
       >
         {/* Olive/Emerald Green XP Start Pill with 4-color XP Flag */}
-        <View
+        <Pressable
+          onPress={() => {
+            if (os.app === 'desktop') {
+              os.winStartOpen = !os.winStartOpen;
+              os.winStartPane = 'left';
+            } else {
+              os.goDesktop();
+              os.winStartOpen = true;
+              os.winStartPane = 'left';
+            }
+            os.cb.onPlaySound?.('score');
+          }}
           style={{
             height: '100%',
             backgroundColor: '#399E28',
@@ -1390,7 +1641,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
           <Text style={{ fontFamily: MONO_FONT, fontSize: 8.5, fontWeight: '900', color: '#FFFFFF', fontStyle: 'italic' }}>
             {startLabel.toLowerCase()}
           </Text>
-        </View>
+        </Pressable>
 
         {/* Active Window Task Pill */}
         <View
@@ -1459,7 +1710,18 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
       }}
     >
       {/* 3D Raised [⊞ Start] Button with authentic Windows 4-color tile square */}
-      <View
+      <Pressable
+        onPress={() => {
+          if (os.app === 'desktop') {
+            os.winStartOpen = !os.winStartOpen;
+            os.winStartPane = 'left';
+          } else {
+            os.goDesktop();
+            os.winStartOpen = true;
+            os.winStartPane = 'left';
+          }
+          os.cb.onPlaySound?.('score');
+        }}
         style={{
           height: 16,
           backgroundColor: '#C0C0C0',
@@ -1486,7 +1748,7 @@ export function renderWinPostFormatTaskbar(os: RetroDeckOS): React.ReactNode {
         <Text style={{ fontFamily: MONO_FONT, fontSize: 8, fontWeight: '900', color: '#000000' }}>
           {startLabel}
         </Text>
-      </View>
+      </Pressable>
 
       {/* Sunken Active Window Tab */}
       <View

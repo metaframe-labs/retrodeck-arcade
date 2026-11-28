@@ -63,6 +63,148 @@ function createWavBuffer(numSamples: number): Uint8Array {
   return buffer;
 }
 
+/** Generates standard 44-byte RIFF WAV byte buffer for 16-bit signed mono PCM */
+function createWavBuffer16(numSamples: number): { buffer: Uint8Array; view: DataView } {
+  const dataBytes = numSamples * 2;
+  const buffer = new Uint8Array(44 + dataBytes);
+  const view = new DataView(buffer.buffer);
+
+  buffer.set([0x52, 0x49, 0x46, 0x46], 0); // "RIFF"
+  view.setUint32(4, 36 + dataBytes, true);
+  buffer.set([0x57, 0x41, 0x56, 0x45], 8); // "WAVE"
+
+  buffer.set([0x66, 0x6d, 0x74, 0x20], 12); // "fmt "
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, SAMPLE_RATE, true);
+  view.setUint32(28, SAMPLE_RATE * 2, true); // ByteRate = SampleRate * 1 * 2
+  view.setUint16(32, 2, true); // BlockAlign = 2
+  view.setUint16(34, 16, true); // 16-bit signed PCM
+
+  buffer.set([0x64, 0x61, 0x74, 0x61], 36); // "data"
+  view.setUint32(40, dataBytes, true);
+
+  return { buffer, view };
+}
+
+type ChimeWave = 'sine' | 'warm_pad' | 'bell' | 'crystal' | 'epiano' | 'brass' | 'pulse_soft' | 'click';
+
+interface StartupVoice {
+  freq: number;
+  freqEnd?: number;
+  startSec: number;
+  durSec: number;
+  attackSec: number;
+  releaseSec: number;
+  wave: ChimeWave;
+  amp: number;
+}
+
+function sampleChimeWave(wave: ChimeWave, phaseRad: number, localT: number): number {
+  switch (wave) {
+    case 'sine':
+      return Math.sin(phaseRad);
+    case 'epiano':
+      return (
+        0.72 * Math.sin(phaseRad) +
+        0.20 * Math.sin(phaseRad * 2) * Math.exp(-localT * 3.0) +
+        0.16 * Math.sin(phaseRad * 3) * Math.exp(-localT * 10.0)
+      );
+    case 'bell':
+      return (
+        0.68 * Math.sin(phaseRad) +
+        0.26 * Math.sin(phaseRad * 2) * Math.exp(-localT * 3.8) +
+        0.12 * Math.sin(phaseRad * 4) * Math.exp(-localT * 9.5)
+      );
+    case 'crystal':
+      return (
+        0.48 * Math.sin(phaseRad * 0.998) +
+        0.48 * Math.sin(phaseRad * 1.002) +
+        0.22 * Math.sin(phaseRad * 2) * Math.exp(-localT * 2.2) +
+        0.08 * Math.sin(phaseRad * 3) * Math.exp(-localT * 5.0)
+      );
+    case 'warm_pad':
+      return (
+        0.46 * Math.sin(phaseRad) +
+        0.24 * Math.sin(phaseRad * 1.003) +
+        0.24 * Math.sin(phaseRad * 0.997) +
+        0.14 * Math.sin(phaseRad * 2) +
+        0.05 * Math.sin(phaseRad * 3)
+      );
+    case 'brass':
+      return Math.tanh(
+        (0.55 * Math.sin(phaseRad) +
+          0.28 * Math.sin(phaseRad * 2) +
+          0.14 * Math.sin(phaseRad * 3) +
+          0.06 * Math.sin(phaseRad * 4)) *
+          1.15
+      );
+    case 'pulse_soft':
+      return (
+        0.64 * Math.sin(phaseRad) +
+        0.26 * Math.sin(phaseRad * 2) +
+        0.12 * Math.sin(phaseRad * 3)
+      );
+    case 'click':
+      return Math.exp(-localT * 170) * Math.sin(phaseRad);
+  }
+}
+
+/** Synthesizes lush 16-bit polyphonic startup chimes with ADSR envelopes and soft room reverb */
+function synthesizePolyChimeUri(
+  voices: StartupVoice[],
+  totalSec: number,
+  gain: number = 1.0,
+  reverbMix: number = 0.24
+): string {
+  const numSamples = Math.max(400, Math.min(SAMPLE_RATE * 6, Math.floor(totalSec * SAMPLE_RATE)));
+  const dry = new Float32Array(numSamples);
+
+  for (const v of voices) {
+    const startIdx = Math.max(0, Math.floor(v.startSec * SAMPLE_RATE));
+    const endIdx = Math.min(numSamples, Math.floor((v.startSec + v.durSec) * SAMPLE_RATE));
+    const len = endIdx - startIdx;
+    if (len <= 0) continue;
+
+    let phase = 0;
+    for (let i = startIdx; i < endIdx; i++) {
+      const localT = (i - startIdx) / SAMPLE_RATE;
+      const u = (i - startIdx) / len;
+      const curFreq = v.freqEnd ? v.freq + (v.freqEnd - v.freq) * u : v.freq;
+      phase += (2 * Math.PI * curFreq) / SAMPLE_RATE;
+
+      let env = 1.0;
+      if (v.attackSec > 0 && localT < v.attackSec) {
+        const ar = localT / v.attackSec;
+        env *= 0.5 - 0.5 * Math.cos(Math.PI * ar);
+      }
+      const rem = v.durSec - localT;
+      if (v.releaseSec > 0 && rem < v.releaseSec) {
+        const rr = Math.max(0, rem / v.releaseSec);
+        env *= Math.pow(rr, 1.45);
+      }
+
+      dry[i] += sampleChimeWave(v.wave, phase, localT) * v.amp * env;
+    }
+  }
+
+  const tap1 = Math.floor(0.088 * SAMPLE_RATE);
+  const tap2 = Math.floor(0.178 * SAMPLE_RATE);
+  const { buffer, view } = createWavBuffer16(numSamples);
+  const master = gain * 0.78;
+
+  for (let i = 0; i < numSamples; i++) {
+    const d1 = i >= tap1 ? dry[i - tap1] * reverbMix : 0;
+    const d2 = i >= tap2 ? dry[i - tap2] * (reverbMix * 0.52) : 0;
+    const wet = Math.tanh((dry[i] + d1 + d2) * 0.85) * master;
+    const pcm = Math.max(-32767, Math.min(32767, Math.round(wet * 32767)));
+    view.setInt16(44 + i * 2, pcm, true);
+  }
+
+  return `data:audio/wav;base64,${bytesToBase64(buffer)}`;
+}
+
 /** Synthesizes authentic 8-bit sound waveforms directly into Base64 WAV data URI */
 export function synthesizeRetroSoundUri(
   sound: ArcadeSound,
@@ -496,78 +638,309 @@ export class RetroAudioEngine {
     );
   }
 
+  private static playRawUriOnMelodyPlayer(uri: string, gain: number): void {
+    this.stopNokiaMelody();
+    if (this.isMuted || gain <= 0) return;
+
+    if (Platform.OS !== 'web' && SafeExpoAudio?.createAudioPlayer) {
+      try {
+        const p = SafeExpoAudio.createAudioPlayer(uri, { keepAudioSessionActive: true });
+        if (p) {
+          p.volume = gain;
+          this.melodyPlayer = p;
+          p.play();
+        }
+      } catch (e) {
+        console.warn('[RetroAudioEngine] playRawUri error:', e);
+      }
+    } else if (Platform.OS === 'web' && typeof Audio !== 'undefined') {
+      try {
+        const a = new Audio(uri);
+        a.volume = gain * 0.9;
+        this.melodyPlayer = a;
+        a.play().catch(() => {});
+      } catch {
+        // ignore
+      }
+    }
+  }
+
   /**
-   * Plays authentic system startup sound chimes based on sound ID or adaptive style:
-   * - windows_xp: Eb - Bb - Ab - Eb - Bb
-   * - windows_95: Brian Eno G - D - G - B - D
-   * - windows_98: F - C - F - A - C2
-   * - macos_modern / macos_classic: Apple F# Major Chord Chime
-   * - psp_crystal: Sony PSP crystal rising chime
-   * - ps1_legend: Sony PlayStation 1 deep chime
-   * - xbox_360: Xbox 360 green orb sweep
-   * - gameboy_dmg: Dual ping B1 -> B2
-   * - sega_sonic: S-E-G-A! dual chord
-   * - nokia_connecting: Connecting People melody
-   * - cyber_synth: Fast arpeggiated synth
-   * - pipboy_vault: Pipboy Geiger / radio burst
-   * - silent: Mute
+   * Plays warm 16-bit polyphonic startup chimes tailored to each OS/console identity.
    */
   public static playStartupChime(soundIdOrStyle?: string, fallbackStyle?: string): void {
     const key = (soundIdOrStyle || '').toLowerCase();
-
+    const hint = (fallbackStyle || '').toLowerCase();
     if (key === 'silent' || key === 'mute') return;
 
-    // Direct sound ID match or style auto detection:
-    if (key === 'windows_xp' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('xp'))) {
-      this.playNokiaMelody('16d#2 16a#1 16g#1 8d#1 4a#1', 130);
-      return;
-    }
-    if (key === 'windows_95' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('95'))) {
-      this.playNokiaMelody('16g1 16d1 16g2 16b2 4d2', 110);
-      return;
-    }
-    if (key === 'windows_98' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('windows'))) {
-      this.playNokiaMelody('16f1 16c1 16f2 16a2 4c3', 125);
-      return;
-    }
-    if (key === 'macos_modern' || key === 'macos_classic' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('mac'))) {
-      this.playNokiaMelody('16f#1 16a#1 16c#2 2f#2', 95);
-      return;
-    }
-    if (key === 'psp_crystal' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('psp'))) {
-      this.playNokiaMelody('32c2 32e2 32g2 32b2 2c3', 140);
-      return;
-    }
-    if (key === 'ps1_legend') {
-      this.playNokiaMelody('16d1 16a1 16d2 16f#2 16a2 2d3', 100);
-      return;
-    }
-    if (key === 'xbox_360' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('xbox'))) {
-      this.playNokiaMelody('16e1 16b1 16e2 2g#2', 120);
-      return;
-    }
-    if (key === 'gameboy_dmg' || (key === 'auto' && ((fallbackStyle || '').toLowerCase().includes('gameboy') || (fallbackStyle || '').toLowerCase().includes('famicom')))) {
-      this.playNokiaMelody('16b1 2b2', 200);
-      return;
-    }
-    if (key === 'sega_sonic') {
-      this.playNokiaMelody('16b1 8d2 8b1 4g1', 190);
-      return;
-    }
-    if (key === 'cyber_synth' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('cyber'))) {
-      this.playNokiaMelody('32c2 32d#2 32g2 32a#2 32c3 16g2', 180);
-      return;
-    }
-    if (key === 'pipboy_vault' || (key === 'auto' && (fallbackStyle || '').toLowerCase().includes('pipboy'))) {
-      this.playNokiaMelody('32g1 32- 32g1 16c2 16e2 4c2', 150);
-      return;
+    const gain = this.getEffectiveGain();
+    if (this.isMuted || gain <= 0) return;
+
+    const resolveId = (): string => {
+      if (key && key !== 'auto') return key;
+      if (hint.includes('nexus')) return 'nexus_holo';
+      if (hint.includes('windows_7') || hint.includes('win7') || hint.includes('aero')) return 'windows_7';
+      if (hint.includes('windows_8') || hint.includes('win8')) return 'windows_7';
+      if (hint.includes('xp')) return 'windows_xp';
+      if (hint.includes('95') || hint.includes('98') || hint.includes('windows')) return 'windows_95';
+      if (hint.includes('mac')) return 'macos_modern';
+      if (hint.includes('psp')) return 'psp_crystal';
+      if (hint.includes('xbox')) return 'xbox_360';
+      if (hint.includes('gameboy') || hint.includes('famicom')) return 'gameboy_dmg';
+      if (hint.includes('cyber')) return 'cyber_synth';
+      if (hint.includes('pipboy')) return 'pipboy_vault';
+      return 'nokia_connecting';
+    };
+
+    const id = resolveId();
+    let uri = '';
+
+    if (id === 'nexus_holo') {
+      // Deep quantum bass swell + shimmering Cmaj9 crystal orbital cascade
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 65.41, freqEnd: 130.81, startSec: 0.01, durSec: 1.9, attackSec: 0.08, releaseSec: 1.2, wave: 'warm_pad', amp: 0.28 },
+          { freq: 196.00, startSec: 0.04, durSec: 2.0, attackSec: 0.10, releaseSec: 1.3, wave: 'warm_pad', amp: 0.26 },
+          { freq: 392.00, startSec: 0.06, durSec: 0.9, attackSec: 0.015, releaseSec: 0.6, wave: 'epiano', amp: 0.30 },
+          { freq: 523.25, startSec: 0.16, durSec: 1.0, attackSec: 0.015, releaseSec: 0.7, wave: 'crystal', amp: 0.32 },
+          { freq: 659.25, startSec: 0.28, durSec: 1.1, attackSec: 0.015, releaseSec: 0.8, wave: 'crystal', amp: 0.34 },
+          { freq: 987.77, startSec: 0.42, durSec: 1.3, attackSec: 0.015, releaseSec: 1.0, wave: 'bell', amp: 0.32 },
+          { freq: 1174.66, startSec: 0.56, durSec: 1.5, attackSec: 0.02, releaseSec: 1.15, wave: 'crystal', amp: 0.34 },
+        ],
+        2.25,
+        gain,
+        0.32
+      );
+    } else if (id === 'windows_7') {
+      // Crystal Frutiger Aero 4-note glass bell chime (B4 -> E5 -> F#5 -> B5) over warm sky pad
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 246.94, startSec: 0.0, durSec: 1.9, attackSec: 0.12, releaseSec: 1.1, wave: 'warm_pad', amp: 0.22 },
+          { freq: 329.63, startSec: 0.16, durSec: 1.75, attackSec: 0.14, releaseSec: 1.0, wave: 'warm_pad', amp: 0.20 },
+          { freq: 493.88, startSec: 0.02, durSec: 1.1, attackSec: 0.015, releaseSec: 0.75, wave: 'bell', amp: 0.34 },
+          { freq: 659.25, startSec: 0.20, durSec: 1.2, attackSec: 0.015, releaseSec: 0.85, wave: 'bell', amp: 0.36 },
+          { freq: 739.99, startSec: 0.38, durSec: 1.25, attackSec: 0.015, releaseSec: 0.90, wave: 'crystal', amp: 0.34 },
+          { freq: 987.77, startSec: 0.58, durSec: 1.5, attackSec: 0.015, releaseSec: 1.15, wave: 'crystal', amp: 0.38 },
+        ],
+        2.25,
+        gain,
+        0.28
+      );
+    } else if (id === 'windows_xp') {
+      // Warm Eb major marimba/e-piano melody + lush orchestral chord swell
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 622.25, startSec: 0.02, durSec: 0.48, attackSec: 0.015, releaseSec: 0.28, wave: 'epiano', amp: 0.38 },
+          { freq: 466.16, startSec: 0.22, durSec: 0.45, attackSec: 0.015, releaseSec: 0.28, wave: 'epiano', amp: 0.34 },
+          { freq: 415.30, startSec: 0.42, durSec: 0.55, attackSec: 0.015, releaseSec: 0.34, wave: 'epiano', amp: 0.36 },
+          { freq: 311.13, startSec: 0.64, durSec: 0.75, attackSec: 0.02, releaseSec: 0.48, wave: 'epiano', amp: 0.36 },
+          { freq: 466.16, startSec: 0.86, durSec: 1.55, attackSec: 0.02, releaseSec: 1.05, wave: 'epiano', amp: 0.34 },
+          // Warm brass/string chord underneath
+          { freq: 155.56, startSec: 0.64, durSec: 1.85, attackSec: 0.16, releaseSec: 1.15, wave: 'warm_pad', amp: 0.24 },
+          { freq: 311.13, startSec: 0.84, durSec: 1.65, attackSec: 0.14, releaseSec: 1.05, wave: 'brass', amp: 0.20 },
+          { freq: 392.00, startSec: 0.86, durSec: 1.62, attackSec: 0.16, releaseSec: 1.05, wave: 'warm_pad', amp: 0.22 },
+          { freq: 587.33, startSec: 0.90, durSec: 1.55, attackSec: 0.18, releaseSec: 1.00, wave: 'crystal', amp: 0.16 },
+        ],
+        2.6,
+        gain,
+        0.26
+      );
+    } else if (id === 'windows_95') {
+      // Brian Eno-inspired dreamy ambient glass & e-piano chord bloom
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 174.61, startSec: 0.0, durSec: 1.3, attackSec: 0.14, releaseSec: 0.6, wave: 'warm_pad', amp: 0.22 },
+          { freq: 261.63, startSec: 0.04, durSec: 1.2, attackSec: 0.10, releaseSec: 0.6, wave: 'epiano', amp: 0.26 },
+          { freq: 440.00, startSec: 0.14, durSec: 1.1, attackSec: 0.06, releaseSec: 0.6, wave: 'bell', amp: 0.26 },
+          { freq: 659.25, startSec: 0.34, durSec: 1.1, attackSec: 0.05, releaseSec: 0.7, wave: 'crystal', amp: 0.24 },
+          // Resolution swell
+          { freq: 233.08, startSec: 0.85, durSec: 1.9, attackSec: 0.18, releaseSec: 1.15, wave: 'warm_pad', amp: 0.24 },
+          { freq: 349.23, startSec: 0.88, durSec: 1.85, attackSec: 0.16, releaseSec: 1.15, wave: 'warm_pad', amp: 0.22 },
+          { freq: 587.33, startSec: 0.95, durSec: 1.75, attackSec: 0.12, releaseSec: 1.15, wave: 'epiano', amp: 0.26 },
+          { freq: 783.99, startSec: 1.15, durSec: 1.60, attackSec: 0.08, releaseSec: 1.15, wave: 'crystal', amp: 0.22 },
+        ],
+        2.85,
+        gain,
+        0.30
+      );
+    } else if (id === 'windows_98') {
+      // Rich 1998 desktop warm synth-bell chord progression
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 174.61, startSec: 0.02, durSec: 1.95, attackSec: 0.08, releaseSec: 1.1, wave: 'warm_pad', amp: 0.24 },
+          { freq: 349.23, startSec: 0.02, durSec: 0.65, attackSec: 0.02, releaseSec: 0.4, wave: 'epiano', amp: 0.32 },
+          { freq: 523.25, startSec: 0.18, durSec: 0.70, attackSec: 0.02, releaseSec: 0.45, wave: 'epiano', amp: 0.30 },
+          { freq: 698.46, startSec: 0.36, durSec: 1.45, attackSec: 0.02, releaseSec: 0.95, wave: 'bell', amp: 0.32 },
+          { freq: 880.00, startSec: 0.56, durSec: 1.45, attackSec: 0.02, releaseSec: 1.00, wave: 'crystal', amp: 0.30 },
+          { freq: 1046.50, startSec: 0.78, durSec: 1.40, attackSec: 0.02, releaseSec: 1.05, wave: 'crystal', amp: 0.28 },
+        ],
+        2.3,
+        gain,
+        0.25
+      );
+    } else if (id === 'macos_modern') {
+      // Iconic Cupertino warm F# Major chord bloom — rich harmonics audible on both phone speakers & headphones
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 92.50, startSec: 0.015, durSec: 2.30, attackSec: 0.025, releaseSec: 1.60, wave: 'warm_pad', amp: 0.28 },
+          { freq: 185.00, startSec: 0.015, durSec: 2.30, attackSec: 0.02, releaseSec: 1.60, wave: 'brass', amp: 0.34 },
+          { freq: 277.18, startSec: 0.015, durSec: 2.25, attackSec: 0.02, releaseSec: 1.55, wave: 'brass', amp: 0.32 },
+          { freq: 369.99, startSec: 0.02, durSec: 2.20, attackSec: 0.02, releaseSec: 1.55, wave: 'epiano', amp: 0.36 },
+          { freq: 466.16, startSec: 0.02, durSec: 2.15, attackSec: 0.025, releaseSec: 1.50, wave: 'warm_pad', amp: 0.30 },
+          { freq: 554.37, startSec: 0.025, durSec: 2.10, attackSec: 0.025, releaseSec: 1.50, wave: 'crystal', amp: 0.28 },
+          { freq: 739.99, startSec: 0.03, durSec: 1.95, attackSec: 0.03, releaseSec: 1.40, wave: 'crystal', amp: 0.24 },
+        ],
+        2.45,
+        gain,
+        0.24
+      );
+    } else if (id === 'macos_classic') {
+      // System 7 warm C major bell chord
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 261.63, startSec: 0.02, durSec: 1.65, attackSec: 0.02, releaseSec: 1.15, wave: 'epiano', amp: 0.28 },
+          { freq: 329.63, startSec: 0.02, durSec: 1.65, attackSec: 0.02, releaseSec: 1.15, wave: 'epiano', amp: 0.24 },
+          { freq: 392.00, startSec: 0.02, durSec: 1.65, attackSec: 0.02, releaseSec: 1.15, wave: 'bell', amp: 0.24 },
+          { freq: 523.25, startSec: 0.03, durSec: 1.65, attackSec: 0.02, releaseSec: 1.15, wave: 'crystal', amp: 0.24 },
+        ],
+        1.8,
+        gain,
+        0.22
+      );
+    } else if (id === 'psp_crystal') {
+      // Sony PSP/PS3 airy glass string shimmer
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 261.63, startSec: 0.02, durSec: 2.0, attackSec: 0.18, releaseSec: 1.2, wave: 'warm_pad', amp: 0.22 },
+          { freq: 392.00, startSec: 0.08, durSec: 1.9, attackSec: 0.18, releaseSec: 1.2, wave: 'warm_pad', amp: 0.20 },
+          { freq: 659.25, startSec: 0.10, durSec: 1.3, attackSec: 0.02, releaseSec: 0.9, wave: 'crystal', amp: 0.26 },
+          { freq: 783.99, startSec: 0.24, durSec: 1.3, attackSec: 0.02, releaseSec: 0.9, wave: 'crystal', amp: 0.26 },
+          { freq: 987.77, startSec: 0.38, durSec: 1.4, attackSec: 0.02, releaseSec: 1.0, wave: 'crystal', amp: 0.28 },
+          { freq: 1174.66, startSec: 0.54, durSec: 1.5, attackSec: 0.03, releaseSec: 1.15, wave: 'bell', amp: 0.24 },
+        ],
+        2.2,
+        gain,
+        0.30
+      );
+    } else if (id === 'ps1_legend') {
+      // Deep 1994 PlayStation bass swell + bright fifths crystal pad
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 73.42, startSec: 0.02, durSec: 2.4, attackSec: 0.22, releaseSec: 1.35, wave: 'warm_pad', amp: 0.30 },
+          { freq: 146.83, startSec: 0.05, durSec: 2.35, attackSec: 0.20, releaseSec: 1.35, wave: 'warm_pad', amp: 0.26 },
+          { freq: 220.00, startSec: 0.20, durSec: 2.15, attackSec: 0.22, releaseSec: 1.30, wave: 'brass', amp: 0.20 },
+          { freq: 587.33, startSec: 0.55, durSec: 1.85, attackSec: 0.16, releaseSec: 1.20, wave: 'crystal', amp: 0.24 },
+          { freq: 880.00, startSec: 0.65, durSec: 1.75, attackSec: 0.16, releaseSec: 1.20, wave: 'crystal', amp: 0.24 },
+          { freq: 1174.66, startSec: 0.80, durSec: 1.60, attackSec: 0.16, releaseSec: 1.15, wave: 'bell', amp: 0.20 },
+        ],
+        2.55,
+        gain,
+        0.28
+      );
+    } else if (id === 'xbox_360') {
+      // Xbox 360 warm power orb sweep + woody-glass E major chord
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 92.50, freqEnd: 164.81, startSec: 0.02, durSec: 0.85, attackSec: 0.10, releaseSec: 0.45, wave: 'sine', amp: 0.34 },
+          { freq: 329.63, startSec: 0.22, durSec: 1.55, attackSec: 0.06, releaseSec: 1.05, wave: 'epiano', amp: 0.28 },
+          { freq: 415.30, startSec: 0.28, durSec: 1.50, attackSec: 0.06, releaseSec: 1.05, wave: 'epiano', amp: 0.24 },
+          { freq: 493.88, startSec: 0.34, durSec: 1.45, attackSec: 0.06, releaseSec: 1.05, wave: 'bell', amp: 0.26 },
+          { freq: 659.25, startSec: 0.42, durSec: 1.45, attackSec: 0.05, releaseSec: 1.10, wave: 'crystal', amp: 0.28 },
+        ],
+        1.95,
+        gain,
+        0.24
+      );
+    } else if (id === 'gameboy_dmg') {
+      // Authentic crisp Game Boy "ba-DING!" (B5 -> E6/B6 clean soft pulse)
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 987.77, startSec: 0.02, durSec: 0.085, attackSec: 0.005, releaseSec: 0.03, wave: 'pulse_soft', amp: 0.42 },
+          { freq: 1975.53, startSec: 0.105, durSec: 0.72, attackSec: 0.005, releaseSec: 0.58, wave: 'pulse_soft', amp: 0.46 },
+        ],
+        0.92,
+        gain,
+        0.12
+      );
+    } else if (id === 'sega_sonic') {
+      // Warm 16-bit dual-chord retro fanfare
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 392.00, startSec: 0.02, durSec: 0.22, attackSec: 0.015, releaseSec: 0.08, wave: 'brass', amp: 0.28 },
+          { freq: 493.88, startSec: 0.02, durSec: 0.22, attackSec: 0.015, releaseSec: 0.08, wave: 'brass', amp: 0.28 },
+          { freq: 523.25, startSec: 0.24, durSec: 0.85, attackSec: 0.015, releaseSec: 0.55, wave: 'brass', amp: 0.30 },
+          { freq: 659.25, startSec: 0.24, durSec: 0.85, attackSec: 0.015, releaseSec: 0.55, wave: 'crystal', amp: 0.26 },
+          { freq: 783.99, startSec: 0.24, durSec: 0.85, attackSec: 0.015, releaseSec: 0.55, wave: 'bell', amp: 0.24 },
+        ],
+        1.2,
+        gain,
+        0.18
+      );
+    } else if (id === 'cyber_synth') {
+      // Sleek analog synthwave Cm9 pad + clean arpeggio
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 130.81, startSec: 0.02, durSec: 1.75, attackSec: 0.08, releaseSec: 1.0, wave: 'warm_pad', amp: 0.28 },
+          { freq: 196.00, startSec: 0.02, durSec: 1.75, attackSec: 0.08, releaseSec: 1.0, wave: 'warm_pad', amp: 0.22 },
+          { freq: 523.25, startSec: 0.05, durSec: 0.32, attackSec: 0.01, releaseSec: 0.18, wave: 'epiano', amp: 0.28 },
+          { freq: 622.25, startSec: 0.17, durSec: 0.32, attackSec: 0.01, releaseSec: 0.18, wave: 'epiano', amp: 0.28 },
+          { freq: 783.99, startSec: 0.29, durSec: 0.38, attackSec: 0.01, releaseSec: 0.22, wave: 'crystal', amp: 0.28 },
+          { freq: 932.33, startSec: 0.41, durSec: 0.45, attackSec: 0.01, releaseSec: 0.28, wave: 'crystal', amp: 0.28 },
+          { freq: 1174.66, startSec: 0.54, durSec: 1.15, attackSec: 0.02, releaseSec: 0.85, wave: 'crystal', amp: 0.30 },
+        ],
+        1.85,
+        gain,
+        0.26
+      );
+    } else if (id === 'pipboy_vault') {
+      // Mechanical tube relay click + warm CRT hum + gentle phosphor chime
+      uri = synthesizePolyChimeUri(
+        [
+          { freq: 1650, startSec: 0.02, durSec: 0.035, attackSec: 0.001, releaseSec: 0.025, wave: 'click', amp: 0.40 },
+          { freq: 1400, startSec: 0.11, durSec: 0.035, attackSec: 0.001, releaseSec: 0.025, wave: 'click', amp: 0.34 },
+          { freq: 120.0, startSec: 0.14, durSec: 1.25, attackSec: 0.12, releaseSec: 0.75, wave: 'warm_pad', amp: 0.20 },
+          { freq: 392.00, startSec: 0.24, durSec: 0.45, attackSec: 0.015, releaseSec: 0.28, wave: 'epiano', amp: 0.30 },
+          { freq: 523.25, startSec: 0.40, durSec: 0.45, attackSec: 0.015, releaseSec: 0.28, wave: 'epiano', amp: 0.32 },
+          { freq: 659.25, startSec: 0.56, durSec: 0.90, attackSec: 0.015, releaseSec: 0.65, wave: 'bell', amp: 0.34 },
+        ],
+        1.55,
+        gain,
+        0.18
+      );
+    } else {
+      // Soft rounded Nokia 3310 warm marimba/e-piano Connecting People tune
+      const notes = [
+        { f: 1318.51, s: 0.02, d: 0.19 }, // E6
+        { f: 1174.66, s: 0.18, d: 0.19 }, // D6
+        { f: 739.99, s: 0.34, d: 0.34 },  // F#5
+        { f: 830.61, s: 0.64, d: 0.34 },  // G#5
+        { f: 1108.73, s: 0.94, d: 0.19 }, // C#6
+        { f: 987.77, s: 1.10, d: 0.19 },  // B5
+        { f: 587.33, s: 1.26, d: 0.34 },  // D5
+        { f: 659.25, s: 1.56, d: 0.34 },  // E5
+        { f: 987.77, s: 1.86, d: 0.19 },  // B5
+        { f: 880.00, s: 2.02, d: 0.19 },  // A5
+        { f: 554.37, s: 2.18, d: 0.34 },  // C#5
+        { f: 659.25, s: 2.48, d: 0.34 },  // E5
+        { f: 880.00, s: 2.78, d: 0.72 },  // A5
+      ];
+      uri = synthesizePolyChimeUri(
+        notes.map((n) => ({
+          freq: n.f * 0.5,
+          startSec: n.s * 0.78,
+          durSec: n.d * 0.85,
+          attackSec: 0.012,
+          releaseSec: n.d * 0.52,
+          wave: 'epiano' as ChimeWave,
+          amp: 0.34,
+        })),
+        2.85,
+        gain,
+        0.20
+      );
     }
 
-    // Default / Nokia Connecting People
-    this.playNokiaMelody(
-      '8e2 8d2 4f#1 4g#1 8c#2 8b1 4d1 4e1 8b1 8a1 4c#1 4e1 2a1',
-      180
-    );
+    this.playRawUriOnMelodyPlayer(uri, gain);
   }
 
   /** Plays a distinct keypad dialer tone for 0-9, *, # */

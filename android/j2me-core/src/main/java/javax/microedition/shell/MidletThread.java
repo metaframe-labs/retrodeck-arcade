@@ -36,8 +36,68 @@ import ru.playsoftware.j2meloader.config.Config;
 
 public class MidletThread extends HandlerThread implements Handler.Callback {
 	private static final String TAG = MidletThread.class.getName();
-	private static final UncaughtExceptionHandler uncaughtExceptionHandler = (t, e) ->
+	private static volatile UncaughtExceptionHandler previousDefaultHandler;
+	private static volatile boolean handlerInstalled;
+	private static final UncaughtExceptionHandler uncaughtExceptionHandler = (t, e) -> {
+		if (MidletThread.embeddedHost && t != null && t.getId() != android.os.Looper.getMainLooper().getThread().getId()) {
+			if (isRunning() || isMidletThrowable(t, e)) {
+				Log.e(TAG, "Suppressed uncaught exception in MIDlet worker thread: \"" + t + "\"", e);
+				return;
+			}
+		}
+		if (!MidletThread.embeddedHost) {
 			Log.e(TAG, "Error in thread: \"" + t + "\" after destroy app called", e);
+			return;
+		}
+		UncaughtExceptionHandler fallback = previousDefaultHandler;
+		if (fallback != null && fallback != MidletThread.uncaughtExceptionHandler) {
+			fallback.uncaughtException(t, e);
+		} else {
+			Log.e(TAG, "Uncaught exception in thread: \"" + t + "\"", e);
+		}
+	};
+
+	private static boolean isMidletThrowable(Thread t, Throwable e) {
+		if (t != null) {
+			String name = t.getName();
+			if (name != null && (name.contains("Midlet") || name.contains("MIDlet") || name.contains("J2me"))) {
+				return true;
+			}
+			if (t.getContextClassLoader() instanceof AppClassLoader) {
+				return true;
+			}
+		}
+		Throwable cur = e;
+		int depth = 0;
+		while (cur != null && depth++ < 6) {
+			for (StackTraceElement ste : cur.getStackTrace()) {
+				String cls = ste.getClassName();
+				String file = ste.getFileName();
+				if ((file != null && file.startsWith("dex-id-"))
+						|| cls.startsWith("javax.microedition.")
+						|| cls.startsWith("com.nokia.mid.")
+						|| cls.startsWith("com.mascotcapsule.")
+						|| cls.startsWith("com.siemens.")
+						|| cls.startsWith("ru.playsoftware.j2meloader.")
+						|| cls.startsWith("ru.woesss.j2me.")) {
+					return true;
+				}
+			}
+			cur = cur.getCause();
+		}
+		return false;
+	}
+
+	static synchronized void installEmbeddedUncaughtExceptionHandler() {
+		if (!handlerInstalled) {
+			UncaughtExceptionHandler current = Thread.getDefaultUncaughtExceptionHandler();
+			if (current != uncaughtExceptionHandler) {
+				previousDefaultHandler = current;
+				Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler);
+			}
+			handlerInstalled = true;
+		}
+	}
 
 	private static final int INIT = 0;
 	private static final int START = 1;
@@ -55,6 +115,7 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 	private MIDlet midlet;
 	private final Handler handler;
 	private volatile int state;
+	private volatile boolean forceCleared;
 
 	private MidletThread(MicroLoader microLoader, String mainClass) {
 		super("MidletMain");
@@ -71,9 +132,17 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 
 	static void setEmbeddedHost(boolean embedded) {
 		embeddedHost = embedded;
+		if (embedded) {
+			installEmbeddedUncaughtExceptionHandler();
+		}
 	}
 
 	public static void notifyDestroyed() {
+		Thread caller = Thread.currentThread();
+		if (caller instanceof MidletThread && ((MidletThread) caller).forceCleared) {
+			Log.w(TAG, "Ignoring late notifyDestroyed() from force-cleared MIDlet thread");
+			return;
+		}
 		Thread.setDefaultUncaughtExceptionHandler(uncaughtExceptionHandler);
 		if (instance != null) {
 			instance.state = DESTROYED;
@@ -156,6 +225,24 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 		return instance != null;
 	}
 
+	/** Forcefully detaches a hung embedded MIDlet thread so a new game can boot. */
+	static void forceClearEmbedded() {
+		MidletThread stuck = instance;
+		instance = null;
+		startAfterDestroy = null;
+		if (stuck != null) {
+			stuck.forceCleared = true;
+			stuck.state = DESTROYED;
+			try {
+				stuck.quit();
+			} catch (Throwable ignored) {}
+			try {
+				stuck.interrupt();
+			} catch (Throwable ignored) {}
+		}
+		J2meHost.releaseEmbeddedResources();
+	}
+
 	@Override
 	public boolean handleMessage(@NonNull Message msg) {
 		switch (msg.what) {
@@ -177,7 +264,7 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 				}
 				break;
 			case START:
-				if (state != PAUSED) {
+				if (state != PAUSED || midlet == null) {
 					break;
 				}
 				try {
@@ -204,7 +291,7 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 				}
 				break;
 			case PAUSE:
-				if (state != STARTED) {
+				if (state != STARTED || midlet == null) {
 					break;
 				}
 				try {
@@ -219,7 +306,7 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 					} else {
 						state = DESTROYED;
 						try {
-							midlet.destroyApp(true);
+							if (midlet != null) midlet.destroyApp(true);
 						} catch (MIDletStateChangeException ignored) {}
 						throw new RuntimeException("Filed pauseApp", t);
 					}
@@ -232,7 +319,9 @@ public class MidletThread extends HandlerThread implements Handler.Callback {
 				}
 				state = DESTROYED;
 				try {
-					midlet.destroyApp(true);
+					if (midlet != null) {
+						midlet.destroyApp(true);
+					}
 				} catch (MIDletStateChangeException e) {
 					Log.w(TAG, "Midlet didn't want to die!", e);
 				} catch (Throwable t) {

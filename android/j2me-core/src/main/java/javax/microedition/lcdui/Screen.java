@@ -37,8 +37,13 @@ public abstract class Screen extends Displayable {
 			layout = (LinearLayout) super.getDisplayableView();
 
 			View screenView = getScreenView();
-			screenView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
-			layout.addView(screenView);
+			if (screenView != null) {
+				if (screenView.getParent() instanceof ViewGroup) {
+					((ViewGroup) screenView.getParent()).removeView(screenView);
+				}
+				screenView.setLayoutParams(new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1));
+				layout.addView(screenView);
+			}
 
 			SoftButtonBarBinding binding = SoftButtonBarBinding.inflate(
 					LayoutInflater.from(layout.getContext()), layout, true);

@@ -1,4 +1,4 @@
-package com.metaframelabs.retrodeck8.j2me
+package com.metaframe.retrodeck.j2me
 
 import com.facebook.react.ReactPackage
 import com.facebook.react.bridge.NativeModule

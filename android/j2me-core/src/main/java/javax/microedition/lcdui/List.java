@@ -42,13 +42,36 @@ public class List extends Screen implements Choice {
 	private ListView view;
 	private int fitPolicy;
 	private Command selectCommand = SELECT_COMMAND;
+	private volatile boolean suppressSelectionCallback;
 
 	private final SimpleEvent msgSetSelection = new SimpleEvent() {
 		@Override
 		public void process() {
-			AdapterView<?> v = view;
+			ListView v = view;
 			if (v != null) {
-				v.setSelection(getSelectedIndex());
+				int idx = getSelectedIndex();
+				suppressSelectionCallback = true;
+				try {
+					if (idx >= 0) {
+						v.setSelection(idx);
+					}
+					int first = v.getFirstVisiblePosition();
+					int childCount = v.getChildCount();
+					for (int i = 0; i < childCount; i++) {
+						adapter.applySelectionStyle(v.getChildAt(i), first + i);
+					}
+					v.invalidate();
+					int w = v.getWidth();
+					int h = v.getHeight();
+					if (w > 0 && h > 0) {
+						v.measure(
+								android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
+								android.view.View.MeasureSpec.makeMeasureSpec(h, android.view.View.MeasureSpec.EXACTLY));
+						v.layout(v.getLeft(), v.getTop(), v.getRight(), v.getBottom());
+					}
+				} finally {
+					v.post(() -> suppressSelectionCallback = false);
+				}
 			}
 		}
 	};
@@ -352,12 +375,16 @@ public class List extends Screen implements Choice {
 		if (view == null) {
 			Context context = ContextHolder.getContext();
 			view = new ListView(context);
+			view.setSelector(android.R.color.transparent);
+			view.setCacheColorHint(0);
 			view.setAdapter(adapter);
 
 			if (listType == IMPLICIT) {
 				msgSetSelection.run();
 				view.setOnItemLongClickListener(this::onItemLongClick);
 				view.setOnItemSelectedListener(new ItemSelectedListener());
+			} else {
+				msgSetSelection.run();
 			}
 
 			view.setOnItemClickListener(this::onItemClick);
@@ -370,27 +397,28 @@ public class List extends Screen implements Choice {
 	@Override
 	public boolean handleHostKeyEvent(int keyCode, boolean pressed) {
 		ListView target = view;
-		if (listType == IMPLICIT) {
-			switch (keyCode) {
-				case android.view.KeyEvent.KEYCODE_DPAD_UP:
-					if (pressed) moveHostSelection(-1);
-					return true;
-				case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
-					if (pressed) moveHostSelection(1);
-					return true;
-				case android.view.KeyEvent.KEYCODE_ENTER:
-				case android.view.KeyEvent.KEYCODE_DPAD_CENTER:
-				case android.view.KeyEvent.KEYCODE_NUMPAD_ENTER:
-					if (!pressed) return true;
-					int selected = getSelectedIndex();
-					if (selected < 0 && size() > 0) {
-						selected = 0;
-					}
-					if (selected >= 0 && selected < size()) {
-						onItemClick(null, null, selected, selected);
-					}
-					return true;
-			}
+		switch (keyCode) {
+			case android.view.KeyEvent.KEYCODE_DPAD_UP:
+			case android.view.KeyEvent.KEYCODE_2:
+				if (pressed) moveHostSelection(-1);
+				return true;
+			case android.view.KeyEvent.KEYCODE_DPAD_DOWN:
+			case android.view.KeyEvent.KEYCODE_8:
+				if (pressed) moveHostSelection(1);
+				return true;
+			case android.view.KeyEvent.KEYCODE_ENTER:
+			case android.view.KeyEvent.KEYCODE_DPAD_CENTER:
+			case android.view.KeyEvent.KEYCODE_NUMPAD_ENTER:
+			case android.view.KeyEvent.KEYCODE_5:
+				if (!pressed) return true;
+				int selected = getSelectedIndex();
+				if (selected < 0 && size() > 0) {
+					selected = 0;
+				}
+				if (selected >= 0 && selected < size()) {
+					onItemClick(null, null, selected, selected);
+				}
+				return true;
 		}
 		if (target == null) {
 			return super.handleHostKeyEvent(keyCode, pressed);
@@ -419,9 +447,12 @@ public class List extends Screen implements Choice {
 		if (selected < 0) {
 			selected = 0;
 		} else {
-			selected = Math.max(0, Math.min(count - 1, selected + delta));
+			selected = (selected + delta + count) % count;
 		}
 		setSelectedIndex(selected, true);
+		if (view != null) {
+			ViewHandler.postEvent(msgSetSelection);
+		}
 	}
 
 	@Override
@@ -475,6 +506,9 @@ public class List extends Screen implements Choice {
 	private class ItemSelectedListener implements AdapterView.OnItemSelectedListener {
 		@Override
 		public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+			if (suppressSelectionCallback) {
+				return;
+			}
 			synchronized (items) {
 				CompoundItem item = items.get(position);
 				if (!item.isSelected()) {

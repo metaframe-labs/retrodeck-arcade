@@ -177,7 +177,10 @@ public class Alert extends Screen implements DialogInterface.OnClickListener {
 	}
 
 	public AlertDialog prepareDialog() {
-		Context context = ContextHolder.getContext();
+		Context rawContext = ContextHolder.getContext();
+		Context context = new androidx.appcompat.view.ContextThemeWrapper(
+				rawContext,
+				androidx.appcompat.R.style.Theme_AppCompat_Dialog_Alert);
 		AlertDialog.Builder builder = new AlertDialog.Builder(context);
 
 		builder.setTitle(getTitle());

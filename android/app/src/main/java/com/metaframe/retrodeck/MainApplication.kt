@@ -1,4 +1,4 @@
-package com.metaframelabs.retrodeck8
+package com.metaframe.retrodeck
 
 import android.app.Application
 import android.content.res.Configuration
@@ -11,7 +11,7 @@ import com.facebook.react.ReactHost
 import com.facebook.react.common.ReleaseLevel
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint
 
-import com.metaframelabs.retrodeck8.j2me.J2mePackage
+import com.metaframe.retrodeck.j2me.J2mePackage
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ExpoReactHostFactory
 

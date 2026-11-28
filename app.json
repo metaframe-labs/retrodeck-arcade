@@ -9,14 +9,14 @@
     "backgroundColor": "#05070A",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.metaframelabs.retrodeck8",
+      "bundleIdentifier": "com.metaframe.retrodeck",
       "icon": "./assets/icon.png",
       "infoPlist": {
         "UIBackgroundModes": ["audio"]
       }
     },
     "android": {
-      "package": "com.metaframelabs.retrodeck8",
+      "package": "com.metaframe.retrodeck",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#05070A"

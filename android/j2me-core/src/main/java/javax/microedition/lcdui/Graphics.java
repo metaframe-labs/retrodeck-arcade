@@ -101,14 +101,18 @@ public class Graphics implements
 	}
 
 	public void fillPolygon(int[] xPoints, int xOffset, int[] yPoints, int yOffset, int nPoints) {
-		if (nPoints > 0) {
+		if (nPoints > 0 && xPoints != null && yPoints != null
+				&& xOffset >= 0 && yOffset >= 0
+				&& xOffset + nPoints <= xPoints.length && yOffset + nPoints <= yPoints.length) {
 			Path path = computePath(xPoints, xOffset, yPoints, yOffset, nPoints);
 			canvas.drawPath(path, fillPaint);
 		}
 	}
 
 	public void drawPolygon(int[] xPoints, int xOffset, int[] yPoints, int yOffset, int nPoints) {
-		if (nPoints > 0) {
+		if (nPoints > 0 && xPoints != null && yPoints != null
+				&& xOffset >= 0 && yOffset >= 0
+				&& xOffset + nPoints <= xPoints.length && yOffset + nPoints <= yPoints.length) {
 			Path path = computePath(xPoints, xOffset, yPoints, yOffset, nPoints);
 			canvas.drawPath(path, drawPaint);
 		}
@@ -311,6 +315,12 @@ public class Graphics implements
 	}
 
 	public void drawChars(char[] data, int offset, int length, int x, int y, int anchor) {
+		if (data == null || length <= 0 || offset < 0 || offset >= data.length) {
+			return;
+		}
+		if (offset + length > data.length) {
+			length = data.length - offset;
+		}
 		Paint paint = font.paint;
 		if ((anchor & Graphics.RIGHT) != 0) {
 			paint.setTextAlign(Paint.Align.RIGHT);
@@ -336,6 +346,9 @@ public class Graphics implements
 	}
 
 	public void drawString(String text, int x, int y, int anchor) {
+		if (text == null || text.isEmpty()) {
+			return;
+		}
 		Paint paint = font.paint;
 		if ((anchor & Graphics.RIGHT) != 0) {
 			paint.setTextAlign(Paint.Align.RIGHT);
@@ -361,6 +374,9 @@ public class Graphics implements
 	}
 
 	public void drawImage(Image image, int x, int y, int anchor) {
+		if (image == null || image.getBitmap() == null) {
+			return;
+		}
 		float lx;
 		if ((anchor & Graphics.RIGHT) != 0) {
 			lx = x - image.getWidth();
@@ -383,6 +399,12 @@ public class Graphics implements
 	}
 
 	public void drawSubstring(String str, int offset, int len, int x, int y, int anchor) {
+		if (str == null || len <= 0 || offset < 0 || offset >= str.length()) {
+			return;
+		}
+		if (offset + len > str.length()) {
+			len = str.length() - offset;
+		}
 		Paint paint = font.paint;
 		if ((anchor & Graphics.RIGHT) != 0) {
 			paint.setTextAlign(Paint.Align.RIGHT);
@@ -409,7 +431,7 @@ public class Graphics implements
 
 	public void drawRegion(Image image, int x_src, int y_src, int width, int height,
 						   int transform, int x_dst, int y_dst, int anchor) {
-		if (width <= 0 || height <= 0) return;
+		if (image == null || image.getBitmap() == null || width <= 0 || height <= 0) return;
 
 		Rect srcR = rect;
 		RectF dstR = rectF;

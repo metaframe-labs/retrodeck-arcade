@@ -93,6 +93,9 @@ public class StringItem extends Item {
 			}
 
 			textview.setTextAppearance(context, android.R.style.TextAppearance_Small);
+			if (appearanceMode != BUTTON) {
+				textview.setTextColor(0xFFF8FAFC);
+			}
 			if (appearanceMode == HYPERLINK && text != null) {
 				SpannableStringBuilder s = new SpannableStringBuilder(text);
 				s.setSpan(new URLSpan(text), 0, s.length(), Spanned.SPAN_INCLUSIVE_EXCLUSIVE);

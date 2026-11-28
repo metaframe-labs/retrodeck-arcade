@@ -44,7 +44,9 @@ export interface RetroDeckOSCallbacks {
   getCartridges: () => ArcadeCartridgeDef[];
   getHighScores: () => Record<string, number>;
   onLaunchGame: (cart: ArcadeCartridgeDef) => void;
-  onLaunchJ2me?: () => void;
+  onLaunchJ2me?: (savedAppPath?: string) => void;
+  getInstalledJ2meGames?: () => Promise<SavedJ2meGame[]>;
+  deleteInstalledJ2meGame?: (appPath: string) => Promise<boolean>;
   onOpenCartVault: () => void;
   onCyclePalette: () => void;
   onSelectPalette?: (id: RetroPaletteId) => void;
@@ -69,7 +71,6 @@ export interface RetroDeckOSCallbacks {
 
 import { styles } from './retroOsStyles';
 import {
-  renderAnalogDial,
   renderStatusLeft,
   renderStatusRight,
   renderDesktop,
@@ -81,6 +82,7 @@ import {
   renderJ2meInfo,
   renderDeviceInfo,
 } from './render/renderCoreApps';
+import { renderLockScreen } from './render/renderLockScreen';
 import {
   renderWap,
   renderAiApp,
@@ -107,6 +109,10 @@ import {
   renderWinPostFormatTaskbar,
   renderWinPostFormatTopBar,
 } from './render/renderFormatApp';
+import { renderStoreApp } from './render/renderStoreApp';
+import { renderProgramsFolder } from './render/renderProgramsFolder';
+import { getWinVariant, isWinUiActive } from './render/winChromeHelper';
+import { StoreDownloadState } from './engine/storeSimEngine';
 import {
   FormatSimState,
   PostFormatWinStyle,
@@ -163,6 +169,7 @@ import {
   WALLPAPER_DIM_OPACITIES,
   MENU_STYLE_STORAGE_KEY,
   STARTUP_SOUND_STORAGE_KEY,
+  INSTALLED_APPS_STORAGE_KEY,
   STARTUP_SOUND_OPTIONS,
   StartupSoundId,
   DESKTOP_MENU_STYLES,
@@ -174,8 +181,11 @@ import {
   UNEXPECTED_TWISTS,
   DEFAULT_CUSTOM_TUNES,
   OsAppId,
+  SavedJ2meGame,
   PixelSpan,
+  DesktopIcon,
   DESKTOP_ICONS,
+  STORE_APP_IDS,
   WEATHER_CITIES,
   WeatherSpriteKey,
   WEATHER_SPRITES,
@@ -242,8 +252,65 @@ export class RetroDeckOS implements ArcadeGameInstance {
   // Desktop 4x3 cursor
   /** @internal */ deskIdx = 0;
 
-  // In-LCD Arcade Browser
+  // In-LCD Arcade Browser & Saved J2ME Library
   /** @internal */ gameIdx = 0;
+  /** @internal */ j2meGames: SavedJ2meGame[] = [];
+  /** @internal */ j2meIdx = 0;
+  /** @internal */ j2meDeleteConfirm = false;
+
+  /** @internal */ refreshJ2meGames() {
+    this.cb.getInstalledJ2meGames?.()
+      .then((list) => {
+        if (!Array.isArray(list)) return;
+        this.j2meGames = list;
+        const maxIdx = list.length; // last slot = "+ CHOOSE JAR"
+        if (this.j2meIdx > maxIdx) this.j2meIdx = Math.max(0, maxIdx);
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ async removeSelectedJ2meGame(): Promise<boolean> {
+    const target = this.j2meGames[this.j2meIdx];
+    if (!target || !this.cb.deleteInstalledJ2meGame) return false;
+    const ok = await this.cb.deleteInstalledJ2meGame(target.appPath);
+    if (ok) {
+      this.j2meGames = this.j2meGames.filter((g) => g.appPath !== target.appPath);
+      this.j2meDeleteConfirm = false;
+      this.j2meIdx = Math.min(this.j2meIdx, this.j2meGames.length);
+    }
+    return ok;
+  }
+
+  /** @internal */ getArcadeCatalogEntries(): (
+    | { kind: 'jar'; jar: SavedJ2meGame }
+    | { kind: 'cart'; cart: ArcadeCartridgeDef; cartIndex: number }
+  )[] {
+    const jars = this.j2meGames.map((jar) => ({ kind: 'jar' as const, jar }));
+    const carts = this.cb.getCartridges().map((cart, cartIndex) => ({
+      kind: 'cart' as const,
+      cart,
+      cartIndex,
+    }));
+    return [...jars, ...carts];
+  }
+
+  /** @internal */ launchArcadeEntry(
+    entry:
+      | { kind: 'jar'; jar: SavedJ2meGame }
+      | { kind: 'cart'; cart: ArcadeCartridgeDef; cartIndex: number }
+  ): ArcadeSound {
+    if (entry.kind === 'jar') {
+      this.cb.onLaunchJ2me?.(entry.jar.appPath);
+      return 'score';
+    }
+    const isPro = this.cb.getIsPro?.() ?? false;
+    if (isCartridgeProLocked(entry.cart.id, isPro)) {
+      this.openProScreen('PRO REQUIRED FOR THIS GAME!');
+      return 'die';
+    }
+    this.cb.onLaunchGame(entry.cart);
+    return 'powerup';
+  }
 
   /** @internal */ playActiveSmsTone() {
     const smsTone = NOKIA_SMS_TONES[this.smsToneIdx] || NOKIA_SMS_TONES[0];
@@ -407,6 +474,18 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   // In-LCD Themes Browser state
   /** @internal */ themeIdx = 0;
+
+  // RD App Store & Simulated Install state
+  /** @internal */ installedStoreApps: OsAppId[] = [];
+  /** @internal */ storeTab: 'browse' | 'installed' = 'browse';
+  /** @internal */ storeIdx = 0;
+  /** @internal */ storeRemoveConfirm = false;
+  /** @internal */ storeDownload: StoreDownloadState | null = null;
+  /** @internal */ programsIdx = 0;
+  /** @internal */ winStartOpen = false;
+  /** @internal */ winStartPane: 'left' | 'right' = 'left';
+  /** @internal */ winStartLeftIdx = 0;
+  /** @internal */ winStartRightIdx = 0;
 
   // RetroDeck Pro In-LCD App state
   /** @internal */ proIdx = 0; // 0: Monthly, 1: Yearly, 2: Lifetime, 3: Restore Purchases
@@ -652,6 +731,128 @@ export class RetroDeckOS implements ArcadeGameInstance {
         }
       })
       .catch(() => {});
+    AsyncStorage.getItem(INSTALLED_APPS_STORAGE_KEY)
+      .then((raw) => {
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            this.installedStoreApps = parsed.filter(
+              (id): id is OsAppId => typeof id === 'string' && STORE_APP_IDS.includes(id as OsAppId)
+            );
+            this.clampDeskIdx();
+          }
+        }
+      })
+      .catch(() => {});
+  }
+
+  /** @internal */ getVisibleDesktopIcons(): DesktopIcon[] {
+    if (isWinUiActive(this) && getWinVariant(this) !== 'win8') {
+      const findIcon = (id: OsAppId, fallbackLabel: string, fallbackIcon: DesktopIcon['icon']): DesktopIcon =>
+        DESKTOP_ICONS.find((item) => item.id === id) || { id, label: fallbackLabel, icon: fallbackIcon };
+      return [
+        { id: 'programs', label: 'PROGRAMS', icon: 'folder-open' },
+        findIcon('arcade', 'GAMES', 'game-controller'),
+        findIcon('store', 'STORE', 'storefront'),
+        findIcon('setup', 'SETTINGS', 'settings'),
+      ];
+    }
+    return DESKTOP_ICONS.filter(
+      (item) => !STORE_APP_IDS.includes(item.id) || this.installedStoreApps.includes(item.id)
+    );
+  }
+
+  /** @internal */ getWinStartLeftItems(): DesktopIcon[] {
+    const winDesktopIds: OsAppId[] = ['programs', 'arcade', 'store', 'setup'];
+    return DESKTOP_ICONS.filter(
+      (item) =>
+        !winDesktopIds.includes(item.id) &&
+        (!STORE_APP_IDS.includes(item.id) || this.installedStoreApps.includes(item.id))
+    );
+  }
+
+  /** @internal */ getWinStartRightItems(): DesktopIcon[] {
+    const findIcon = (id: OsAppId, fallbackLabel: string, fallbackIcon: DesktopIcon['icon']): DesktopIcon =>
+      DESKTOP_ICONS.find((item) => item.id === id) || { id, label: fallbackLabel, icon: fallbackIcon };
+    return [
+      { id: 'programs', label: 'PROGRAMS', icon: 'folder-open' },
+      findIcon('arcade', 'GAMES', 'game-controller'),
+      findIcon('store', 'STORE', 'storefront'),
+      findIcon('format', 'MY PC [C:]', 'disc'),
+      findIcon('setup', 'SETTINGS', 'settings'),
+    ];
+  }
+
+  /** @internal */ getProgramsFolderItems(): DesktopIcon[] {
+    const startLeft = this.getWinStartLeftItems();
+    const storeIcon = DESKTOP_ICONS.find((item) => item.id === 'store');
+    const list: DesktopIcon[] = [...startLeft];
+    if (storeIcon) list.push(storeIcon);
+    return list;
+  }
+
+  /** @internal */ isStoreAppInstalled(id: OsAppId): boolean {
+    return !STORE_APP_IDS.includes(id) || this.installedStoreApps.includes(id);
+  }
+
+  /** @internal */ clampDeskIdx() {
+    const count = this.getVisibleDesktopIcons().length;
+    if (count <= 0) {
+      this.deskIdx = 0;
+    } else if (this.deskIdx >= count) {
+      this.deskIdx = count - 1;
+    } else if (this.deskIdx < 0) {
+      this.deskIdx = 0;
+    }
+  }
+
+  /** @internal */ launchDesktopApp(targetApp: OsAppId): ArcadeSound {
+    this.winStartOpen = false;
+    if (targetApp === 'wallpapers') {
+      this.openWallpaperGallery();
+      return 'score';
+    }
+    if (targetApp === 'format') {
+      openFormatSimulator(this, 0, false);
+      return 'explode';
+    }
+    if (targetApp === 'store') {
+      this.app = 'store';
+      this.storeRemoveConfirm = false;
+      return 'score';
+    }
+    if (targetApp === 'programs') {
+      this.app = 'programs';
+      this.programsIdx = 0;
+      return 'score';
+    }
+    this.app = targetApp;
+    if (targetApp === 'ai') {
+      this.kbdTarget = 'chat';
+    }
+    if (targetApp === 'wap' && !this.wapFetchedOnce) {
+      this.wapFetchedOnce = true;
+      this.fetchWapPage(this.wapUrl);
+    }
+    if (targetApp === 'radio') {
+      somaRadioService.fetchNowPlaying();
+    }
+    if (targetApp === 'weather' && !this.weatherFetchedOnce) {
+      this.weatherFetchedOnce = true;
+      this.fetchWeather(this.weatherQuery);
+    }
+    if (targetApp === 'notes') {
+      this.noteDeleteConfirm = false;
+    }
+    if (targetApp === 'sms') {
+      this.smsDeleteConfirm = false;
+      this.unreadSmsCount = 0;
+    }
+    if (targetApp === 'j2me' || targetApp === 'arcade') {
+      this.j2meDeleteConfirm = false;
+      this.refreshJ2meGames();
+    }
+    return 'score';
   }
 
   /** @internal */ setStartupSound(next: StartupSoundId) {
@@ -1066,6 +1267,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
     this.bootTimer = 0;
     this.bootChimePlayed = false;
     this.deskIdx = 0;
+    this.winStartOpen = false;
     this.keyLocked = false;
     this.unlockStage = false;
     this.idleTimer = 0;
@@ -1087,6 +1289,7 @@ export class RetroDeckOS implements ArcadeGameInstance {
 
   public goDesktop() {
     this.app = 'desktop';
+    this.winStartOpen = false;
     this.keyLocked = false;
     this.unlockStage = false;
     this.idleTimer = 0;
@@ -1112,6 +1315,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
     if (this.app === 'wap') return tOs('titleWap', this.lang);
     if (this.app === 'wallpapers') return tOs('titleWallpapers', this.lang);
     if (this.app === 'format') return tOs('titleFormat', this.lang);
+    if (this.app === 'store') return tOs('titleStore', this.lang);
+    if (this.app === 'programs') return tOs('titlePrograms', this.lang);
     if (this.app === 'j2me') return 'J2ME // RUNTIME INFO';
     if (this.app === 'device') return this.lang === 'tr' ? 'CIHAZ HAKKINDA' : 'ABOUT THIS DEVICE';
     if (this.app === 'ai') {
@@ -1338,145 +1543,21 @@ export class RetroDeckOS implements ArcadeGameInstance {
       );
     }
 
-    // Nokia 3310 Keyguard & Floating Pixel Digital Clock Screensaver (with optional Pixel Wallpaper!)
+    // Dynamic Lock Screen adapted to active menu style / theme
     if (this.keyLocked) {
-      const d = new Date();
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      const ss = String(d.getSeconds()).padStart(2, '0');
-      const driftY = Math.round(Math.sin(this.uptime * 1.1) * 14);
-      const lockWall = this.getActiveWallpaper();
-
-      return (
-        <View style={[styles.container, { backgroundColor: bg }]}>
-          {lockWall && (
-            <>
-              <Image
-                source={lockWall.image}
-                style={{ position: 'absolute', top: 20, left: 0, right: 0, bottom: 18, width: undefined, height: undefined }}
-                resizeMode="cover"
-              />
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 20,
-                  left: 0,
-                  right: 0,
-                  bottom: 18,
-                  backgroundColor: bg,
-                  opacity: Math.max(0.32, this.getWallpaperDimOpacity()),
-                }}
-              />
-            </>
-          )}
-          <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
-            {renderStatusLeft(this, bg)}
-            <Text style={[styles.osBarTxt, { color: bg }]}>[KEYGUARD]</Text>
-            {renderStatusRight(this, bg)}
-          </View>
-
-          <View style={[styles.centerBox, { transform: [{ translateY: driftY }] }]}>
-            {this.clockFace === 'analog' ? (
-              <View
-                style={[
-                  styles.swBox,
-                  {
-                    borderColor: fg,
-                    backgroundColor: lockWall ? hexWithAlpha(bg, 0.82) : 'transparent',
-                    paddingHorizontal: 18,
-                    paddingVertical: 8,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 14,
-                  },
-                ]}
-              >
-                {renderAnalogDial(fg, 76)}
-                <View style={{ alignItems: 'flex-start' }}>
-                  <Text style={[styles.swLbl, { color: fg }]}>
-                    {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
-                  </Text>
-                  <Text style={[styles.swTime, { color: fg, fontSize: 16, marginVertical: 2 }]}>
-                    {hh}:{mm}:{ss}
-                  </Text>
-                  <Text style={[styles.swLap, { color: fg }]}>
-                    KEYGUARD ({NOKIA_PROFILES[this.profileIdx]})
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <View
-                style={[
-                  styles.swBox,
-                  {
-                    borderColor: fg,
-                    backgroundColor: lockWall ? hexWithAlpha(bg, 0.82) : 'transparent',
-                    paddingHorizontal: 22,
-                    paddingVertical: 10,
-                  },
-                ]}
-              >
-                <Text style={[styles.swLbl, { color: fg }]}>
-                  {NOKIA_OPERATORS[this.operatorIdx]} // RD-OS
-                </Text>
-                <Text style={[styles.clockBig, { color: fg }]}>
-                  {hh}:{mm}:{ss}
-                </Text>
-                <Text style={[styles.swLap, { color: fg }]}>
-                  KEYGUARD LOCKED ({NOKIA_PROFILES[this.profileIdx]})
-                </Text>
-              </View>
-            )}
-
-            {(this.unreadSmsCount > 0 || this.smsBannerTimer > 0) && (
-              <View
-                style={{
-                  marginTop: 8,
-                  backgroundColor: fg,
-                  paddingHorizontal: 10,
-                  paddingVertical: 3,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 5,
-                }}
-              >
-                <Ionicons name="mail" size={11} color={bg} />
-                <Text
-                  style={{
-                    color: bg,
-                    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-                    fontSize: 9,
-                    fontWeight: '900',
-                  }}
-                >
-                  {this.smsBannerTimer > 0
-                    ? this.smsBanner.replace('✉ ', '')
-                    : `${this.unreadSmsCount} ${tOs(this.unreadSmsCount > 1 ? 'newMsgPlural' : 'newMsgSingle', this.lang)}`}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View style={[styles.osFooter, { borderTopColor: fg, backgroundColor: this.unlockStage ? fg : 'transparent' }]}>
-            <Text style={[styles.footerTxt, { color: this.unlockStage ? bg : fg }]}>
-              {this.unlockStage
-                ? tOs('unlockNow', this.lang)
-                : tOs('unlockPrompt', this.lang)}
-            </Text>
-          </View>
-        </View>
-      );
+      return renderLockScreen(this, fg, bg);
     }
 
     const isPureWallPreview =
       this.app === 'wallpapers' && this.wallpaperCleanPreview;
-    const isMacOsDesktop = this.app === 'desktop' && this.menuStyle === 'macos';
+    const isFullCustomDesktop =
+      this.app === 'desktop' && (this.menuStyle === 'macos' || this.menuStyle === 'nexus_os');
 
     return (
       <View style={[styles.container, { backgroundColor: bg }]}>
-        {/* OS Top Status Bar (hidden during pure wallpaper preview and macOS desktop) */}
-        {!isPureWallPreview && !isMacOsDesktop && (
-          (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
+        {/* OS Top Status Bar (hidden during pure wallpaper preview and full-screen custom desktops) */}
+        {!isPureWallPreview && !isFullCustomDesktop && (
+          (this.postFormatWinStyle || this.menuStyle === 'windows' || this.menuStyle === 'windows_7' || this.menuStyle === 'windows_8') ? (
             renderWinPostFormatTopBar(this)
           ) : (
             <View style={[styles.osBar, { borderBottomColor: fg, backgroundColor: fg }]}>
@@ -1517,6 +1598,8 @@ export class RetroDeckOS implements ArcadeGameInstance {
           {this.app === 'pro' && renderPro(this, fg, bg)}
           {this.app === 'j2me' && renderJ2meInfo(this, fg, bg)}
           {this.app === 'device' && renderDeviceInfo(this, fg, bg)}
+          {this.app === 'store' && renderStoreApp(this, fg, bg)}
+          {this.app === 'programs' && renderProgramsFolder(this, fg, bg)}
 
           {/* Global Nokia 3310 SMS Notification Overlay Banner */}
           {this.smsBannerTimer > 0 && (
@@ -1558,9 +1641,9 @@ export class RetroDeckOS implements ArcadeGameInstance {
           )}
         </View>
 
-        {/* OS Footer Taskbar (hidden during pure wallpaper preview and macOS desktop) */}
-        {!isPureWallPreview && !isMacOsDesktop && (
-          (this.postFormatWinStyle || this.menuStyle === 'windows') ? (
+        {/* OS Footer Taskbar (hidden during pure wallpaper preview and full-screen custom desktops) */}
+        {!isPureWallPreview && !isFullCustomDesktop && (
+          (this.postFormatWinStyle || this.menuStyle === 'windows' || this.menuStyle === 'windows_7' || this.menuStyle === 'windows_8') ? (
             renderWinPostFormatTaskbar(this)
           ) : (
             <View style={[styles.osFooter, { borderTopColor: fg }]}>
@@ -1585,6 +1668,10 @@ export class RetroDeckOS implements ArcadeGameInstance {
                   ? tOs('footerWallpapers', this.lang)
                   : this.app === 'format'
                   ? tOs('footerFormat', this.lang)
+                  : this.app === 'store'
+                  ? tOs('footerStore', this.lang)
+                  : this.app === 'programs'
+                  ? tOs('footerPrograms', this.lang)
                   : tOs('footerDefault', this.lang)}
               </Text>
             </View>

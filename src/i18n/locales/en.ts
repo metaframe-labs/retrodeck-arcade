@@ -5,6 +5,8 @@
 export const enLocale = {
   desktop: {
     arcade: 'GAMES',
+    store: 'STORE',
+    programs: 'PROGRAMS',
     radio: 'RADIO',
     ai: 'CHAT',
     wap: 'WAP',
@@ -39,6 +41,8 @@ export const enLocale = {
     titleWap: 'RETRO WAP 1.1',
     titleWallpapers: 'PIXEL WALLPAPERS',
     titleFormat: 'FORMAT SIM [C:]',
+    titleStore: 'RD STORE [PKG]',
+    titlePrograms: 'C:\\PROGRAM FILES',
 
     // Setup
     setupTitle: 'SYSTEM SETUP',
@@ -52,7 +56,10 @@ export const enLocale = {
     menuStyleNokia: 'NOKIA 3310',
     menuStyleList: 'RETRO LIST',
     menuStyleCards: 'BIG CARDS',
+    menuStyleNexus: 'NEXUS HOLO-OS',
     menuStyleWindows: 'WINDOWS DESKTOP',
+    menuStyleWindows7: 'WINDOWS 7 AERO',
+    menuStyleWindows8: 'WINDOWS 8 METRO',
     menuStyleMacos: 'MACOS DESKTOP',
     menuStylePsp: 'SONY PSP (XMB)',
     menuStyleXbox: 'XBOX 360 BLADES',
@@ -74,8 +81,8 @@ export const enLocale = {
     active: 'ACTIVE',
 
     // Keyguard & Common
-    unlockPrompt: 'UNLOCK: PRESS [A] THEN [▲] (*)',
-    unlockNow: 'NOW PRESS [▲] (*) TO UNLOCK!',
+    unlockPrompt: 'UNLOCK: PRESS [A] TWICE ([A]+[A])',
+    unlockNow: 'PRESS [A] AGAIN TO UNLOCK!',
     keyguardLocked: 'KEYGUARD LOCKED',
     newMsgSingle: 'NEW MESSAGE',
     newMsgPlural: 'NEW MESSAGES',
@@ -103,8 +110,10 @@ export const enLocale = {
     footerNotes: '[A] NEW NOTE   [▲/▼] SELECT   [▶]x2 DELETE   [B] DESKTOP',
     footerPaint: '[A] PIXEL / SELECT   [D-PAD] DRAW & TOOLBAR   [B] EXIT',
     footerContacts: '[A] CALL   [▶] SMS   [◀]x2 DEL   [KBD] +NEW   [B] EXIT',
-    footerWallpapers: '[◀/▶] 50 SCENES   [▲/▼] TINT   [A] SET/FULL   [B] EXIT',
+    footerWallpapers: '[◀/▶] 51 SCENES   [▲/▼] TINT   [A] SET/FULL   [B] EXIT',
     footerFormat: '[▲/▼] MODE   [◀/▶] D: SAVE   [A] NEXT/SMACK   [B] BACK',
+    footerStore: '[▲/▼] PKG   [◀/▶] TAB   [A] INSTALL/OPEN   [B] DESKTOP',
+    footerPrograms: '[D-PAD] SELECT   [A] OPEN   [B] DESKTOP',
     footerDefault: '[A] ACTION   [B] DESKTOP',
 
     // AI Chat
@@ -305,8 +314,10 @@ export const enLocale = {
     hintStats: 'Viewing Arcade High Scores & Rank • [B]: Desktop',
     hintTerm: '[A]: Run / Open KBD • [◀]/[▶]: History • [▲]/[▼]: Scroll • [B]: Exit',
     hintSetup: '[▲]/[▼]: Setting • [A]: Open/Toggle • [B]: Desktop',
-    hintWallpapers: '[◀]/[▶]: Browse 50 Pixel Scenes • [▲]/[▼]: Contrast Dim • [A]: Apply • [B]: Back',
+    hintWallpapers: '[◀]/[▶]: Browse 51 Pixel Scenes • [▲]/[▼]: Contrast Dim • [A]: Apply • [B]: Back',
     hintFormat: '[▲]/[▼]: Mode • [◀]/[▶]: Backup D: • [A]: Start / Smack Case • [B]: Back',
+    hintStore: '[▲]/[▼]: Browse Apps • [◀]/[▶]: Catalog/Installed • [A]: Install/Open/Remove • [B]: Back',
+    hintPrograms: 'D-PAD: Select Program • [A]: Launch • [B]: Desktop',
     hintThemes: '[▲]/[▼]: Browse Themes • [◀]/[▶]: ±5 • [A]: Apply • [B]: Back',
     hintPro: '[▲]/[▼]: Select Plan • [A]: Purchase / Restore • [B]: Back',
     hintDefault: 'D-PAD: Navigate • [A]: Select • [B]: Back',

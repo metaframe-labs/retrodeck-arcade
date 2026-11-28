@@ -44,6 +44,7 @@ export type RetroPaletteId =
   | 'cyber_lime'
   | 'arctic_neon'
   | 'amethyst_glow'
+  | 'nexus_holo'
   | 'everforest'
   | 'rose_pine'
   | 'kanagawa'
@@ -103,6 +104,7 @@ export type RetroPaletteId =
   | 'sakura_matcha'
   | 'windows_95'
   | 'windows_xp'
+  | 'windows_7'
   | 'windows_8'
   | 'windows_10'
   | 'windows_11'
@@ -2116,6 +2118,28 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     buttonBg: '#234B9E',
     buttonBorder: '#6BA0FF',
   },
+  windows_7: {
+    id: 'windows_7',
+    name: 'WINDOWS 7 AERO',
+    tagline: 'Frutiger Aero Glass & Harmony Sky',
+    category: 'STUDIO',
+    screenBg: '#0B4F8A',
+    pixelOn: '#EAF6FF',
+    pixelGlow: 'rgba(125, 211, 252, 0.35)',
+    scanlineColor: 'rgba(6, 28, 56, 0.10)',
+    bezelAccent: '#38BDF8',
+    ledColor: '#38BDF8',
+    keypadAccent: '#1D7ED8',
+    textMuted: '#93C5FD',
+    isLightLcd: false,
+    chassisBg: '#08182B',
+    deckBg: '#0E243F',
+    bezelBg: '#0A1C33',
+    surfaceBg: '#163559',
+    surfaceBorder: '#3B82C4',
+    buttonBg: '#132D4D',
+    buttonBorder: '#5CA8E6',
+  },
   windows_8: {
     id: 'windows_8',
     name: 'WINDOWS 8 METRO',
@@ -2270,6 +2294,28 @@ export const RETRO_PALETTES: Record<RetroPaletteId, RetroPalette> = {
     buttonBg: '#1D1A2A',
     buttonBorder: '#6366F1',
   },
+  nexus_holo: {
+    id: 'nexus_holo',
+    name: 'NEXUS HOLO OLED',
+    tagline: 'Obsidian Void, Quantum Cyan & Neon Violet',
+    category: 'NEON',
+    screenBg: '#030712',
+    pixelOn: '#22D3EE',
+    pixelGlow: 'rgba(34, 211, 238, 0.52)',
+    scanlineColor: 'rgba(0, 0, 0, 0.16)',
+    bezelAccent: '#22D3EE',
+    ledColor: '#22D3EE',
+    keypadAccent: '#A855F7',
+    textMuted: '#67E8F9',
+    isLightLcd: false,
+    chassisBg: '#02040A',
+    deckBg: '#060B16',
+    bezelBg: '#040811',
+    surfaceBg: '#0D172A',
+    surfaceBorder: '#1E3A5F',
+    buttonBg: '#0B1424',
+    buttonBorder: '#22D3EE',
+  },
 };
 
 export const FREE_PALETTE_ORDER: RetroPaletteId[] = [
@@ -2383,9 +2429,11 @@ const RAW_PALETTE_ORDER: RetroPaletteId[] = [
   'cyber_lime',
   'arctic_neon',
   'amethyst_glow',
+  'nexus_holo',
   'synth_vfd',
   'windows_95',
   'windows_xp',
+  'windows_7',
   'windows_8',
   'windows_10',
   'windows_11',

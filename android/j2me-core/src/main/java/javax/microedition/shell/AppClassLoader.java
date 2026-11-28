@@ -55,7 +55,30 @@ public class AppClassLoader extends DexClassLoader {
 	}
 
 	public static void setDataDir(File appDir) {
-		dataDir = appDir.getParentFile().getParent() + Config.MIDLET_DATA_DIR + appDir.getName();
+		if (appDir == null) return;
+		File parent = appDir.getParentFile();
+		String root = (parent != null && parent.getParent() != null) ? parent.getParent() : appDir.getAbsolutePath();
+		dataDir = root + Config.MIDLET_DATA_DIR + appDir.getName();
+	}
+
+	private static String normalizeResourcePath(Class<?> resClass, String resName) {
+		if (resName == null || resName.isEmpty()) {
+			return "";
+		}
+		String normName = resName.replace('\\', '/').replaceAll("//+", "/");
+		while (normName.startsWith("./")) {
+			normName = normName.substring(2);
+		}
+		if (!normName.isEmpty() && normName.charAt(0) != '/' && resClass != null && resClass.getPackage() != null) {
+			String className = resClass.getPackage().getName().replace('.', '/');
+			if (!className.isEmpty()) {
+				normName = className + "/" + normName;
+			}
+		}
+		while (normName.startsWith("/") || normName.startsWith("./")) {
+			normName = normName.startsWith("./") ? normName.substring(2) : normName.substring(1);
+		}
+		return normName;
 	}
 
 	public static InputStream getResourceAsStream(Class<?> resClass, String resName) {
@@ -64,19 +87,15 @@ public class AppClassLoader extends DexClassLoader {
 			Log.w(TAG, "Can't load res on empty path");
 			return null;
 		}
-		// Add support for Siemens file path
-		String normName = resName.replace('\\', '/');
-		// Remove double slashes
-		normName = normName.replaceAll("//+", "/");
-		if (normName.charAt(0) != '/' && resClass != null && resClass.getPackage() != null) {
-			String className = resClass.getPackage().getName().replace('.', '/');
-			normName = className + "/" + normName;
-		}
-		// Remove leading slash
-		if (normName.charAt(0) == '/') {
-			normName = normName.substring(1);
-		}
+		String normName = normalizeResourcePath(resClass, resName);
 		byte[] data = getResourceBytes(normName);
+		if (data == null && resClass != null && resClass.getPackage() != null) {
+			// Fallback to root-relative lookup when a default/package-relative call intended root
+			String rootName = normalizeResourcePath(null, resName);
+			if (!rootName.equals(normName)) {
+				data = getResourceBytes(rootName);
+			}
+		}
 		if (data == null) {
 			Log.w(TAG, "Can't load res: " + resName);
 			return null;
@@ -93,14 +112,7 @@ public class AppClassLoader extends DexClassLoader {
 			Log.w(TAG, "Can't load res on empty path");
 			return null;
 		}
-		// Add support for Siemens file path
-		String normName = resName.replace('\\', '/');
-		// Remove double slashes
-		normName = normName.replaceAll("//+", "/");
-		// Remove leading slash
-		if (normName.charAt(0) == '/') {
-			normName = normName.substring(1);
-		}
+		String normName = normalizeResourcePath(null, resName);
 		byte[] data = getResourceBytes(normName);
 		if (data == null) {
 			Log.w(TAG, "Can't load res: " + resName);
@@ -139,6 +151,21 @@ public class AppClassLoader extends DexClassLoader {
 		DataInputStream dis = null;
 		try {
 			FileHeader header = zipFile.getFileHeader(name);
+			if (header == null) {
+				for (FileHeader candidate : zipFile.getFileHeaders()) {
+					if (candidate == null || candidate.isDirectory()) continue;
+					String entryName = candidate.getFileName();
+					if (entryName == null) continue;
+					entryName = entryName.replace('\\', '/').replaceAll("//+", "/");
+					while (entryName.startsWith("./") || entryName.startsWith("/")) {
+						entryName = entryName.startsWith("./") ? entryName.substring(2) : entryName.substring(1);
+					}
+					if (entryName.equalsIgnoreCase(name)) {
+						header = candidate;
+						break;
+					}
+				}
+			}
 			if (header == null) {
 				return null;
 			}

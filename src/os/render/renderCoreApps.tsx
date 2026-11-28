@@ -7,8 +7,15 @@ import { PALETTE_ORDER, RETRO_PALETTES, isPaletteProLocked } from '../../theme/p
 import { RetroAudioEngine, KEYPAD_SOUND_STYLES } from '../../audio/RetroAudioEngine';
 import { somaRadioService } from '../../services/somaRadioService';
 import { styles } from '../retroOsStyles';
-import { DESKTOP_ICONS, DESKTOP_MENU_STYLES, DesktopMenuStyle, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS, STARTUP_SOUND_OPTIONS } from '../retroOsData';
+import { DESKTOP_MENU_STYLES, DesktopMenuStyle, hexWithAlpha, NOKIA_OPERATORS, NOKIA_PROFILES, REAL_POSTCARDS, STARTUP_SOUND_OPTIONS } from '../retroOsData';
 import { getDesktopLabel, pickLang, tOs } from '../../i18n/retroI18n';
+import {
+  getWinExplorerPalette,
+  getWinVariant,
+  isWinUiActive,
+  renderWinAppIconTile,
+} from './winChromeHelper';
+import { renderNexusDesktop } from './renderNexusDesktop';
 import type { RetroDeckOS } from '../RetroDeckOS';
 
 export function renderAnalogDial(fg: string, dialSize = 84) {
@@ -205,11 +212,13 @@ export function renderStatusRight(os: RetroDeckOS, ink: string): React.ReactNode
 }
 
 export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
+  const visibleIcons = os.getVisibleDesktopIcons();
+  const safeDeskIdx = Math.max(0, Math.min(os.deskIdx, Math.max(0, visibleIcons.length - 1)));
   const cols = 4;
   const rows = 3;
   const pageSize = cols * rows; // 12 items per page for large, crisp retro icons
-  const totalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / pageSize));
-  const curPage = Math.min(totalPages - 1, Math.floor(os.deskIdx / pageSize));
+  const totalPages = Math.max(1, Math.ceil(visibleIcons.length / pageSize));
+  const curPage = Math.min(totalPages - 1, Math.floor(safeDeskIdx / pageSize));
   const pageStart = curPage * pageSize;
   const winStyle = os.postFormatWinStyle;
   const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
@@ -264,7 +273,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     );
   };
 
-  const isWinDesktop = Boolean(winStyle) || os.menuStyle === 'windows';
+  const isWinDesktop =
+    Boolean(winStyle) ||
+    os.menuStyle === 'windows' ||
+    os.menuStyle === 'windows_7' ||
+    os.menuStyle === 'windows_8';
   const activeWall = os.getActiveWallpaper();
 
   const renderWallBackdrop = () =>
@@ -298,222 +311,23 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
       </>
     ) : null;
 
+  if (!winStyle && os.menuStyle === 'nexus_os') {
+    return renderNexusDesktop(os, fg, bg, renderWallBackdrop);
+  }
+
   if (isWinDesktop) {
-    const isXp = winStyle === 'winxp' || (!winStyle && os.cb.getPaletteId?.() === 'windows_xp');
-    const isWin8 = !winStyle && os.cb.getPaletteId?.() === 'windows_8';
-    const isWin10 = !winStyle && os.cb.getPaletteId?.() === 'windows_10';
-    const isWin11 = !winStyle && os.cb.getPaletteId?.() === 'windows_11';
-    const isWin95 = !winStyle && (os.cb.getPaletteId?.() === 'windows_95' || (!isXp && !isWin8 && !isWin10 && !isWin11));
-
-    // Authentic, Fluent / Modern & Win32 Desktop Icon Renderer
-    const renderWinDesktopIcon = (itemId: string, sel: boolean) => {
-      // Sleek Fluent App Tile with drop-shadow, inner depth gradient & crisp glyph
-      const renderFluentTile = (
-        iconName: keyof typeof Ionicons.glyphMap,
-        tileBg: string,
-        tileBorder: string,
-        glyphColor: string = '#FFFFFF',
-        accentBadge?: React.ReactNode
-      ) => (
-        <View
-          style={{
-            width: 24,
-            height: 24,
-            borderRadius: isWin11 ? 6 : isWin8 ? 0 : 4,
-            backgroundColor: sel ? '#0284C7' : tileBg,
-            borderWidth: 1,
-            borderColor: sel ? '#FFFFFF' : tileBorder,
-            alignItems: 'center',
-            justifyContent: 'center',
-            shadowColor: '#000000',
-            shadowOffset: { width: 0, height: 1.5 },
-            shadowOpacity: 0.35,
-            shadowRadius: 2,
-            elevation: 3,
-          }}
-        >
-          <Ionicons name={iconName} size={13} color={sel ? '#FFFFFF' : glyphColor} />
-          {accentBadge}
-        </View>
-      );
-
-      switch (itemId) {
-        // 1. MY COMPUTER / C: DRIVE (Fluent This PC Desktop App)
-        case 'format':
-          return renderFluentTile(
-            'desktop',
-            '#0284C7',
-            '#0369A1',
-            '#FFFFFF',
-            <View style={{ position: 'absolute', bottom: 1, right: 1, width: 6, height: 4, backgroundColor: '#38BDF8', borderRadius: 1 }} />
-          );
-
-        // 2. INTERNET (Microsoft Edge / Internet Explorer Fluent Sphere)
-        case 'wap':
-          return renderFluentTile(
-            'globe',
-            '#0284C7',
-            '#0369A1',
-            '#E0F2FE'
-          );
-
-        // 3. GAMES (Xbox / Retro Arcade Console)
-        case 'arcade':
-          return renderFluentTile(
-            'game-controller',
-            '#107C10',
-            '#0E6B0E',
-            '#FFFFFF'
-          );
-
-        // 4. NOTEPAD (Fluent Fluent Text Editor Pad)
-        case 'notes':
-          return renderFluentTile(
-            'document-text',
-            '#0284C7',
-            '#0369A1',
-            '#FEF08A'
-          );
-
-        // 5. PAINT (Windows Paint 3D & Creative Studio)
-        case 'paint':
-          return renderFluentTile(
-            'color-palette',
-            '#E11D48',
-            '#BE123C',
-            '#FFFFFF'
-          );
-
-        // 6. CALC (Fluent Modern Calculator)
-        case 'calc':
-          return renderFluentTile(
-            'calculator',
-            '#475569',
-            '#334155',
-            '#38BDF8'
-          );
-
-        // 7. COMMAND PROMPT (Windows Terminal / PowerShell Console)
-        case 'term':
-          return renderFluentTile(
-            'terminal',
-            '#0F172A',
-            '#334155',
-            '#4ADE80'
-          );
-
-        // 8. SETTINGS (Windows Settings & Control Panel Gears)
-        case 'setup':
-          return renderFluentTile(
-            'settings',
-            '#475569',
-            '#334155',
-            '#F1F5F9'
-          );
-
-        // 9. PICTURES (Microsoft Photos & Wallpaper Studio)
-        case 'wallpapers':
-          return renderFluentTile(
-            'images',
-            '#0D9488',
-            '#0F766E',
-            '#FFFFFF'
-          );
-
-        // 10. MEDIA PLAYER (Windows Groove & Media Player)
-        case 'radio':
-          return renderFluentTile(
-            'play-circle',
-            '#EA580C',
-            '#C2410C',
-            '#FFFFFF'
-          );
-
-        // 11. MUSIC COMPOSER (Studio Synthesizer & Audio Tracks)
-        case 'synth':
-          return renderFluentTile(
-            'musical-notes',
-            '#7C3AED',
-            '#6D28D9',
-            '#FFFFFF'
-          );
-
-        // 12. MESSENGER (Microsoft Teams / AI Assistant Chat)
-        case 'ai':
-          return renderFluentTile(
-            'chatbubbles',
-            '#4F46E5',
-            '#4338CA',
-            '#FFFFFF'
-          );
-
-        // 13. MAIL (Windows Outlook Mail Client)
-        case 'sms':
-          return renderFluentTile(
-            'mail',
-            '#0284C7',
-            '#0369A1',
-            '#FFFFFF'
-          );
-
-        // 14. CONTACTS (Microsoft People & Address Book)
-        case 'contacts':
-          return renderFluentTile(
-            'people',
-            '#D97706',
-            '#B45309',
-            '#FFFFFF'
-          );
-
-        // 15. PHONE (Dial-up & Phone Link)
-        case 'phone':
-          return renderFluentTile(
-            'call',
-            '#16A34A',
-            '#15803D',
-            '#FFFFFF'
-          );
-
-        // 16. WEATHER (MSN Live Weather Radar)
-        case 'weather':
-          return renderFluentTile(
-            'partly-sunny',
-            '#0284C7',
-            '#0369A1',
-            '#FDE047'
-          );
-
-        // 17. CLOCK (Windows Alarms & World Clock)
-        case 'clock':
-          return renderFluentTile(
-            'time',
-            '#2563EB',
-            '#1D4ED8',
-            '#FFFFFF'
-          );
-
-        // 18. STATS (Windows Task Manager & Performance Monitor)
-        case 'stats':
-          return renderFluentTile(
-            'stats-chart',
-            '#059669',
-            '#047857',
-            '#6EE7B7'
-          );
-
-        // Default Fallback
-        default:
-          return renderFluentTile(
-            'folder',
-            '#F59E0B',
-            '#D97706',
-            '#FFFFFF'
-          );
-      }
-    };
+    const winVariant = getWinVariant(os);
+    const isXp = winVariant === 'winxp';
+    const isWin7 = winVariant === 'win7';
+    const isWin8 = winVariant === 'win8';
+    const isWin10 = winVariant === 'win10';
+    const isWin11 = winVariant === 'win11';
+    const isWin95 = winVariant === 'win95';
 
     const selHighlight = isXp
       ? '#2B65CE'
+      : isWin7
+      ? '#3898EC'
       : isWin8
       ? '#2D89EF'
       : isWin10
@@ -521,6 +335,159 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
       : isWin11
       ? '#0067C0'
       : '#000080';
+
+    // WINDOWS 8 METRO START SCREEN (Vibrant Sharp-Edge Live Tiles Mosaic)
+    if (isWin8) {
+      const METRO_COLORS: Record<string, string> = {
+        arcade: '#107C10',
+        store: '#0078D7',
+        phone: '#16A34A',
+        sms: '#D80073',
+        contacts: '#FA6800',
+        ai: '#6A00FF',
+        radio: '#E51400',
+        calc: '#00ABA9',
+        clock: '#1BA1E2',
+        wallpapers: '#0D9488',
+        profiles: '#8A2BE2',
+        setup: '#647687',
+        j2me: '#EA580C',
+        wap: '#0284C7',
+        synth: '#A200FF',
+        paint: '#D80073',
+        weather: '#1BA1E2',
+        notes: '#E3C800',
+        term: '#1E293B',
+        stats: '#059669',
+        format: '#0050EF',
+        device: '#008A00',
+      };
+
+      const metroCols = 3;
+      const metroRows = 3;
+      const metroPageSize = metroCols * metroRows;
+      const metroTotalPages = Math.max(1, Math.ceil(visibleIcons.length / metroPageSize));
+      const metroCurPage = Math.min(metroTotalPages - 1, Math.floor(safeDeskIdx / metroPageSize));
+      const metroStart = metroCurPage * metroPageSize;
+
+      const getLiveBadge = (id: string): string | null => {
+        if (id === 'arcade') return `${os.cb.getCartridges().length}`;
+        if (id === 'store') return `${os.installedStoreApps.length}/10`;
+        if (id === 'sms' && os.unreadSmsCount > 0) return `${os.unreadSmsCount}`;
+        if (id === 'clock') return os.formatClock();
+        if (id === 'weather' && os.weatherData) return `${Math.round(os.weatherData.tempC)}°`;
+        return null;
+      };
+
+      return (
+        <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', backgroundColor: '#25093D', paddingHorizontal: 5, paddingVertical: 4, justifyContent: 'space-between' }]}>
+          {renderWallBackdrop()}
+
+          {/* Signature Windows 8 Metro Diagonal Geometric Facets */}
+          {!activeWall && (
+            <View pointerEvents="none" style={{ position: 'absolute', left: -20, right: -20, top: -10, bottom: -10 }}>
+              <View style={{ position: 'absolute', top: -20, right: -30, width: 220, height: 140, backgroundColor: '#3B0E61', opacity: 0.65, transform: [{ rotate: '-18deg' }] }} />
+              <View style={{ position: 'absolute', bottom: -30, left: -20, width: 200, height: 120, backgroundColor: '#4E147D', opacity: 0.45, transform: [{ rotate: '14deg' }] }} />
+            </View>
+          )}
+
+          {/* Windows 8 Start Header: "Start" + Page + User Badge */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 2, marginBottom: 2 }}>
+            <Text style={{ fontFamily: monoFont, fontSize: 12, fontWeight: '300', color: '#FFFFFF', letterSpacing: 0.6 }}>
+              {pickLang(os.lang, 'Start', 'Baslangic')}
+            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Pressable
+                onPress={() => {
+                  const nextPage = (metroCurPage + 1) % metroTotalPages;
+                  os.deskIdx = nextPage * metroPageSize;
+                  os.cb.onPlaySound?.('hit');
+                }}
+                style={{ backgroundColor: 'rgba(255,255,255,0.16)', paddingHorizontal: 5, paddingVertical: 1 }}
+              >
+                <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '800', color: '#FFFFFF' }}>
+                  {metroCurPage + 1}/{metroTotalPages}
+                </Text>
+              </Pressable>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: 'rgba(255,255,255,0.85)' }}>
+                  RETRO_8
+                </Text>
+                <View style={{ width: 13, height: 13, backgroundColor: '#0078D7', alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="person" size={8} color="#FFFFFF" />
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* 3x3 Sharp-Edge Metro Live Tiles Grid */}
+          <View style={{ flex: 1, gap: 4 }}>
+            {Array.from({ length: metroRows }, (_, r) => (
+              <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
+                {Array.from({ length: metroCols }, (_, c) => {
+                  const idx = metroStart + r * metroCols + c;
+                  const item = visibleIcons[idx];
+                  if (!item) {
+                    return <View key={`sp-m-${c}`} style={{ flex: 1 }} />;
+                  }
+                  const sel = idx === safeDeskIdx;
+                  const tileColor = METRO_COLORS[item.id] || '#0078D7';
+                  const liveBadge = getLiveBadge(item.id);
+                  const ink = item.id === 'notes' ? '#111827' : '#FFFFFF';
+
+                  return (
+                    <Pressable
+                      key={item.id}
+                      onPress={() => {
+                        if (os.deskIdx !== idx) {
+                          os.deskIdx = idx;
+                          os.cb.onPlaySound?.('hit');
+                        } else {
+                          const s = os.launchDesktopApp(item.id);
+                          os.cb.onPlaySound?.(s);
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        backgroundColor: tileColor,
+                        borderRadius: 0,
+                        borderWidth: sel ? 2 : 1,
+                        borderColor: sel ? '#FFFFFF' : 'rgba(255, 255, 255, 0.22)',
+                        paddingHorizontal: 5,
+                        paddingVertical: 4,
+                        justifyContent: 'space-between',
+                        transform: sel ? [{ scale: 1.03 }] : [],
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <Ionicons name={item.icon} size={17} color={ink} />
+                        {liveBadge && (
+                          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: ink, opacity: 0.92 }}>
+                            {liveBadge}
+                          </Text>
+                        )}
+                      </View>
+                      <Text
+                        style={{
+                          fontFamily: monoFont,
+                          fontSize: 7.2,
+                          fontWeight: '800',
+                          color: ink,
+                          letterSpacing: 0.2,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {getDesktopLabel(item.id, item.label, os.lang)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ))}
+          </View>
+        </View>
+      );
+    }
 
     return (
       <View style={[styles.deskGrid, { position: 'relative' }]}>
@@ -570,6 +537,48 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         )}
 
+        {/* 1b) Windows 7 Aero: Iconic Frutiger Aero Harmony Sky & Sweeping Glass Ribbons */}
+        {isWin7 && !activeWall && (
+          <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#0A4B86', overflow: 'hidden' }}>
+            {/* Sky-to-lagoon layered depth */}
+            <View style={{ position: 'absolute', left: 0, right: 0, top: 0, height: '42%', backgroundColor: '#0E66B3', opacity: 0.9 }} />
+            <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '38%', backgroundColor: '#0C759C', opacity: 0.75 }} />
+            {/* Luminous sweeping Aero light ribbons */}
+            <View
+              style={{
+                position: 'absolute',
+                top: 22,
+                left: -50,
+                width: 340,
+                height: 74,
+                borderRadius: 48,
+                backgroundColor: 'rgba(56, 189, 248, 0.28)',
+                borderTopWidth: 1.5,
+                borderTopColor: 'rgba(224, 242, 254, 0.55)',
+                transform: [{ rotate: '-11deg' }],
+              }}
+            />
+            <View
+              style={{
+                position: 'absolute',
+                top: 52,
+                left: -20,
+                width: 340,
+                height: 60,
+                borderRadius: 40,
+                backgroundColor: 'rgba(110, 231, 183, 0.16)',
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(186, 230, 253, 0.45)',
+                transform: [{ rotate: '9deg' }],
+              }}
+            />
+            {/* Soft sunlit Frutiger Aero glass bokeh orbs */}
+            <View style={{ position: 'absolute', top: 10, right: 30, width: 58, height: 58, borderRadius: 29, backgroundColor: 'rgba(186, 230, 253, 0.18)', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.25)' }} />
+            <View style={{ position: 'absolute', bottom: 14, left: 26, width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(125, 211, 252, 0.22)' }} />
+            <View style={{ position: 'absolute', top: 64, right: 86, width: 18, height: 18, borderRadius: 9, backgroundColor: 'rgba(255, 255, 255, 0.22)' }} />
+          </View>
+        )}
+
         {/* 2) Windows 95: Authentic Retro CRT #008080 Teal Solid Desktop */}
         {isWin95 && !activeWall && (
           <View pointerEvents="none" style={{ position: 'absolute', left: -8, right: -8, top: -6, bottom: -6, backgroundColor: '#008080' }} />
@@ -609,75 +618,82 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           </View>
         )}
 
-        {/* Desktop Icons Grid (Windows Column-Major Layout: Top-to-Bottom, Left-to-Right) */}
-        {Array.from({ length: rows }, (_, r) => (
-          <View key={r} style={styles.deskRow}>
-            {Array.from({ length: cols }, (_, c) => {
-              // Windows Column-Major arrangement within current page
-              const colMajorOffset = c * rows + r;
-              const idx = pageStart + colMajorOffset;
-              const item = DESKTOP_ICONS[idx];
-              if (!item) {
-                return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
-              }
-              const sel = idx === os.deskIdx;
-              const badgeBg = '#FFFFFF';
-              const badgeTxt = '#000080';
+        {/* Real Windows Desktop: Single Left-Column Shortcuts (open wallpaper, ZERO full-screen 4x3 grid!) */}
+        <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 2 }}>
+          <View style={{ width: 68, justifyContent: 'flex-start', gap: 5 }}>
+            {visibleIcons.map((item, idx) => {
+              const sel = !os.winStartOpen && idx === safeDeskIdx;
               return (
-                <View
+                <Pressable
                   key={item.id}
+                  onPress={() => {
+                    if (os.winStartOpen) {
+                      os.winStartOpen = false;
+                      os.deskIdx = idx;
+                      os.cb.onPlaySound?.('hit');
+                      return;
+                    }
+                    if (os.deskIdx !== idx) {
+                      os.deskIdx = idx;
+                      os.cb.onPlaySound?.('hit');
+                    } else {
+                      const s = os.launchDesktopApp(item.id);
+                      os.cb.onPlaySound?.(s);
+                    }
+                  }}
                   style={{
-                    flex: 1,
-                    justifyContent: 'center',
                     alignItems: 'center',
-                    borderRadius: isWin11 ? 4 : isWin8 ? 0 : 2,
+                    justifyContent: 'center',
+                    borderRadius: isWin11 || isWin7 ? 4 : isWin8 ? 0 : 2,
                     borderWidth: sel ? 1 : 0,
-                    borderStyle: sel && !isXp && !isWin8 && !isWin11 ? 'dotted' : 'solid',
-                    borderColor: sel ? '#FFFFFF' : 'transparent',
-                    backgroundColor: sel ? (isXp ? '#2B65CEE6' : `${selHighlight}DD`) : 'transparent',
+                    borderStyle: sel && !isXp && !isWin7 && !isWin8 && !isWin11 ? 'dotted' : 'solid',
+                    borderColor: sel ? (isWin7 ? 'rgba(224, 242, 254, 0.85)' : '#FFFFFF') : 'transparent',
+                    backgroundColor: sel
+                      ? isWin7
+                        ? 'rgba(125, 211, 252, 0.34)'
+                        : isXp
+                        ? '#2B65CEE6'
+                        : `${selHighlight}DD`
+                      : 'transparent',
                     paddingVertical: 2,
-                    marginHorizontal: 1,
+                    paddingHorizontal: 3,
                   }}
                 >
                   <View style={{ position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
-                    {/* Authentic Win32 Detailed Professional Icon */}
-                    {renderWinDesktopIcon(item.id, sel)}
-
-                    {/* Authentic miniature Windows desktop shortcut curved overlay badge */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        left: -5,
-                        bottom: -3,
-                        width: 7,
-                        height: 7,
-                        backgroundColor: badgeBg,
-                        borderWidth: 0.5,
-                        borderColor: '#222222',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: isWin11 ? 2 : 0,
-                      }}
-                    >
-                      <Text style={{ fontSize: 5.5, fontWeight: '900', color: badgeTxt, lineHeight: 6.5 }}>
-                        ↗
-                      </Text>
-                    </View>
+                    {renderWinAppIconTile(item.id, item.icon, sel, winVariant, 22)}
+                    {item.id !== 'programs' && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          left: -4,
+                          bottom: -2,
+                          width: 6.5,
+                          height: 6.5,
+                          backgroundColor: '#FFFFFF',
+                          borderWidth: 0.5,
+                          borderColor: '#222222',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: isWin11 ? 2 : 0,
+                        }}
+                      >
+                        <Text style={{ fontSize: 5, fontWeight: '900', color: '#000080', lineHeight: 6 }}>
+                          ↗
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                  {/* Shortcut Label with Windows Drop Shadow */}
                   <View
                     style={{
                       backgroundColor: sel
                         ? selHighlight
                         : isWin11
-                        ? 'rgba(255, 255, 255, 0.75)'
-                        : isXp
-                        ? 'rgba(0, 0, 0, 0.45)'
-                        : 'rgba(0, 0, 0, 0.55)',
+                        ? 'rgba(255, 255, 255, 0.78)'
+                        : 'rgba(0, 0, 0, 0.45)',
                       paddingHorizontal: 4,
-                      paddingVertical: 1,
+                      paddingVertical: 0.5,
                       borderRadius: isWin11 ? 3 : isWin8 ? 0 : 1,
-                      marginTop: 2,
+                      marginTop: 1.5,
                     }}
                   >
                     <Text
@@ -685,11 +701,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                         styles.deskLbl,
                         {
                           color: sel ? '#FFFFFF' : isWin11 ? '#0F172A' : '#FFFFFF',
-                          fontSize: 7.5,
+                          fontSize: 6.8,
                           fontWeight: sel ? '900' : '700',
-                          textShadowColor: sel ? 'transparent' : isWin11 ? 'transparent' : 'rgba(0,0,0,0.9)',
-                          textShadowOffset: { width: 1, height: 1 },
-                          textShadowRadius: 1,
                         },
                       ]}
                       numberOfLines={1}
@@ -697,23 +710,276 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                       {getDesktopLabel(item.id, item.label, os.lang)}
                     </Text>
                   </View>
-                </View>
+                </Pressable>
               );
             })}
           </View>
-        ))}
 
-        {renderPageStrip(true)}
+          {/* Open Desktop Hint Pill on bottom-right */}
+          {!os.winStartOpen && (
+            <Pressable
+              onPress={() => {
+                os.winStartOpen = true;
+                os.winStartPane = 'left';
+                os.cb.onPlaySound?.('score');
+              }}
+              style={{
+                alignSelf: 'flex-end',
+                backgroundColor: isWin11 ? 'rgba(255,255,255,0.82)' : 'rgba(10, 24, 48, 0.65)',
+                borderWidth: 1,
+                borderColor: isWin11 ? 'rgba(15,23,42,0.18)' : 'rgba(186,230,253,0.45)',
+                borderRadius: isWin11 ? 6 : 3,
+                paddingHorizontal: 6,
+                paddingVertical: 2.5,
+                marginBottom: 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: monoFont,
+                  fontSize: 6.8,
+                  fontWeight: '800',
+                  color: isWin11 ? '#0F172A' : '#E0F2FE',
+                }}
+              >
+                {pickLang(os.lang, '[▶] START MENU', '[▶] BASLAT MENUSU')}
+              </Text>
+            </Pressable>
+          )}
+        </View>
+
+        {/* Authentic Floating Two-Column Windows Start Menu Popup */}
+        {os.winStartOpen && (() => {
+          const leftItems = os.getWinStartLeftItems();
+          const rightItems = os.getWinStartRightItems();
+          const LEFT_VISIBLE = 6;
+          const safeLeftIdx = Math.max(0, Math.min(os.winStartLeftIdx, Math.max(0, leftItems.length - 1)));
+          const safeRightIdx = Math.max(0, Math.min(os.winStartRightIdx, Math.max(0, rightItems.length - 1)));
+          const maxLeftStart = Math.max(0, leftItems.length - LEFT_VISIBLE);
+          const leftStart = Math.max(0, Math.min(safeLeftIdx - 2, maxLeftStart));
+          const visibleLeft = leftItems.slice(leftStart, leftStart + LEFT_VISIBLE);
+
+          const menuOuterBg = isWin7
+            ? 'rgba(18, 60, 108, 0.94)'
+            : isXp
+            ? '#245EDC'
+            : isWin10
+            ? '#1F1F1F'
+            : isWin11
+            ? '#F3F6FA'
+            : '#C0C0C0';
+          const menuOuterBorder = isWin7
+            ? 'rgba(186, 230, 253, 0.8)'
+            : isXp
+            ? '#0B3592'
+            : isWin11
+            ? '#CBD5E1'
+            : '#FFFFFF';
+          const leftPaneBg = isWin10 ? '#18181B' : '#FFFFFF';
+          const leftText = isWin10 ? '#F8FAFC' : '#0F172A';
+          const rightPaneBg = isWin7
+            ? 'rgba(12, 42, 78, 0.86)'
+            : isXp
+            ? '#D3E5FA'
+            : isWin10
+            ? '#252526'
+            : isWin11
+            ? '#E2E8F0'
+            : '#DFDFDF';
+          const rightText = isWin7 || isWin10 ? '#F0F9FF' : '#0F172A';
+
+          return (
+            <Pressable
+              onPress={() => {
+                os.winStartOpen = false;
+                os.cb.onPlaySound?.('hit');
+              }}
+              style={{
+                position: 'absolute',
+                left: -6,
+                right: -6,
+                top: -4,
+                bottom: -4,
+                justifyContent: 'flex-end',
+                alignItems: 'flex-start',
+                paddingLeft: 6,
+                paddingBottom: 4,
+              }}
+            >
+              <Pressable
+                onPress={(e) => e.stopPropagation?.()}
+                style={{
+                  width: 228,
+                  backgroundColor: menuOuterBg,
+                  borderWidth: 1.5,
+                  borderColor: menuOuterBorder,
+                  borderRadius: isWin7 || isWin11 ? 6 : isXp ? 5 : 1,
+                  padding: 4,
+                  shadowColor: '#000000',
+                  shadowOffset: { width: 2, height: 3 },
+                  shadowOpacity: 0.45,
+                  shadowRadius: 6,
+                  elevation: 8,
+                }}
+              >
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {/* Left White/Dark Programs List */}
+                  <View
+                    style={{
+                      flex: 1.25,
+                      backgroundColor: leftPaneBg,
+                      borderRadius: isWin7 || isWin11 ? 4 : 1,
+                      borderWidth: 1,
+                      borderColor: isWin10 ? '#333338' : '#CBD5E1',
+                      padding: 3,
+                      gap: 2,
+                    }}
+                  >
+                    {visibleLeft.map((item, i) => {
+                      const actualIdx = leftStart + i;
+                      const sel = os.winStartPane === 'left' && actualIdx === safeLeftIdx;
+                      return (
+                        <Pressable
+                          key={item.id}
+                          onPress={() => {
+                            const s = os.launchDesktopApp(item.id);
+                            os.cb.onPlaySound?.(s);
+                          }}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 5,
+                            paddingHorizontal: 4,
+                            paddingVertical: 2.5,
+                            borderRadius: isWin7 || isWin11 ? 3 : 1,
+                            backgroundColor: sel ? selHighlight : 'transparent',
+                          }}
+                        >
+                          {renderWinAppIconTile(item.id, item.icon, sel, winVariant, 15)}
+                          <Text
+                            style={{
+                              fontFamily: monoFont,
+                              fontSize: 7.4,
+                              fontWeight: sel ? '900' : '700',
+                              color: sel ? '#FFFFFF' : leftText,
+                              flex: 1,
+                            }}
+                            numberOfLines={1}
+                          >
+                            {getDesktopLabel(item.id, item.label, os.lang)}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                    <View
+                      style={{
+                        borderTopWidth: 1,
+                        borderTopColor: isWin10 ? '#333338' : '#E2E8F0',
+                        paddingTop: 2,
+                        marginTop: 1,
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        paddingHorizontal: 3,
+                      }}
+                    >
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.3, fontWeight: '800', color: isWin10 ? '#9CA3AF' : '#64748B' }}>
+                        {pickLang(os.lang, 'ALL APPS', 'TUM PROGRAMLAR')}
+                      </Text>
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.3, fontWeight: '900', color: selHighlight }}>
+                        {safeLeftIdx + 1}/{leftItems.length}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Right Places / System Column */}
+                  <View
+                    style={{
+                      flex: 0.95,
+                      backgroundColor: rightPaneBg,
+                      borderRadius: isWin7 || isWin11 ? 4 : 1,
+                      padding: 4,
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3, paddingHorizontal: 2 }}>
+                      <View
+                        style={{
+                          width: 14,
+                          height: 14,
+                          borderRadius: 3,
+                          backgroundColor: selHighlight,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Ionicons name="person" size={9} color="#FFFFFF" />
+                      </View>
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', color: rightText }} numberOfLines={1}>
+                        RETRODECK
+                      </Text>
+                    </View>
+
+                    <View style={{ gap: 2, flex: 1 }}>
+                      {rightItems.map((item, rIdx) => {
+                        const sel = os.winStartPane === 'right' && rIdx === safeRightIdx;
+                        return (
+                          <Pressable
+                            key={item.id}
+                            onPress={() => {
+                              const s = os.launchDesktopApp(item.id);
+                              os.cb.onPlaySound?.(s);
+                            }}
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              gap: 4,
+                              paddingHorizontal: 4,
+                              paddingVertical: 2.5,
+                              borderRadius: isWin7 || isWin11 ? 3 : 1,
+                              backgroundColor: sel ? selHighlight : 'transparent',
+                            }}
+                          >
+                            <Ionicons
+                              name={item.icon}
+                              size={10}
+                              color={sel ? '#FFFFFF' : isWin7 || isWin10 ? '#7DD3FC' : selHighlight}
+                            />
+                            <Text
+                              style={{
+                                fontFamily: monoFont,
+                                fontSize: 6.8,
+                                fontWeight: sel ? '900' : '700',
+                                color: sel ? '#FFFFFF' : rightText,
+                                flex: 1,
+                              }}
+                              numberOfLines={1}
+                            >
+                              {getDesktopLabel(item.id, item.label, os.lang)}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <Text style={{ fontFamily: monoFont, fontSize: 6, fontWeight: '800', color: rightText, opacity: 0.75, textAlign: 'center', marginTop: 2 }}>
+                      [B] {pickLang(os.lang, 'CLOSE', 'KAPAT')}
+                    </Text>
+                  </View>
+                </View>
+              </Pressable>
+            </Pressable>
+          );
+        })()}
       </View>
     );
   }
 
   // STYLE 2: Classic Nokia 3310 Single-Item Carousel Menu
   if (os.menuStyle === 'nokia') {
-    const total = DESKTOP_ICONS.length;
-    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
-    const prevItem = DESKTOP_ICONS[(os.deskIdx + total - 1) % total];
-    const nextItem = DESKTOP_ICONS[(os.deskIdx + 1) % total];
+    const total = visibleIcons.length;
+    const curItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
+    const prevItem = visibleIcons[(safeDeskIdx + total - 1) % total];
+    const nextItem = visibleIcons[(safeDeskIdx + 1) % total];
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -732,7 +998,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             }}
           >
             <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: bg }}>
-              {String(os.deskIdx + 1).padStart(2, '0')}/{total}
+              {String(safeDeskIdx + 1).padStart(2, '0')}/{total}
             </Text>
           </View>
         </View>
@@ -806,9 +1072,9 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   // STYLE 3: Classic Retro Vertical List (6 rows per window)
   if (os.menuStyle === 'list') {
     const visibleCount = 6;
-    const total = DESKTOP_ICONS.length;
-    const start = Math.max(0, Math.min(total - visibleCount, os.deskIdx - 2));
-    const slice = DESKTOP_ICONS.slice(start, start + visibleCount);
+    const total = visibleIcons.length;
+    const start = Math.max(0, Math.min(total - visibleCount, safeDeskIdx - 2));
+    const slice = visibleIcons.slice(start, start + visibleCount);
 
     return (
       <View style={[styles.listWrap, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -829,14 +1095,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
             {pickLang(os.lang, 'APPLICATIONS', 'UYGULAMALAR')}
           </Text>
           <Text style={[styles.listMeta, { color: fg }]}>
-            {String(os.deskIdx + 1).padStart(2, '0')}/{total}
+            {String(safeDeskIdx + 1).padStart(2, '0')}/{total}
           </Text>
         </View>
 
         <View style={{ flex: 1, justifyContent: 'flex-start', gap: 2.5 }}>
           {slice.map((item, i) => {
             const realIdx = start + i;
-            const sel = realIdx === os.deskIdx;
+            const sel = realIdx === safeDeskIdx;
             const rowInk = sel ? bg : fg;
             return (
               <View
@@ -890,11 +1156,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const isAqua = palId === 'macos_aqua';
     const isSequoia = palId === 'macos_sequoia';
     const dockCols = 6;
-    const dockPages = Math.ceil(DESKTOP_ICONS.length / dockCols);
-    const dockCurPage = Math.min(dockPages - 1, Math.floor(os.deskIdx / dockCols));
+    const dockPages = Math.ceil(visibleIcons.length / dockCols);
+    const dockCurPage = Math.min(dockPages - 1, Math.floor(safeDeskIdx / dockCols));
     const dockPageStart = dockCurPage * dockCols;
-    const dockSlice = DESKTOP_ICONS.slice(dockPageStart, dockPageStart + dockCols);
-    const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const dockSlice = visibleIcons.slice(dockPageStart, dockPageStart + dockCols);
+    const activeItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
 
     // Detect luminance of active background (wallpaper OR palette bg)
     const isLightWallpaper = (() => {
@@ -1126,7 +1392,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 {getDesktopLabel(activeItem.id, activeItem.label, os.lang)}
               </Text>
               <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '700', color: macScale.cardSub, marginTop: 1 }}>
-                {pickLang(os.lang, `App ${os.deskIdx + 1} of ${DESKTOP_ICONS.length} • [A] Launch`, `Uygulama ${os.deskIdx + 1}/${DESKTOP_ICONS.length} • [A] Ac`)}
+                {pickLang(os.lang, `App ${safeDeskIdx + 1} of ${visibleIcons.length} • [A] Launch`, `Uygulama ${safeDeskIdx + 1}/${visibleIcons.length} • [A] Ac`)}
               </Text>
             </View>
           </View>
@@ -1154,7 +1420,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         >
           {dockSlice.map((item, idxInPage) => {
             const realIdx = dockPageStart + idxInPage;
-            const sel = realIdx === os.deskIdx;
+            const sel = realIdx === safeDeskIdx;
 
             const tileBg = sel
               ? macScale.accentBg
@@ -1205,19 +1471,25 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
   // STYLE 6: Sony PlayStation Portable (PSP) / PS3 XMB (Cross Media Bar)
   if (os.menuStyle === 'psp_xmb') {
     // 5 Categories: Settings, Games, Media, Network, Tools
-    const XMB_CATEGORIES: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; appIds: string[] }[] = [
-      { id: 'settings', label: pickLang(os.lang, 'SETTINGS', 'AYARLAR'), icon: 'settings', appIds: ['setup', 'stats', 'term', 'format'] },
-      { id: 'games', label: pickLang(os.lang, 'GAME', 'OYUN'), icon: 'game-controller', appIds: ['arcade'] },
-      { id: 'media', label: pickLang(os.lang, 'MEDIA', 'MEDYA'), icon: 'musical-notes', appIds: ['radio', 'synth', 'wallpapers'] },
-      { id: 'network', label: pickLang(os.lang, 'NETWORK', 'AG'), icon: 'globe', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone'] },
-      { id: 'tools', label: pickLang(os.lang, 'EXTRAS', 'EKSTRALAR'), icon: 'briefcase', appIds: ['notes', 'paint', 'calc', 'weather', 'clock', 'profiles'] },
+    const rawXmbCategories: { id: string; label: string; icon: keyof typeof Ionicons.glyphMap; appIds: string[] }[] = [
+      { id: 'settings', label: pickLang(os.lang, 'SETTINGS', 'AYARLAR'), icon: 'settings', appIds: ['setup', 'stats', 'term', 'format', 'device'] },
+      { id: 'games', label: pickLang(os.lang, 'GAME', 'OYUN'), icon: 'game-controller', appIds: ['arcade', 'j2me'] },
+      { id: 'media', label: pickLang(os.lang, 'MEDIA', 'MEDYA'), icon: 'musical-notes', appIds: ['radio', 'synth', 'wallpapers', 'paint'] },
+      { id: 'network', label: pickLang(os.lang, 'NETWORK', 'AG'), icon: 'globe', appIds: ['ai', 'sms', 'contacts', 'phone', 'wap'] },
+      { id: 'tools', label: pickLang(os.lang, 'EXTRAS', 'EKSTRALAR'), icon: 'briefcase', appIds: ['store', 'calc', 'clock', 'profiles', 'notes', 'weather'] },
     ];
+    const XMB_CATEGORIES = rawXmbCategories
+      .map((cat) => ({
+        ...cat,
+        appIds: cat.appIds.filter((id) => visibleIcons.some((icon) => icon.id === id)),
+      }))
+      .filter((cat) => cat.appIds.length > 0);
 
-    const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const currentApp = visibleIcons[safeDeskIdx] || visibleIcons[0];
     let activeCatIdx = XMB_CATEGORIES.findIndex((cat) => cat.appIds.includes(currentApp.id));
-    if (activeCatIdx === -1) activeCatIdx = 1; // default to Games
+    if (activeCatIdx === -1) activeCatIdx = Math.min(1, XMB_CATEGORIES.length - 1);
     const activeCat = XMB_CATEGORIES[activeCatIdx];
-    const catApps = activeCat.appIds.map((id) => DESKTOP_ICONS.find((icon) => icon.id === id)!).filter(Boolean);
+    const catApps = activeCat.appIds.map((id) => visibleIcons.find((icon) => icon.id === id)!).filter(Boolean);
     let itemIdxInCat = catApps.findIndex((item) => item.id === currentApp.id);
     if (itemIdxInCat === -1) itemIdxInCat = 0;
 
@@ -1456,15 +1728,20 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     // 4 Classic Xbox 360 Blades: Marketplace/Games (Green), Media (Blue), System (Purple), Live (Orange)
     // Always use vibrant, authentic high-saturation Xbox blade colors so tabs never turn washed-out white/transparent!
     const XBOX_BLADES: { id: string; label: string; color: string; appIds: string[] }[] = [
-      { id: 'games', label: 'GAMES', color: '#107C10', appIds: ['arcade', 'synth'] },
+      { id: 'games', label: 'GAMES', color: '#107C10', appIds: ['arcade', 'store', 'j2me', 'synth'] },
       { id: 'media', label: 'MEDIA', color: '#0078D7', appIds: ['radio', 'wallpapers', 'paint'] },
-      { id: 'system', label: 'SYSTEM', color: '#5C2D91', appIds: ['setup', 'stats', 'term', 'format', 'clock'] },
-      { id: 'live', label: 'XBOX LIVE', color: '#D83B01', appIds: ['wap', 'ai', 'sms', 'contacts', 'phone', 'weather', 'notes', 'calc', 'profiles'] },
-    ];
+      { id: 'system', label: 'SYSTEM', color: '#5C2D91', appIds: ['setup', 'clock', 'stats', 'term', 'format', 'device'] },
+      { id: 'live', label: 'XBOX LIVE', color: '#D83B01', appIds: ['ai', 'sms', 'contacts', 'phone', 'calc', 'profiles', 'wap', 'weather', 'notes'] },
+    ]
+      .map((blade) => ({
+        ...blade,
+        appIds: blade.appIds.filter((id) => visibleIcons.some((icon) => icon.id === id)),
+      }))
+      .filter((blade) => blade.appIds.length > 0);
 
     let activeBladeIdx = os.xboxBladeIdx >= 0 && os.xboxBladeIdx < XBOX_BLADES.length ? os.xboxBladeIdx : 0;
     // Verify if currentApp matches activeBlade, otherwise sync
-    const currentApp = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const currentApp = visibleIcons[safeDeskIdx] || visibleIcons[0];
     const matchingIdx = XBOX_BLADES.findIndex((b) => b.appIds.includes(currentApp.id));
     if (matchingIdx !== -1 && matchingIdx !== activeBladeIdx) {
       activeBladeIdx = matchingIdx;
@@ -1472,7 +1749,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     }
 
     const activeBlade = XBOX_BLADES[activeBladeIdx];
-    const bladeApps = activeBlade.appIds.map((id) => DESKTOP_ICONS.find((icon) => icon.id === id)!).filter(Boolean);
+    const bladeApps = activeBlade.appIds.map((id) => visibleIcons.find((icon) => icon.id === id)!).filter(Boolean);
     let itemIdxInBlade = bladeApps.findIndex((item) => item.id === currentApp.id);
     if (itemIdxInBlade === -1) itemIdxInBlade = 0;
 
@@ -1738,14 +2015,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   // STYLE 8: Cyberpunk / Linux Tiling Window Manager (i3 / bspwm / sway style)
   if (os.menuStyle === 'cyberpunk') {
-    const total = DESKTOP_ICONS.length;
-    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const total = visibleIcons.length;
+    const curItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
     const workspaces = ['1:SYS', '2:NET', '3:MEDIA', '4:EXTRA'];
-    const activeWsIdx = Math.min(3, Math.floor(os.deskIdx / 5));
+    const activeWsIdx = Math.min(3, Math.floor(safeDeskIdx / 5));
 
     // Visible terminal list window (5 items)
-    const listPage = Math.floor(os.deskIdx / 5);
-    const visibleApps = DESKTOP_ICONS.slice(listPage * 5, listPage * 5 + 5);
+    const listPage = Math.floor(safeDeskIdx / 5);
+    const visibleApps = visibleIcons.slice(listPage * 5, listPage * 5 + 5);
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0, backgroundColor: '#050811' }]}>
@@ -1835,7 +2112,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 UP: {Math.floor(os.uptime)}s
               </Text>
               <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '700', color: '#A855F7' }}>
-                PKGS: 19 (pacman)
+                PKGS: {total} (pacman)
               </Text>
             </View>
 
@@ -1866,7 +2143,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           >
             <View style={{ backgroundColor: '#22D3EE', paddingHorizontal: 4, paddingVertical: 1, marginBottom: 3 }}>
               <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: '#050811' }}>
-                $ dmenu_run ({os.deskIdx + 1}/{total})
+                $ dmenu_run ({safeDeskIdx + 1}/{total})
               </Text>
             </View>
 
@@ -1933,14 +2210,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const cols = 4;
     const rows = 3;
     const pageSize = cols * rows; // 12 TV channels per screen
-    const totalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / pageSize));
-    const curPage = Math.min(totalPages - 1, Math.floor(os.deskIdx / pageSize));
+    const totalPages = Math.max(1, Math.ceil(visibleIcons.length / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(safeDeskIdx / pageSize));
     const pageStart = curPage * pageSize;
-    const pageSlice = DESKTOP_ICONS.slice(pageStart, pageStart + pageSize);
-    const activeItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const pageSlice = visibleIcons.slice(pageStart, pageStart + pageSize);
+    const activeItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
 
     // Grid coordinates
-    const localIdx = os.deskIdx - pageStart;
+    const localIdx = safeDeskIdx - pageStart;
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 4, paddingVertical: 2, backgroundColor: activeWall ? 'transparent' : '#ECEFF1', justifyContent: 'space-between' }]}>
@@ -2095,14 +2372,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   // STYLE 10: Fallout Pip-Boy 3000 (Monochrome Amber / Phosphor CRT with Vault Boy)
   if (os.menuStyle === 'pipboy') {
-    const total = DESKTOP_ICONS.length;
-    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const total = visibleIcons.length;
+    const curItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
     const pipTabs = ['STAT', 'INV', 'DATA', 'MAP', 'RADIO'];
-    const activeTabIdx = Math.min(4, Math.floor(os.deskIdx / 4));
+    const activeTabIdx = Math.min(4, Math.floor(safeDeskIdx / 4));
 
     // Visible 4 items in inventory list
     const pageStart = activeTabIdx * 4;
-    const visibleApps = DESKTOP_ICONS.slice(pageStart, pageStart + 4);
+    const visibleApps = visibleIcons.slice(pageStart, pageStart + 4);
 
     const pipColor = fg;
     const pipBg = bg;
@@ -2276,14 +2553,14 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 
   // STYLE 11: Apple iPod Classic (2001 Dual-Pane Click Wheel Interface)
   if (os.menuStyle === 'ipod_classic') {
-    const total = DESKTOP_ICONS.length;
-    const curItem = DESKTOP_ICONS[os.deskIdx] || DESKTOP_ICONS[0];
+    const total = visibleIcons.length;
+    const curItem = visibleIcons[safeDeskIdx] || visibleIcons[0];
 
     // Virtual windowed list: display 5 items on the left menu pane
     const PAGE_SIZE = 5;
     const maxStart = Math.max(0, total - PAGE_SIZE);
-    const startIdx = Math.max(0, Math.min(os.deskIdx - 2, maxStart));
-    const visibleApps = DESKTOP_ICONS.slice(startIdx, startIdx + PAGE_SIZE);
+    const startIdx = Math.max(0, Math.min(safeDeskIdx - 2, maxStart));
+    const visibleApps = visibleIcons.slice(startIdx, startIdx + PAGE_SIZE);
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', overflow: 'hidden', paddingHorizontal: 0, paddingVertical: 0, backgroundColor: activeWall ? 'transparent' : '#FFFFFF', justifyContent: 'space-between' }]}>
@@ -2331,7 +2608,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           >
             {visibleApps.map((item, i) => {
               const actualIdx = startIdx + i;
-              const isSelected = actualIdx === os.deskIdx;
+              const isSelected = actualIdx === safeDeskIdx;
               return (
                 <View
                   key={item.id}
@@ -2429,7 +2706,7 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
                 marginTop: 1,
               }}
             >
-              {os.deskIdx + 1} of {total}
+              {safeDeskIdx + 1} of {total}
             </Text>
           </View>
         </View>
@@ -2463,8 +2740,8 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
     const cardCols = 3;
     const cardRows = 2;
     const cardPageSize = cardCols * cardRows;
-    const cardTotalPages = Math.max(1, Math.ceil(DESKTOP_ICONS.length / cardPageSize));
-    const cardCurPage = Math.min(cardTotalPages - 1, Math.floor(os.deskIdx / cardPageSize));
+    const cardTotalPages = Math.max(1, Math.ceil(visibleIcons.length / cardPageSize));
+    const cardCurPage = Math.min(cardTotalPages - 1, Math.floor(safeDeskIdx / cardPageSize));
     const cardStart = cardCurPage * cardPageSize;
 
     return (
@@ -2475,11 +2752,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
           <View key={r} style={styles.deskRow}>
             {Array.from({ length: cardCols }, (_, c) => {
               const idx = cardStart + r * cardCols + c;
-              const item = DESKTOP_ICONS[idx];
+              const item = visibleIcons[idx];
               if (!item) {
                 return <View key={`sp-c-${c}`} style={styles.deskTileSpacer} />;
               }
-              const sel = idx === os.deskIdx;
+              const sel = idx === safeDeskIdx;
               const iconColor = sel ? bg : fg;
               return (
                 <View
@@ -2566,11 +2843,11 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
         <View key={r} style={styles.deskRow}>
           {Array.from({ length: cols }, (_, c) => {
             const idx = pageStart + r * cols + c;
-            const item = DESKTOP_ICONS[idx];
+            const item = visibleIcons[idx];
             if (!item) {
               return <View key={`sp-${c}`} style={styles.deskTileSpacer} />;
             }
-            const sel = idx === os.deskIdx;
+            const sel = idx === safeDeskIdx;
             const iconColor = sel ? bg : fg;
             return (
               <View
@@ -2605,11 +2882,44 @@ export function renderDesktop(os: RetroDeckOS, fg: string, bg: string) {
 }
 
 export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
-  const carts = os.cb.getCartridges();
+  const entries = os.getArcadeCatalogEntries();
   const scores = os.cb.getHighScores();
   const isPro = os.cb.getIsPro?.() ?? false;
   const activeWall = os.getActiveWallpaper();
   const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
+  const totalEntries = entries.length;
+  const safeGameIdx = Math.max(0, Math.min(os.gameIdx, Math.max(0, totalEntries - 1)));
+
+  const getEntryTitle = (entry: (typeof entries)[number]) =>
+    entry.kind === 'jar' ? entry.jar.name : entry.cart.title;
+  const getEntryTag = (entry: (typeof entries)[number]) => {
+    if (entry.kind === 'jar') return entry.jar.hasSave ? 'JAR • SAVE' : 'J2ME JAR';
+    const hs = scores[entry.cart.id] || 0;
+    const locked = isCartridgeProLocked(entry.cart.id, isPro);
+    if (locked) return '[PRO]';
+    return hs > 0 ? `HI:${hs}` : entry.cart.genre.slice(0, 6);
+  };
+  const renderEntryIcon = (
+    entry: (typeof entries)[number],
+    size: number,
+    iconColor: string,
+    radius = 4
+  ) => {
+    if (entry.kind === 'jar' && entry.jar.iconUri) {
+      return (
+        <Image
+          source={{ uri: entry.jar.iconUri }}
+          style={{ width: size, height: size, borderRadius: radius }}
+          resizeMode="contain"
+        />
+      );
+    }
+    if (entry.kind === 'jar') {
+      return <Ionicons name="phone-portrait-outline" size={Math.round(size * 0.78)} color={iconColor} />;
+    }
+    const locked = isCartridgeProLocked(entry.cart.id, isPro);
+    return <Ionicons name={locked ? 'lock-closed' : 'game-controller'} size={Math.round(size * 0.78)} color={iconColor} />;
+  };
 
   const renderWallBackdrop = () =>
     activeWall ? (
@@ -2642,14 +2952,11 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
       </>
     ) : null;
 
-  // STYLE 2: Nokia 3310 Single-Cartridge Carousel
+  // STYLE 2: Nokia 3310 Single-Cartridge / JAR Carousel
   if (os.menuStyle === 'nokia') {
-    const total = carts.length;
-    const cur = carts[os.gameIdx] || carts[0];
-    const prev = carts[(os.gameIdx + total - 1) % total];
-    const next = carts[(os.gameIdx + 1) % total];
-    const hs = cur ? scores[cur.id] || 0 : 0;
-    const locked = cur ? isCartridgeProLocked(cur.id, isPro) : false;
+    const cur = entries[safeGameIdx] || entries[0];
+    const prev = entries[(safeGameIdx + totalEntries - 1) % totalEntries];
+    const next = entries[(safeGameIdx + 1) % totalEntries];
 
     return (
       <View style={[styles.deskGrid, { position: 'relative', justifyContent: 'space-between' }]}>
@@ -2657,24 +2964,32 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 4 }}>
           <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: fg }}>
-            {pickLang(os.lang, 'CARTRIDGE', 'KARTUS')}
+            {cur?.kind === 'jar'
+              ? 'J2ME JAR'
+              : pickLang(os.lang, 'CARTRIDGE', 'KARTUS')}
           </Text>
           <View style={{ backgroundColor: fg, paddingHorizontal: 6, paddingVertical: 1 }}>
             <Text style={{ fontFamily: monoFont, fontSize: 8.5, fontWeight: '900', color: bg }}>
-              {String(os.gameIdx + 1).padStart(3, '0')}/{total}
+              {String(safeGameIdx + 1).padStart(3, '0')}/{totalEntries}
             </Text>
           </View>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1, paddingHorizontal: 2 }}>
           <View style={{ alignItems: 'center', opacity: 0.45, width: 34 }}>
-            <Ionicons name="game-controller" size={14} color={fg} />
+            {prev ? renderEntryIcon(prev, 16, fg, 3) : <Ionicons name="game-controller" size={14} color={fg} />}
             <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
-              ◀ {prev?.title}
+              ◀ {prev ? getEntryTitle(prev) : ''}
             </Text>
           </View>
 
-          <View
+          <Pressable
+            onPress={() => {
+              if (cur) {
+                const s = os.launchArcadeEntry(cur);
+                os.cb.onPlaySound?.(s);
+              }
+            }}
             style={{
               flex: 1,
               marginHorizontal: 5,
@@ -2694,28 +3009,31 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
                 width: 40,
                 height: 40,
                 borderRadius: 8,
-                backgroundColor: fg,
+                backgroundColor: cur?.kind === 'jar' && cur.jar.iconUri ? 'transparent' : fg,
+                borderWidth: cur?.kind === 'jar' && cur.jar.iconUri ? 1.5 : 0,
+                borderColor: fg,
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
               }}
             >
-              <Ionicons name={locked ? 'lock-closed' : 'game-controller'} size={22} color={bg} />
+              {cur ? renderEntryIcon(cur, 32, bg, 6) : <Ionicons name="game-controller" size={22} color={bg} />}
             </View>
             <Text
               style={{ fontFamily: monoFont, fontSize: 11, fontWeight: '900', color: fg, textAlign: 'center' }}
               numberOfLines={1}
             >
-              {cur?.title}
+              {cur ? getEntryTitle(cur) : ''}
             </Text>
             <Text style={{ fontFamily: monoFont, fontSize: 8, fontWeight: '800', color: fg, opacity: 0.85 }} numberOfLines={1}>
-              {locked ? '[PRO REQUIRED]' : hs > 0 ? `HI-SCORE: ${hs}` : cur?.genre}
+              {cur ? getEntryTag(cur) : ''}
             </Text>
-          </View>
+          </Pressable>
 
           <View style={{ alignItems: 'center', opacity: 0.45, width: 34 }}>
-            <Ionicons name="game-controller" size={14} color={fg} />
+            {next ? renderEntryIcon(next, 16, fg, 3) : <Ionicons name="game-controller" size={14} color={fg} />}
             <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '800', color: fg }} numberOfLines={1}>
-              {next?.title} ▶
+              {next ? getEntryTitle(next) : ''} ▶
             </Text>
           </View>
         </View>
@@ -2743,8 +3061,8 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
     const cols = isCards ? 3 : 4;
     const rows = isCards ? 2 : 3;
     const pageSize = cols * rows;
-    const totalPages = Math.max(1, Math.ceil(carts.length / pageSize));
-    const curPage = Math.min(totalPages - 1, Math.floor(os.gameIdx / pageSize));
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(safeGameIdx / pageSize));
     const pageStart = curPage * pageSize;
 
     return (
@@ -2755,17 +3073,26 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
           <View key={r} style={styles.deskRow}>
             {Array.from({ length: cols }, (_, c) => {
               const idx = pageStart + r * cols + c;
-              const cart = carts[idx];
-              if (!cart) {
+              const entry = entries[idx];
+              if (!entry) {
                 return <View key={`sp-g-${c}`} style={styles.deskTileSpacer} />;
               }
-              const sel = idx === os.gameIdx;
-              const locked = isCartridgeProLocked(cart.id, isPro);
-              const hs = scores[cart.id] || 0;
+              const sel = idx === safeGameIdx;
               const ink = sel ? bg : fg;
+              const title = getEntryTitle(entry);
+              const tag = getEntryTag(entry);
               return (
-                <View
-                  key={cart.id}
+                <Pressable
+                  key={entry.kind === 'jar' ? entry.jar.appPath : entry.cart.id}
+                  onPress={() => {
+                    if (os.gameIdx !== idx) {
+                      os.gameIdx = idx;
+                      os.cb.onPlaySound?.('hit');
+                    } else {
+                      const s = os.launchArcadeEntry(entry);
+                      os.cb.onPlaySound?.(s);
+                    }
+                  }}
                   style={[
                     styles.deskTile,
                     { borderRadius: isCards ? 6 : 4, paddingHorizontal: 2 },
@@ -2781,15 +3108,18 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
                         },
                   ]}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                    <Ionicons
-                      name={locked ? 'lock-closed' : 'game-controller'}
-                      size={isCards ? 16 : 12}
-                      color={ink}
-                    />
-                    <Text style={{ fontFamily: monoFont, fontSize: isCards ? 8 : 7, fontWeight: '900', color: ink }}>
-                      {String(idx + 1).padStart(2, '0')}
-                    </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                    {renderEntryIcon(entry, isCards ? 20 : 14, ink, 3)}
+                    {entry.kind === 'cart' && (
+                      <Text style={{ fontFamily: monoFont, fontSize: isCards ? 8 : 7, fontWeight: '900', color: ink }}>
+                        {String(entry.cartIndex + 1).padStart(2, '0')}
+                      </Text>
+                    )}
+                    {entry.kind === 'jar' && (
+                      <Text style={{ fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', color: ink }}>
+                        JAR
+                      </Text>
+                    )}
                   </View>
                   <Text
                     style={[
@@ -2798,17 +3128,17 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
                     ]}
                     numberOfLines={1}
                   >
-                    {cart.title}
+                    {title}
                   </Text>
                   {isCards && (
                     <Text
                       style={{ fontFamily: monoFont, fontSize: 6.8, fontWeight: '800', color: ink, opacity: 0.8, marginTop: 1 }}
                       numberOfLines={1}
                     >
-                      {locked ? '[PRO]' : hs > 0 ? `HI:${hs}` : cart.genre.slice(0, 7)}
+                      {tag}
                     </Text>
                   )}
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -2836,8 +3166,8 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
           <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
             {pickLang(
               os.lang,
-              `PAGE ${curPage + 1}/${totalPages} (${os.gameIdx + 1}/${carts.length})`,
-              `SAYFA ${curPage + 1}/${totalPages} (${os.gameIdx + 1}/${carts.length})`
+              `PAGE ${curPage + 1}/${totalPages} (${safeGameIdx + 1}/${totalEntries})`,
+              `SAYFA ${curPage + 1}/${totalPages} (${safeGameIdx + 1}/${totalEntries})`
             )}
           </Text>
           <Text style={{ fontFamily: monoFont, fontSize: 7.5, fontWeight: '900', color: fg }}>
@@ -2848,10 +3178,212 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
     );
   }
 
-  // STYLE 3: Classic 7-Row Retro List
+  // WINDOWS EXPLORER GAMES FOLDER (Win 95/XP/7/8/10/11)
+  if (isWinUiActive(os)) {
+    const L = os.lang;
+    const variant = getWinVariant(os);
+    const exp = getWinExplorerPalette(variant);
+    const cols = 4;
+    const rows = 2;
+    const pageSize = cols * rows;
+    const totalPages = Math.max(1, Math.ceil(totalEntries / pageSize));
+    const curPage = Math.min(totalPages - 1, Math.floor(safeGameIdx / pageSize));
+    const pageStart = curPage * pageSize;
+    const activeEntry = entries[safeGameIdx] || entries[0];
+
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: exp.paneBg,
+          borderWidth: 1.5,
+          borderColor: exp.frameBorder,
+          borderRadius: exp.radius,
+          overflow: 'hidden',
+        }}
+      >
+        {/* Explorer Address Bar */}
+        <View
+          style={{
+            backgroundColor: exp.toolbarBg,
+            borderBottomWidth: 1,
+            borderBottomColor: exp.toolbarBorder,
+            paddingHorizontal: 5,
+            paddingVertical: 3,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4,
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: exp.addressBg,
+              borderWidth: 1,
+              borderColor: exp.addressBorder,
+              borderRadius: Math.min(3, exp.radius),
+              paddingHorizontal: 5,
+              paddingVertical: 1.5,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 4,
+            }}
+          >
+            <Ionicons name="folder-open" size={9} color="#107C10" />
+            <Text style={{ fontFamily: monoFont, fontSize: 7.2, fontWeight: '800', color: exp.text, flex: 1 }} numberOfLines={1}>
+              {os.j2meGames.length > 0
+                ? pickLang(L, `Computer > C: > Games (JAR:${os.j2meGames.length})`, `Bilgisayar > C: > Oyunlar (JAR:${os.j2meGames.length})`)
+                : pickLang(L, 'Computer > C: > Games > Cartridges', 'Bilgisayar > C: > Oyunlar > Kartuslar')}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              const nextPage = (curPage + 1) % totalPages;
+              os.gameIdx = nextPage * pageSize;
+              os.cb.onPlaySound?.('hit');
+            }}
+            style={{
+              backgroundColor: exp.cardBg,
+              borderWidth: 1,
+              borderColor: exp.addressBorder,
+              borderRadius: Math.min(3, exp.radius),
+              paddingHorizontal: 5,
+              paddingVertical: 1.5,
+            }}
+          >
+            <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: exp.text }}>
+              {pickLang(L, `P.${curPage + 1}/${totalPages}`, `S.${curPage + 1}/${totalPages}`)}
+            </Text>
+          </Pressable>
+        </View>
+
+        {/* 4x2 Games Icon Grid inside Explorer Window (JAR icons + Cartridges) */}
+        <View style={{ flex: 1, padding: 5, justifyContent: 'space-around', gap: 4 }}>
+          {Array.from({ length: rows }, (_, r) => (
+            <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
+              {Array.from({ length: cols }, (_, c) => {
+                const idx = pageStart + r * cols + c;
+                const entry = entries[idx];
+                if (!entry) return <View key={`sp-w-${c}`} style={{ flex: 1 }} />;
+                const sel = idx === safeGameIdx;
+                const isJar = entry.kind === 'jar';
+                const locked = entry.kind === 'cart' && isCartridgeProLocked(entry.cart.id, isPro);
+                const iconBoxRadius = variant === 'win11' ? 6 : variant === 'win8' || variant === 'win95' ? 0 : 4;
+
+                return (
+                  <Pressable
+                    key={isJar ? entry.jar.appPath : entry.cart.id}
+                    onPress={() => {
+                      if (os.gameIdx !== idx) {
+                        os.gameIdx = idx;
+                        os.cb.onPlaySound?.('hit');
+                      } else {
+                        const s = os.launchArcadeEntry(entry);
+                        os.cb.onPlaySound?.(s);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: exp.radius,
+                      borderWidth: 1,
+                      borderColor: sel ? exp.selBorder : 'transparent',
+                      backgroundColor: sel ? exp.selBg : 'transparent',
+                      paddingHorizontal: 2,
+                      paddingVertical: 2,
+                      position: 'relative',
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: 26,
+                        height: 26,
+                        borderRadius: iconBoxRadius,
+                        backgroundColor:
+                          isJar && entry.jar.iconUri
+                            ? 'transparent'
+                            : sel
+                            ? exp.accent
+                            : locked
+                            ? '#B45309'
+                            : isJar
+                            ? '#2563EB'
+                            : '#107C10',
+                        borderWidth: 1,
+                        borderColor: sel ? '#FFFFFF' : locked ? '#F59E0B' : isJar ? '#60A5FA' : '#0E6B0E',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {renderEntryIcon(entry, 24, '#FFFFFF', Math.max(0, iconBoxRadius - 1))}
+                    </View>
+                    {isJar && entry.jar.hasSave && (
+                      <View
+                        style={{
+                          position: 'absolute',
+                          top: 2,
+                          right: 6,
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: '#22C55E',
+                          borderWidth: 1,
+                          borderColor: '#FFFFFF',
+                        }}
+                      />
+                    )}
+                    <Text
+                      style={{
+                        fontFamily: monoFont,
+                        fontSize: 7,
+                        fontWeight: sel ? '900' : '700',
+                        color: sel ? exp.selText : exp.text,
+                        marginTop: 2.5,
+                        textAlign: 'center',
+                      }}
+                      numberOfLines={1}
+                    >
+                      {getEntryTitle(entry)}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        {/* Explorer Bottom Details Bar */}
+        <View
+          style={{
+            backgroundColor: exp.statusBg,
+            borderTopWidth: 1,
+            borderTopColor: exp.statusBorder,
+            paddingHorizontal: 6,
+            paddingVertical: 2.5,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '800', color: exp.subText, flex: 1 }} numberOfLines={1}>
+            {activeEntry
+              ? `${String(safeGameIdx + 1).padStart(3, '0')}. ${getEntryTitle(activeEntry)} • ${getEntryTag(activeEntry)}`
+              : ''}
+          </Text>
+          <Text style={{ fontFamily: monoFont, fontSize: 7, fontWeight: '900', color: exp.accent }}>
+            {pickLang(L, '[A] PLAY', '[A] OYNA')}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  // STYLE 3: Classic 7-Row Retro List (with JAR icons + Cartridges)
   const visibleCount = 7;
-  const start = Math.max(0, Math.min(carts.length - visibleCount, os.gameIdx - 3));
-  const slice = carts.slice(start, start + visibleCount);
+  const start = Math.max(0, Math.min(totalEntries - visibleCount, safeGameIdx - 3));
+  const slice = entries.slice(start, start + visibleCount);
 
   return (
     <View style={[styles.listWrap, { position: 'relative' }]}>
@@ -2866,16 +3398,24 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
           },
         ]}
       >
-        {tOs('arcadeHeader', { cur: os.gameIdx + 1, total: carts.length }, os.lang)}
+        {tOs('arcadeHeader', { cur: safeGameIdx + 1, total: totalEntries }, os.lang)}
       </Text>
-      {slice.map((c, i) => {
+      {slice.map((entry, i) => {
         const realIdx = start + i;
-        const sel = realIdx === os.gameIdx;
-        const hs = scores[c.id] || 0;
-        const locked = isCartridgeProLocked(c.id, isPro);
+        const sel = realIdx === safeGameIdx;
+        const ink = sel ? bg : fg;
         return (
-          <View
-            key={c.id}
+          <Pressable
+            key={entry.kind === 'jar' ? entry.jar.appPath : entry.cart.id}
+            onPress={() => {
+              if (os.gameIdx !== realIdx) {
+                os.gameIdx = realIdx;
+                os.cb.onPlaySound?.('hit');
+              } else {
+                const s = os.launchArcadeEntry(entry);
+                os.cb.onPlaySound?.(s);
+              }
+            }}
             style={[
               styles.listRow,
               {
@@ -2888,13 +3428,18 @@ export function renderArcadeBrowser(os: RetroDeckOS, fg: string, bg: string) {
               },
             ]}
           >
-            <Text style={[styles.listTxt, { color: sel ? bg : fg }]} numberOfLines={1}>
-              {String(realIdx + 1).padStart(3, '0')}. {c.title}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1 }}>
+              {entry.kind === 'jar' && renderEntryIcon(entry, 13, ink, 2)}
+              <Text style={[styles.listTxt, { color: ink, flex: 1 }]} numberOfLines={1}>
+                {entry.kind === 'jar'
+                  ? entry.jar.name
+                  : `${String(entry.cartIndex + 1).padStart(3, '0')}. ${entry.cart.title}`}
+              </Text>
+            </View>
+            <Text style={[styles.listMeta, { color: ink }]}>
+              {getEntryTag(entry)}
             </Text>
-            <Text style={[styles.listMeta, { color: sel ? bg : fg }]}>
-              {locked ? '[PRO]' : (hs > 0 ? `HI:${hs}` : c.genre.slice(0, 6))}
-            </Text>
-          </View>
+          </Pressable>
         );
       })}
     </View>
@@ -2913,6 +3458,8 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     list: tOs('menuStyleList', L),
     cards: tOs('menuStyleCards', L),
     windows: tOs('menuStyleWindows', L),
+    windows_7: tOs('menuStyleWindows7', L),
+    windows_8: tOs('menuStyleWindows8', L),
     macos: tOs('menuStyleMacos', L),
     psp_xmb: tOs('menuStylePsp', L),
     xbox_blades: tOs('menuStyleXbox', L),
@@ -2920,6 +3467,7 @@ export function renderSetup(os: RetroDeckOS, fg: string, bg: string) {
     wii_channels: tOs('menuStyleWii', L),
     pipboy: tOs('menuStylePipboy', L),
     ipod_classic: tOs('menuStyleIpod', L),
+    nexus_os: tOs('menuStyleNexus', L),
   };
 
   // SUB-PAGE: Dedicated Desktop Style Picker Screen
@@ -3928,76 +4476,321 @@ export function renderPro(os: RetroDeckOS, fg: string, bg: string) {
 export function renderJ2meInfo(os: RetroDeckOS, fg: string, bg: string) {
   const tr = os.lang === 'tr';
   const monoFont = Platform.OS === 'ios' ? 'Courier' : 'monospace';
-  const cards = [
-    {
-      icon: 'code-slash-outline' as const,
-      label: tr ? 'DERLEYİCİ' : 'COMPILER',
-      value: tr ? 'JAR → DEX' : 'JAR → DEX',
-      detail: tr ? 'Cihazda, başlatmadan önce' : 'On-device before launch',
-    },
-    {
-      icon: 'resize-outline' as const,
-      label: tr ? 'LCD ÇIKIŞI' : 'LCD OUTPUT',
-      value: tr ? 'TAM EKRAN' : 'FULL LCD',
-      detail: tr ? '4:3 LCD’ye esnetilir' : 'Stretched to fill 4:3 LCD',
-    },
-  ];
+  const games = os.j2meGames;
+  const totalSlots = games.length + 1;
+  const safeIdx = Math.max(0, Math.min(os.j2meIdx, totalSlots - 1));
 
-  return (
-    <View style={{ flex: 1, padding: 6, gap: 5, backgroundColor: bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-        <View style={{ width: 27, height: 27, borderWidth: 1.5, borderColor: fg, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name="phone-portrait-outline" size={15} color={fg} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }}>
-            {tr ? 'J2ME OYUN ALANI' : 'J2ME GAME DECK'}
+  if (games.length === 0) {
+    const cards = [
+      {
+        icon: 'code-slash-outline' as const,
+        label: tr ? 'DERLEYİCİ' : 'COMPILER',
+        value: 'JAR → DEX',
+        detail: tr ? 'Cihazda, başlatmadan önce' : 'On-device before launch',
+      },
+      {
+        icon: 'save-outline' as const,
+        label: tr ? 'KAYIT & RMS' : 'LIBRARY & RMS',
+        value: tr ? 'OTOMATİK KAYIT' : 'AUTO SAVED',
+        detail: tr ? 'Oyun ve ilerleme saklanır' : 'Game & saves persist here',
+      },
+    ];
+
+    return (
+      <View style={{ flex: 1, padding: 6, gap: 5, backgroundColor: bg }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <View style={{ width: 27, height: 27, borderWidth: 1.5, borderColor: fg, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="phone-portrait-outline" size={15} color={fg} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 10, fontWeight: '900', letterSpacing: 0.8 }}>
+              {tr ? 'J2ME OYUN ALANI' : 'J2ME GAME DECK'}
+            </Text>
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7.5, opacity: 0.75 }}>
+              {tr ? 'Gömülü Java ME çalışma zamanı' : 'Embedded Java ME runtime'}
+            </Text>
+          </View>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900', borderWidth: 1, borderColor: fg, paddingHorizontal: 4, paddingVertical: 2 }}>
+            ANDROID
           </Text>
-          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7.5, opacity: 0.75 }}>
-            {tr ? 'Gömülü Java ME çalışma zamanı' : 'Embedded Java ME runtime'}
+        </View>
+
+        <View style={{ flexDirection: 'row', gap: 5 }}>
+          {cards.map((card) => (
+            <View key={card.label} style={{ flex: 1, minHeight: 48, borderWidth: 1, borderColor: hexWithAlpha(fg, 0.55), borderRadius: 5, paddingHorizontal: 5, paddingVertical: 4, justifyContent: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                <Ionicons name={card.icon} size={9} color={fg} />
+                <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', letterSpacing: 0.5 }}>{card.label}</Text>
+              </View>
+              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 9, fontWeight: '900', marginTop: 2 }}>{card.value}</Text>
+              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.75 }} numberOfLines={1}>{card.detail}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={{ borderLeftWidth: 2, borderLeftColor: fg, paddingLeft: 6, gap: 2 }}>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900' }}>
+            {tr ? 'KALICI OYUN KÜTÜPHANESİ' : 'PERSISTENT GAME LIBRARY'}
+          </Text>
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, opacity: 0.82 }} numberOfLines={2}>
+            {tr
+              ? 'Açılan her .jar oyunu ve oyun içi kayıtları (RMS) burada saklanır; tekrar seçmen gerekmez.'
+              : 'Every launched .jar game & its RMS save data stay stored here for 1-tap relaunch.'}
           </Text>
         </View>
-        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900', borderWidth: 1, borderColor: fg, paddingHorizontal: 4, paddingVertical: 2 }}>
-          ANDROID
+
+        <Pressable
+          onPress={() => os.cb.onLaunchJ2me?.()}
+          style={{ minHeight: 29, borderWidth: 1.5, borderColor: fg, borderRadius: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: hexWithAlpha(fg, 0.12) }}
+        >
+          <Ionicons name="folder-open-outline" size={12} color={fg} />
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 8, fontWeight: '900', letterSpacing: 0.7 }}>
+            {tr ? 'JAR DOSYASI SEÇ' : 'CHOOSE JAR FILE'}
+          </Text>
+        </Pressable>
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.65, textAlign: 'center' }}>
+          {tr ? '[A] BAŞLAT  •  [B] GERİ' : '[A] SELECT  •  [B] BACK'}
         </Text>
       </View>
+    );
+  }
 
-      <View style={{ flexDirection: 'row', gap: 5 }}>
-        {cards.map((card) => (
-          <View key={card.label} style={{ flex: 1, minHeight: 48, borderWidth: 1, borderColor: hexWithAlpha(fg, 0.55), borderRadius: 5, paddingHorizontal: 5, paddingVertical: 4, justifyContent: 'center' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Ionicons name={card.icon} size={9} color={fg} />
-              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900', letterSpacing: 0.5 }}>{card.label}</Text>
-            </View>
-            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 9, fontWeight: '900', marginTop: 2 }}>{card.value}</Text>
-            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.75 }} numberOfLines={1}>{card.detail}</Text>
+  const cols = 4;
+  const rows = 2;
+  const pageSize = cols * rows;
+  const totalPages = Math.max(1, Math.ceil(totalSlots / pageSize));
+  const curPage = Math.min(totalPages - 1, Math.floor(safeIdx / pageSize));
+  const pageStart = curPage * pageSize;
+  const activeGame = games[safeIdx];
+
+  return (
+    <View style={{ flex: 1, padding: 6, gap: 4, backgroundColor: bg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: hexWithAlpha(fg, 0.4), paddingBottom: 3 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+          <Ionicons name="game-controller-outline" size={13} color={fg} />
+          <Text style={{ color: fg, fontFamily: monoFont, fontSize: 9, fontWeight: '900', letterSpacing: 0.5 }}>
+            {tr ? `J2ME OYUNLARIM (${games.length})` : `J2ME GAMES (${games.length})`}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          {totalPages > 1 && (
+            <Pressable
+              onPress={() => {
+                const nextPage = (curPage + 1) % totalPages;
+                os.j2meIdx = nextPage * pageSize;
+                os.cb.onPlaySound?.('hit');
+              }}
+              style={{ borderWidth: 1, borderColor: hexWithAlpha(fg, 0.55), borderRadius: 4, paddingHorizontal: 4, paddingVertical: 1 }}
+            >
+              <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900' }}>
+                {curPage + 1}/{totalPages}
+              </Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={() => {
+              os.j2meDeleteConfirm = false;
+              os.cb.onLaunchJ2me?.();
+            }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 3, borderWidth: 1, borderColor: fg, borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1.5, backgroundColor: hexWithAlpha(fg, 0.12) }}
+          >
+            <Ionicons name="add" size={10} color={fg} />
+            <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900' }}>
+              {tr ? 'JAR EKLE' : 'ADD JAR'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* 4x2 Visual Icon Grid for Saved JAR Games */}
+      <View style={{ flex: 1, justifyContent: 'space-around', gap: 4 }}>
+        {Array.from({ length: rows }, (_, r) => (
+          <View key={r} style={{ flex: 1, flexDirection: 'row', gap: 4 }}>
+            {Array.from({ length: cols }, (_, c) => {
+              const slotIdx = pageStart + r * cols + c;
+              if (slotIdx >= totalSlots) return <View key={`j-sp-${c}`} style={{ flex: 1 }} />;
+              const isAddTile = slotIdx === games.length;
+              const isSel = slotIdx === safeIdx;
+              const tileFg = isSel ? bg : fg;
+              const tileBg = isSel ? fg : hexWithAlpha(fg, 0.06);
+
+              if (isAddTile) {
+                return (
+                  <Pressable
+                    key="add-jar-tile"
+                    onPress={() => {
+                      os.j2meIdx = slotIdx;
+                      os.j2meDeleteConfirm = false;
+                      os.cb.onLaunchJ2me?.();
+                      os.cb.onPlaySound?.('score');
+                    }}
+                    style={{
+                      flex: 1,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderStyle: 'dashed',
+                      borderColor: fg,
+                      borderRadius: 6,
+                      backgroundColor: tileBg,
+                      padding: 3,
+                    }}
+                  >
+                    <Ionicons name="folder-open-outline" size={18} color={tileFg} />
+                    <Text style={{ color: tileFg, fontFamily: monoFont, fontSize: 6.8, fontWeight: '900', marginTop: 3 }} numberOfLines={1}>
+                      {tr ? '+ JAR SEC' : '+ ADD JAR'}
+                    </Text>
+                  </Pressable>
+                );
+              }
+
+              const g = games[slotIdx];
+              return (
+                <Pressable
+                  key={g.appPath}
+                  onPress={() => {
+                    if (os.j2meIdx !== slotIdx) {
+                      os.j2meIdx = slotIdx;
+                      os.j2meDeleteConfirm = false;
+                      os.cb.onPlaySound?.('hit');
+                    } else {
+                      os.j2meDeleteConfirm = false;
+                      os.cb.onLaunchJ2me?.(g.appPath);
+                      os.cb.onPlaySound?.('score');
+                    }
+                  }}
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: isSel ? 1.5 : 1,
+                    borderColor: isSel ? fg : hexWithAlpha(fg, 0.42),
+                    borderRadius: 6,
+                    backgroundColor: tileBg,
+                    paddingHorizontal: 3,
+                    paddingVertical: 3,
+                    position: 'relative',
+                  }}
+                >
+                  {g.iconUri ? (
+                    <Image
+                      source={{ uri: g.iconUri }}
+                      style={{ width: 30, height: 30, borderRadius: 5 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 5,
+                        borderWidth: 1,
+                        borderColor: hexWithAlpha(tileFg, 0.5),
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      <Ionicons name="phone-portrait-outline" size={16} color={tileFg} />
+                    </View>
+                  )}
+
+                  {g.hasSave && (
+                    <View
+                      style={{
+                        position: 'absolute',
+                        top: 3,
+                        right: 4,
+                        backgroundColor: isSel ? bg : fg,
+                        borderRadius: 3,
+                        paddingHorizontal: 2.5,
+                        paddingVertical: 0.5,
+                      }}
+                    >
+                      <Text style={{ color: isSel ? fg : bg, fontFamily: monoFont, fontSize: 5.2, fontWeight: '900' }}>
+                        SAVE
+                      </Text>
+                    </View>
+                  )}
+
+                  <Text
+                    style={{
+                      color: tileFg,
+                      fontFamily: monoFont,
+                      fontSize: 6.8,
+                      fontWeight: isSel ? '900' : '700',
+                      marginTop: 3,
+                      textAlign: 'center',
+                    }}
+                    numberOfLines={1}
+                  >
+                    {g.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         ))}
       </View>
 
-      <View style={{ borderLeftWidth: 2, borderLeftColor: fg, paddingLeft: 6, gap: 2 }}>
-        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, fontWeight: '900' }}>
-          {tr ? 'OYUN ÇÖZÜNÜRLÜĞÜ' : 'GAME RESOLUTION'}
-        </Text>
-        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 7, opacity: 0.82 }} numberOfLines={2}>
-          {tr
-            ? 'Varsayılan sanal ekran 240×320; LCD’yi doldurmak için esnetilir.'
-            : 'Default virtual screen is 240×320; stretched to fill the LCD viewport.'}
-        </Text>
-      </View>
-
-      <Pressable
-        onPress={() => os.cb.onLaunchJ2me?.()}
-        style={{ minHeight: 29, borderWidth: 1.5, borderColor: fg, borderRadius: 5, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: hexWithAlpha(fg, 0.12) }}
+      {/* Bottom Details & Quick Play / Delete Strip */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderTopWidth: 1,
+          borderTopColor: hexWithAlpha(fg, 0.35),
+          paddingTop: 3,
+          gap: 6,
+        }}
       >
-        <Ionicons name="folder-open-outline" size={12} color={fg} />
-        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 8, fontWeight: '900', letterSpacing: 0.7 }}>
-          {tr ? 'JAR DOSYASI SEÇ' : 'CHOOSE JAR FILE'}
+        <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.8, fontWeight: '800', flex: 1 }} numberOfLines={1}>
+          {os.j2meDeleteConfirm
+            ? tr
+              ? 'SILMEK ICIN [DEL] / COP KUTUSUNA BAS'
+              : 'PRESS [DEL] / TRASH TO REMOVE'
+            : activeGame
+            ? `${activeGame.name} • ${(activeGame.vendor || 'J2ME')} v${activeGame.version}${activeGame.hasSave ? ' • SAVE' : ''}`
+            : tr
+            ? 'YENI .JAR OYUNU EKLE'
+            : 'PICK NEW .JAR FILE'}
         </Text>
-      </Pressable>
-      <Text style={{ color: fg, fontFamily: monoFont, fontSize: 6.5, opacity: 0.65, textAlign: 'center' }}>
-        {tr ? '[A] BAŞLAT  •  [B] GERİ' : '[A] SELECT  •  [B] BACK'}
-      </Text>
+        {activeGame && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Pressable
+              onPress={() => {
+                os.j2meDeleteConfirm = false;
+                os.cb.onLaunchJ2me?.(activeGame.appPath);
+                os.cb.onPlaySound?.('score');
+              }}
+              style={{ backgroundColor: fg, borderRadius: 3, paddingHorizontal: 5, paddingVertical: 1.5 }}
+            >
+              <Text style={{ color: bg, fontFamily: monoFont, fontSize: 6.5, fontWeight: '900' }}>
+                {tr ? 'OYNA' : 'PLAY'}
+              </Text>
+            </Pressable>
+            <Pressable
+              hitSlop={6}
+              onPress={() => {
+                if (!os.j2meDeleteConfirm) {
+                  os.j2meDeleteConfirm = true;
+                  os.cb.onPlaySound?.('hit');
+                } else {
+                  os.removeSelectedJ2meGame();
+                  os.cb.onPlaySound?.('die');
+                }
+              }}
+              style={{ borderWidth: 1, borderColor: hexWithAlpha(fg, 0.6), borderRadius: 3, paddingHorizontal: 4, paddingVertical: 1 }}
+            >
+              <Ionicons
+                name={os.j2meDeleteConfirm ? 'checkmark-circle' : 'trash-outline'}
+                size={10}
+                color={fg}
+              />
+            </Pressable>
+          </View>
+        )}
+      </View>
     </View>
   );
 }

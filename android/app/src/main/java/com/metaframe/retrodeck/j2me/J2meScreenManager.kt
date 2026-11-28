@@ -1,4 +1,4 @@
-package com.metaframelabs.retrodeck8.j2me
+package com.metaframe.retrodeck.j2me
 
 import android.widget.FrameLayout
 import com.facebook.react.uimanager.SimpleViewManager

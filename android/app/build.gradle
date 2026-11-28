@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.metaframelabs.retrodeck8'
+    namespace 'com.metaframe.retrodeck'
     defaultConfig {
-        applicationId 'com.metaframelabs.retrodeck8'
+        applicationId 'com.metaframe.retrodeck'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

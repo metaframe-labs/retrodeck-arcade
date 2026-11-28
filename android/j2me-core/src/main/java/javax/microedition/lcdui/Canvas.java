@@ -633,6 +633,9 @@ public abstract class Canvas extends Displayable {
 
 	// GameCanvas
 	protected void flushBuffer(Image image, int x, int y, int width, int height) {
+		if (image == null) {
+			return;
+		}
 		limitFps();
 		if (width <= 0 || height <= 0 ||
 				x + width < 0 || y + height < 0 ||
@@ -651,6 +654,9 @@ public abstract class Canvas extends Displayable {
 
 	// ExtendedImage
 	public void flushBuffer(Image image, int x, int y) {
+		if (image == null) {
+			return;
+		}
 		limitFps();
 		synchronized (bufferLock) {
 			image.copyTo(offscreenCopy, x, y);
@@ -1266,7 +1272,7 @@ public abstract class Canvas extends Displayable {
 	}
 
 	private class SoftBar extends AbstractSoftKeysBar implements Layer {
-		private final OverlayView overlayView;
+		private OverlayView overlayView;
 		private final float padding;
 		private final int textColor;
 		private final int bgColor;
@@ -1288,18 +1294,32 @@ public abstract class Canvas extends Displayable {
 			notifyChanged();
 		}
 
+		private OverlayView resolveOverlayView() {
+			if (this.overlayView != null) {
+				return this.overlayView;
+			}
+			MicroActivity activity = ContextHolder.getActivity();
+			this.overlayView = activity != null ? activity.binding.overlayView : javax.microedition.shell.J2meHost.getOverlayView();
+			return this.overlayView;
+		}
+
 		private void showPopup() {
+			OverlayView ov = resolveOverlayView();
+			if (ov == null || !ov.isAttachedToWindow()) {
+				return;
+			}
 			PopupWindow popup = prepareMenu(fullscreen ? 0 : 1);
 			popup.setWidth(Math.min(displayWidth, displayHeight) / 2);
 			popup.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
 			int x = (int) (displayWidth - bounds.right);
 			int y = (int) (displayHeight - bounds.top);
-			popup.showAtLocation(overlayView, Gravity.RIGHT | Gravity.BOTTOM, x, y);
+			popup.showAtLocation(ov, Gravity.RIGHT | Gravity.BOTTOM, x, y);
 		}
 
 		@Override
 		protected void onCommandsChanged() {
 			super.onCommandsChanged();
+			OverlayView ov = resolveOverlayView();
 			if (!fullscreen) {
 				int size = commands.size();
 				switch (size) {
@@ -1314,11 +1334,14 @@ public abstract class Canvas extends Displayable {
 						rightLabel = commands.get(0).getAndroidLabel();
 						break;
 					default:
-						leftLabel = overlayView.getResources().getString(R.string.cmd_menu);
+						android.content.Context resCtx = ov != null ? ov.getContext() : ContextHolder.getAppContext();
+						leftLabel = resCtx != null ? resCtx.getResources().getString(R.string.cmd_menu) : "Menu";
 						rightLabel = commands.get(0).getAndroidLabel();
 				}
 			}
-			overlayView.postInvalidate();
+			if (ov != null) {
+				ov.postInvalidate();
+			}
 		}
 
 		private boolean fireLeftSoft() {

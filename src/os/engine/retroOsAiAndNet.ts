@@ -26,6 +26,7 @@ import {
   stripMarkdownForLcd,
 } from '../retroOsData';
 import { pickLang, tOs } from '../../i18n/retroI18n';
+import { focusStoreOnApp } from './storeSimEngine';
 import {
   describeSimMoodForPrompt,
   evaluateMoodAfterUserReply,
@@ -410,23 +411,34 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
     if (cmd === 'OPEN_APP') {
       const target = arg.toLowerCase() as OsAppId;
       const validApps: OsAppId[] = [
-        'desktop', 'arcade', 'radio', 'wap', 'synth', 'phone', 'contacts', 'sms',
+        'desktop', 'arcade', 'store', 'radio', 'wap', 'synth', 'phone', 'contacts', 'sms',
         'profiles', 'calc', 'clock', 'paint', 'weather', 'notes',
-        'stats', 'term', 'setup', 'wallpapers', 'format', 'themes', 'pro',
+        'stats', 'term', 'setup', 'wallpapers', 'format', 'j2me', 'device', 'themes', 'pro',
       ];
       if (validApps.includes(target)) {
-        actionLogs.push(`OPENING ${target.toUpperCase()}...`);
-        setTimeout(() => {
-          os.app = target;
-          if (target === 'radio') somaRadioService.fetchNowPlaying();
-          if (target === 'themes') {
-            const curId = os.cb.getPaletteId?.();
-            const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
-            os.themeIdx = idx >= 0 ? idx : 0;
-          }
-          os.cb.onRequestKeyboard?.(false);
-          os.cb.onPlaySound?.('powerup');
-        }, 550);
+        if (!os.isStoreAppInstalled(target)) {
+          actionLogs.push(`OPENING STORE FOR ${target.toUpperCase()}...`);
+          setTimeout(() => {
+            focusStoreOnApp(os, target);
+            os.smsBanner = pickLang(os.lang, `INSTALL ${target.toUpperCase()} FROM STORE`, `MAGAZADAN ${target.toUpperCase()} YUKLE`);
+            os.smsBannerTimer = 2.6;
+            os.cb.onRequestKeyboard?.(false);
+            os.cb.onPlaySound?.('score');
+          }, 550);
+        } else {
+          actionLogs.push(`OPENING ${target.toUpperCase()}...`);
+          setTimeout(() => {
+            os.app = target;
+            if (target === 'radio') somaRadioService.fetchNowPlaying();
+            if (target === 'themes') {
+              const curId = os.cb.getPaletteId?.();
+              const idx = curId ? PALETTE_ORDER.indexOf(curId) : 0;
+              os.themeIdx = idx >= 0 ? idx : 0;
+            }
+            os.cb.onRequestKeyboard?.(false);
+            os.cb.onPlaySound?.('powerup');
+          }, 550);
+        }
       }
     } else if (cmd === 'PLAY_GAME') {
       const q = arg.toLowerCase();
@@ -546,6 +558,7 @@ export function executeAiActionsImpl(os: RetroDeckOS, rawReply: string): { displ
       setTimeout(() => {
         os.app = 'boot';
         os.bootTimer = 0;
+        os.bootChimePlayed = false;
         os.cb.onRequestKeyboard?.(false);
       }, 600);
     }
@@ -580,7 +593,7 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
       `You are the built-in AI assistant of the RetroDeck OS handheld console. You can directly control the user's device.\n` +
         `Current state: Theme=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radio=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Lang=${os.lang.toUpperCase()}.\n` +
         `If the user asks to open an app, launch a game, change theme, toggle radio/music, add a note, check weather, change language, lock the screen, or trigger a live SMS, append the matching tag at the end of your reply:\n` +
-        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:OPEN_APP|arcade|store|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
         `[[ACTION:PLAY_GAME|<game e.g. snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
         `[[ACTION:SET_THEME|<theme e.g. gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
         `[[ACTION:CYCLE_THEME]]\n` +
@@ -599,7 +612,7 @@ export async function sendAiMessageImpl(os: RetroDeckOS) {
       `Sen RetroDeck OS el konsolunun dahili AI asistanisin. Kullanicinin cihazini dogrudan kontrol edebilirsin.\n` +
         `Mevcut durum: Tema=${os.cb.getPaletteName()}, Pro=${os.cb.getIsPro?.() ? 'YES' : 'NO'}, Radyo=${somaRadioService.getIsPlaying() ? 'ON' : 'OFF'}, Scanlines=${os.cb.getScanlines() ? 'ON' : 'OFF'}, Dil=${os.lang.toUpperCase()}.\n` +
         `Eger kullanici bir uygulama acmak, oyun baslatmak, tema degistirmek, radyo/muzik acmak, not eklemek, hava durumuna bakmak, dil degistirmek, ekrani kilitlemek veya canli SMS istemek gibi bir islem talep ederse cevabinin sonuna su etiketlerden uygun olani ekle:\n` +
-        `[[ACTION:OPEN_APP|arcade|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
+        `[[ACTION:OPEN_APP|arcade|store|radio|wap|synth|phone|contacts|sms|profiles|calc|clock|paint|weather|notes|stats|term|setup|themes|pro|desktop]]\n` +
         `[[ACTION:PLAY_GAME|<oyun adi orn: snake, tetris, pong, pac-boy, breakout, space-invaders, minesweeper, dino>]]\n` +
         `[[ACTION:SET_THEME|<tema adi orn: gameboy, nokia, famicom, atomic_purple, playdate, cyberpunk, matrix, pipboy, oled>]]\n` +
         `[[ACTION:CYCLE_THEME]]\n` +

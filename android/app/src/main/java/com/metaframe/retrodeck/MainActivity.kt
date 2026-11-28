@@ -1,4 +1,4 @@
-package com.metaframelabs.retrodeck8
+package com.metaframe.retrodeck
 
 import android.os.Build
 import android.os.Bundle

@@ -15,9 +15,12 @@ export const WALLPAPER_CUSTOM_URI_KEY = '@retrodeck8_wallpaper_custom_uri_v1';
 export const WALLPAPER_DIM_STORAGE_KEY = '@retrodeck8_wallpaper_dim_v1';
 export const MENU_STYLE_STORAGE_KEY = '@retrodeck8_menu_style_v1';
 export const STARTUP_SOUND_STORAGE_KEY = '@retrodeck8_startup_sound_v1';
+export const INSTALLED_APPS_STORAGE_KEY = '@retrodeck8_installed_apps_v1';
 
 export type StartupSoundId =
   | 'auto'
+  | 'nexus_holo'
+  | 'windows_7'
   | 'windows_xp'
   | 'windows_95'
   | 'windows_98'
@@ -41,6 +44,8 @@ export interface StartupSoundOption {
 
 export const STARTUP_SOUND_OPTIONS: StartupSoundOption[] = [
   { id: 'auto', name: 'AUTO (THEME ADAPTIVE)', tagline: 'Plays matching chime for active OS style/palette' },
+  { id: 'nexus_holo', name: 'NEXUS HOLO-OS', tagline: 'Quantum cyan & crystal neural boot chime' },
+  { id: 'windows_7', name: 'WINDOWS 7 AERO', tagline: '2009 Frutiger Aero crystal bell chime' },
   { id: 'windows_xp', name: 'WINDOWS XP', tagline: 'Iconic 2001 orchestral startup chord' },
   { id: 'windows_95', name: 'WINDOWS 95 (BRIAN ENO)', tagline: '1995 ambient slow-rise chord' },
   { id: 'windows_98', name: 'WINDOWS 98', tagline: 'Rich corporate desktop chime' },
@@ -57,8 +62,8 @@ export const STARTUP_SOUND_OPTIONS: StartupSoundOption[] = [
   { id: 'silent', name: 'SILENT / MUTE', tagline: 'Instant silent boot without chimes' },
 ];
 
-export type DesktopMenuStyle = 'grid' | 'nokia' | 'list' | 'cards' | 'windows' | 'macos' | 'psp_xmb' | 'xbox_blades' | 'cyberpunk' | 'wii_channels' | 'pipboy' | 'ipod_classic';
-export const DESKTOP_MENU_STYLES: DesktopMenuStyle[] = ['grid', 'nokia', 'list', 'cards', 'windows', 'macos', 'psp_xmb', 'xbox_blades', 'cyberpunk', 'wii_channels', 'pipboy', 'ipod_classic'];
+export type DesktopMenuStyle = 'grid' | 'nokia' | 'list' | 'cards' | 'nexus_os' | 'windows' | 'windows_7' | 'windows_8' | 'macos' | 'psp_xmb' | 'xbox_blades' | 'cyberpunk' | 'wii_channels' | 'pipboy' | 'ipod_classic';
+export const DESKTOP_MENU_STYLES: DesktopMenuStyle[] = ['grid', 'nokia', 'list', 'cards', 'nexus_os', 'windows', 'windows_7', 'windows_8', 'macos', 'psp_xmb', 'xbox_blades', 'cyberpunk', 'wii_channels', 'pipboy', 'ipod_classic'];
 
 export const WALLPAPER_DIM_OPACITIES = [0.18, 0.36, 0.56] as const;
 
@@ -121,6 +126,8 @@ export type OsAppId =
   | 'boot'
   | 'desktop'
   | 'arcade'
+  | 'store'
+  | 'programs'
   | 'radio'
   | 'ai'
   | 'wap'
@@ -143,6 +150,16 @@ export type OsAppId =
   | 'device'
   | 'themes'
   | 'pro';
+
+export interface SavedJ2meGame {
+  appPath: string;
+  id: string;
+  name: string;
+  vendor: string;
+  version: string;
+  hasSave: boolean;
+  iconUri?: string | null;
+}
 
 export interface PixelSpan {
   key: string;
@@ -215,28 +232,169 @@ export interface DesktopIcon {
 }
 
 export const DESKTOP_ICONS: DesktopIcon[] = [
-  { id: 'format', label: 'MY PC [C:]', icon: 'disc' },
-  { id: 'wap', label: 'INTERNET', icon: 'globe' },
+  // Core pre-installed desktop apps (12 items = 1 clean 4x3 page)
   { id: 'arcade', label: 'GAMES', icon: 'game-controller' },
-  { id: 'j2me', label: 'J2ME JAR', icon: 'cube' },
-  { id: 'notes', label: 'NOTEPAD', icon: 'document-text' },
-  { id: 'paint', label: 'PAINT', icon: 'brush' },
-  { id: 'calc', label: 'CALC', icon: 'calculator' },
-  { id: 'term', label: 'COMMAND', icon: 'terminal' },
-  { id: 'setup', label: 'SETTINGS', icon: 'settings' },
-  { id: 'wallpapers', label: 'PICTURES', icon: 'image' },
-  { id: 'radio', label: 'MEDIA PLAYER', icon: 'radio' },
-  { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
-  { id: 'ai', label: 'MESSENGER', icon: 'chatbubble-ellipses' },
+  { id: 'store', label: 'STORE', icon: 'storefront' },
+  { id: 'phone', label: 'DIAL-UP', icon: 'call' },
   { id: 'sms', label: 'MAIL', icon: 'mail' },
   { id: 'contacts', label: 'CONTACTS', icon: 'people' },
-  { id: 'phone', label: 'DIAL-UP', icon: 'call' },
-  { id: 'weather', label: 'WEATHER', icon: 'partly-sunny' },
+  { id: 'ai', label: 'MESSENGER', icon: 'chatbubble-ellipses' },
+  { id: 'radio', label: 'MEDIA PLAYER', icon: 'radio' },
+  { id: 'calc', label: 'CALC', icon: 'calculator' },
   { id: 'clock', label: 'CLOCK', icon: 'time' },
-  { id: 'stats', label: 'TASK MGR', icon: 'bar-chart' },
-  { id: 'device', label: 'ABOUT DEVICE', icon: 'hardware-chip-outline' },
+  { id: 'wallpapers', label: 'PICTURES', icon: 'image' },
   { id: 'profiles', label: 'PROFILES', icon: 'notifications' },
+  { id: 'setup', label: 'SETTINGS', icon: 'settings' },
+  // Optional packages installable via RD Store
+  { id: 'j2me', label: 'J2ME JAR', icon: 'cube' },
+  { id: 'wap', label: 'INTERNET', icon: 'globe' },
+  { id: 'synth', label: 'MUSIC', icon: 'musical-notes' },
+  { id: 'paint', label: 'PAINT', icon: 'brush' },
+  { id: 'weather', label: 'WEATHER', icon: 'partly-sunny' },
+  { id: 'notes', label: 'NOTEPAD', icon: 'document-text' },
+  { id: 'term', label: 'COMMAND', icon: 'terminal' },
+  { id: 'stats', label: 'TASK MGR', icon: 'bar-chart' },
+  { id: 'format', label: 'MY PC [C:]', icon: 'disc' },
+  { id: 'device', label: 'ABOUT DEVICE', icon: 'hardware-chip-outline' },
 ];
+
+export interface StoreCatalogItem {
+  id: OsAppId;
+  icon: keyof typeof Ionicons.glyphMap;
+  sizeKb: number;
+  version: string;
+  categoryEn: string;
+  categoryTr: string;
+  titleEn: string;
+  titleTr: string;
+  descEn: string;
+  descTr: string;
+}
+
+export const STORE_CATALOG: StoreCatalogItem[] = [
+  {
+    id: 'j2me',
+    icon: 'cube',
+    sizeKb: 420,
+    version: 'v1.8',
+    categoryEn: 'EMU',
+    categoryTr: 'EMUL',
+    titleEn: 'J2ME JAR RUNNER',
+    titleTr: 'J2ME JAR OYUNCU',
+    descEn: 'Run classic Java ME .jar mobile games on LCD.',
+    descTr: 'Klasik Java ME .jar mobil oyunlarini LCD de calistir.',
+  },
+  {
+    id: 'wap',
+    icon: 'globe',
+    sizeKb: 185,
+    version: 'v1.1',
+    categoryEn: 'NET',
+    categoryTr: 'AG',
+    titleEn: 'RETRO WAP BROWSER',
+    titleTr: 'RETRO WAP TARAYICI',
+    descEn: 'Browse lightweight text web pages via WAP 1.1.',
+    descTr: 'WAP 1.1 ile hafif metin tabanli web sayfalarini gez.',
+  },
+  {
+    id: 'synth',
+    icon: 'musical-notes',
+    sizeKb: 240,
+    version: 'v2.0',
+    categoryEn: 'MEDIA',
+    categoryTr: 'MEDYA',
+    titleEn: 'RD COMPOSER',
+    titleTr: 'RD BESTECI',
+    descEn: 'Compose & play Nokia 3310 ringtone melodies.',
+    descTr: 'Nokia 3310 zil sesleri ve kendi melodilerini bestele.',
+  },
+  {
+    id: 'paint',
+    icon: 'brush',
+    sizeKb: 160,
+    version: 'v1.4',
+    categoryEn: 'ART',
+    categoryTr: 'SANAT',
+    titleEn: 'PIXEL PAINT STUDIO',
+    titleTr: 'PIKSEL CIZIM',
+    descEn: '16x10 monochrome pixel art canvas & presets.',
+    descTr: '16x10 monokrom piksel cizim tuvali ve hazir eserler.',
+  },
+  {
+    id: 'weather',
+    icon: 'partly-sunny',
+    sizeKb: 140,
+    version: 'v1.3',
+    categoryEn: 'TOOL',
+    categoryTr: 'ARAC',
+    titleEn: 'LIVE WEATHER RADAR',
+    titleTr: 'CANLI HAVA DURUMU',
+    descEn: 'Real-time temperature & 3-day city forecast.',
+    descTr: 'Gercek zamanli sicaklik ve 3 gunluk sehir tahmini.',
+  },
+  {
+    id: 'notes',
+    icon: 'document-text',
+    sizeKb: 96,
+    version: 'v1.0',
+    categoryEn: 'TOOL',
+    categoryTr: 'ARAC',
+    titleEn: 'PIXEL NOTEPAD',
+    titleTr: 'PIKSEL NOTLAR',
+    descEn: 'Persistent pocket memo pad for quick notes.',
+    descTr: 'Hizli notlar icin kalici cep not defteri.',
+  },
+  {
+    id: 'term',
+    icon: 'terminal',
+    sizeKb: 310,
+    version: 'v1.2',
+    categoryEn: 'SYS',
+    categoryTr: 'SIS',
+    titleEn: 'RDSH COMMAND SHELL',
+    titleTr: 'RDSH KOMUT SATIRI',
+    descEn: 'Interactive retro terminal with OS & AI commands.',
+    descTr: 'OS ve AI komutlari calistiran interaktif terminal.',
+  },
+  {
+    id: 'stats',
+    icon: 'bar-chart',
+    sizeKb: 112,
+    version: 'v1.1',
+    categoryEn: 'SYS',
+    categoryTr: 'SIS',
+    titleEn: 'TASK MGR & SCORES',
+    titleTr: 'GOREV YONETICISI',
+    descEn: 'View arcade high-score leaderboard & playtime.',
+    descTr: 'Arcade rekor tablosunu ve oyun istatistiklerini gor.',
+  },
+  {
+    id: 'format',
+    icon: 'disc',
+    sizeKb: 512,
+    version: 'v9.8',
+    categoryEn: 'SYS',
+    categoryTr: 'SIS',
+    titleEn: 'FORMAT C: SIMULATOR',
+    titleTr: 'FORMAT C: SIMULATOR',
+    descEn: 'Nostalgic Win98/XP CD & BIOS format simulator.',
+    descTr: 'Nostaljik Win98/XP CD ve BIOS format simulasyonu.',
+  },
+  {
+    id: 'device',
+    icon: 'hardware-chip-outline',
+    sizeKb: 64,
+    version: 'v1.0',
+    categoryEn: 'SYS',
+    categoryTr: 'SIS',
+    titleEn: 'ABOUT THIS DEVICE',
+    titleTr: 'CIHAZ HAKKINDA',
+    descEn: 'Hardware specs, screen density & J2ME runtime info.',
+    descTr: 'Donanim ozellikleri, ekran ve J2ME calisma bilgisi.',
+  },
+];
+
+export const STORE_APP_IDS: OsAppId[] = STORE_CATALOG.map((item) => item.id);
 
 export const WEATHER_CITIES = [
   'Palo Alto',
@@ -1568,6 +1726,7 @@ export const REAL_POSTCARDS: { id: string; title: string; image: any }[] = [
   { id: 'santorini', title: 'AEGEAN SUNSET', image: require('../../assets/postcards/santorini.jpg') },
   { id: 'cybercity', title: 'CYBER ARCADE', image: require('../../assets/postcards/cybercity.jpg') },
   { id: 'bliss_meadow', title: 'GREEN MEADOW', image: require('../../assets/postcards/bliss_meadow.jpg') },
+  { id: 'win7_aero', title: 'WIN 7 AERO', image: require('../../assets/postcards/win7_aero.jpg') },
   { id: 'lofi_room', title: 'COZY LO-FI ROOM', image: require('../../assets/postcards/lofi_room.jpg') },
   { id: 'synth_highway', title: 'OUTRUN SUNSET', image: require('../../assets/postcards/synth_highway.jpg') },
   { id: 'underwater', title: 'CORAL REEF', image: require('../../assets/postcards/underwater.jpg') },
